@@ -1,3 +1,5 @@
+import micahUrl from './assets/micah.png';
+
 // Hand-drawn SVG art for Micah Madness. All original, drawn in a 100x100 box.
 
 export interface KindInfo {
@@ -63,33 +65,11 @@ export const KINDS: KindInfo[] = [
   { name: 'Cap', plural: 'Caps', color: '#ff7a1a', svg: cap },
 ];
 
-/** Micah: black dog, grey muzzle, wearing an orange cap. */
-export function micahFace(opts: { cap?: boolean; lobster?: boolean; tongue?: boolean } = {}): string {
-  const { cap: wearCap = true, lobster: wearLobster = false, tongue = true } = opts;
-  const lobsterHood = wearLobster
-    ? `<path d="M14 58 C10 22 90 22 86 58 C80 40 20 40 14 58 Z" fill="#e8352f" stroke="#9c1d19" stroke-width="3"/>
-       <circle cx="36" cy="22" r="8" fill="#fff" stroke="#222" stroke-width="2"/><circle cx="64" cy="22" r="8" fill="#fff" stroke="#222" stroke-width="2"/>
-       <circle cx="37" cy="23" r="3.5" fill="#222"/><circle cx="65" cy="23" r="3.5" fill="#222"/>`
-    : '';
-  const capSvg = wearCap && !wearLobster
-    ? `<path d="M24 36 C24 12 76 12 76 36 Z" fill="#ff7a1a" stroke="#b54d00" stroke-width="3"/>
-       <path d="M22 36 H86 C92 36 92 42 86 43 C70 44 40 44 22 41 Z" fill="#ff8f3d" stroke="#b54d00" stroke-width="3" stroke-linejoin="round"/>
-       <circle cx="50" cy="15" r="3" fill="#ff9a4d"/>`
-    : '';
-  return `
-  <path d="M22 34 C8 36 6 62 14 72 C20 76 26 66 28 54 Z" fill="#1d1b1f"/>
-  <path d="M78 34 C92 36 94 62 86 72 C80 76 74 66 72 54 Z" fill="#1d1b1f"/>
-  <ellipse cx="50" cy="52" rx="30" ry="30" fill="#29262b"/>
-  <ellipse cx="50" cy="70" rx="17" ry="14" fill="#8d8a90"/>
-  <ellipse cx="50" cy="66" rx="12" ry="8" fill="#a7a4aa"/>
-  <ellipse cx="50" cy="62" rx="7" ry="5" fill="#111"/>
-  <ellipse cx="48" cy="60.5" rx="2.4" ry="1.4" fill="#fff" opacity=".5"/>
-  <path d="M50 67 V72 M42 74 Q50 80 58 74" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
-  ${tongue ? '<path d="M46 76 Q50 88 54 76 Z" fill="#f27b9b" stroke="#c24d6e" stroke-width="1.5"/>' : ''}
-  <circle cx="38" cy="48" r="6" fill="#4a2d1a"/><circle cx="62" cy="48" r="6" fill="#4a2d1a"/>
-  <circle cx="39.5" cy="46" r="2" fill="#fff"/><circle cx="63.5" cy="46" r="2" fill="#fff"/>
-  <path d="M32 40 Q36 37 40 39 M60 39 Q64 37 68 40" stroke="#6b686e" stroke-width="2" fill="none" stroke-linecap="round"/>
-  ${lobsterHood}${capSvg}`;
+export { micahUrl };
+
+/** Micah in his lobster costume (the player's own photo cut-out). */
+export function micahFace(_opts: { cap?: boolean; lobster?: boolean; tongue?: boolean } = {}): string {
+  return `<image href="${micahUrl}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 export function svg(inner: string, cls = ''): string {
@@ -117,4 +97,16 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <circle cx="44" cy="46" r="3" fill="#94631c"/><circle cx="56" cy="52" r="3" fill="#94631c"/><circle cx="48" cy="60" r="3" fill="#94631c"/>`,
   mud: `<path d="M14 60 C10 40 30 30 44 36 C54 22 82 28 82 46 C94 52 90 74 72 74 C60 84 32 82 26 74 C14 74 10 66 14 60Z" fill="#7a5233" stroke="#4f331d" stroke-width="3"/>
           <ellipse cx="40" cy="50" rx="8" ry="4" fill="#9a7050"/><ellipse cx="62" cy="60" rx="6" ry="3" fill="#9a7050"/>`,
+};
+
+/** Interface icons from the Lucide set (ISC licence), all on a 24px grid at the same stroke weight. */
+export const UI = {
+  back: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+  soundOn: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></svg>`,
+  soundOff: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>`,
+  lock: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" class="star-icon" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.3a.5.5 0 0 1 1 0l2.3 4.7a2.1 2.1 0 0 0 1.6 1.2l5.2.8a.5.5 0 0 1 .3.9l-3.8 3.7a2.1 2.1 0 0 0-.6 1.9l.9 5.2a.5.5 0 0 1-.8.6l-4.6-2.5a2.1 2.1 0 0 0-2 0l-4.6 2.5a.5.5 0 0 1-.8-.6l.9-5.2a2.1 2.1 0 0 0-.6-1.9L1.9 9.9a.5.5 0 0 1 .3-.9l5.2-.8a2.1 2.1 0 0 0 1.6-1.2z"/></svg>`,
 };

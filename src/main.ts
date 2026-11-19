@@ -21,15 +21,18 @@ import {
   type Special,
   type Tile,
 } from './board';
-import { BOOSTER_ICONS, KINDS, micahFace, svg } from './art';
+import { BOOSTER_ICONS, KINDS, UI, micahUrl, svg } from './art';
 import { LEVELS, ZONES, mudCount, type Goal, type Level } from './levels';
-import { BOOSTERS, load, persist, unlockedUpTo, type BoosterId, type SaveData } from './save';
+import { BOOSTERS, load, persist, requestDurableStorage, unlockedUpTo, type BoosterId, type SaveData } from './save';
 import { setSound, sfx } from './sound';
 
 const ROWS = 8;
 const COLS = 8;
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let save: SaveData = load();
+const canSave = persist(save);
+requestDurableStorage();
+window.addEventListener('pagehide', () => persist(save));
 setSound(save.sound);
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
@@ -39,16 +42,18 @@ const h = (html: string): HTMLElement => {
   return t.content.firstElementChild as HTMLElement;
 };
 const icon = (id: string, cls = 'icon') => svg(BOOSTER_ICONS[id], cls);
+const micahImg = (cls: string, alt = '') => `<img src="${micahUrl}" class="${cls}" alt="${alt}" draggable="false">`;
+const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : ''}">${UI.star}</i>`).join('');
 
 function goalIcon(goal: Goal): string {
   if (goal.type === 'collect') return svg(KINDS[goal.kind].svg, 'goal-icon');
   if (goal.type === 'mud') return svg(BOOSTER_ICONS.mud, 'goal-icon');
-  return `<span class="goal-score">★</span>`;
+  return `<span class="goal-score">${UI.star}</span>`;
 }
 function goalText(goal: Goal): string {
-  if (goal.type === 'collect') return `Collect ${goal.count} ${KINDS[goal.kind].plural}`;
-  if (goal.type === 'mud') return 'Clean all the mud';
-  return `Score ${goal.target.toLocaleString()}`;
+  if (goal.type === 'collect') return `Collect ${goal.count} ${KINDS[goal.kind].plural.toLowerCase()}`;
+  if (goal.type === 'mud') return 'Wash away every mud patch';
+  return `Score ${goal.target.toLocaleString()} points`;
 }
 
 // ───────────────────────────── Map screen ─────────────────────────────
@@ -69,8 +74,7 @@ function showMap(scrollTo?: number): void {
   const zoneBands = ZONES.map((z, zi) => {
     const yTop = zi === ZONES.length - 1 ? 0 : nodePos(zi * 5 + 4).y - spacing / 2;
     const yBot = zi === 0 ? height : nodePos(zi * 5).y + spacing / 2;
-    return `<rect x="0" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${z.ground}"/>
-      <rect x="0" y="${yTop}" width="${width}" height="6" fill="${z.sky}" opacity=".9"/>`;
+    return `<rect x="0" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${z.ground}"/>`;
   }).join('');
 
   const decorKinds = [[0, 1, 2], [1, 1, 3], [4, 4, 5], [2, 3, 0], [5, 4, 1]];
@@ -96,38 +100,46 @@ function showMap(scrollTo?: number): void {
   const screen = h(`
     <div class="screen map-screen">
       <header class="topbar">
-        <div class="brand">${svg(micahFace(), 'brand-face')}<span>Micah Madness</span></div>
-        <button class="pill biscuits" data-act="shop">${icon('biscuit', 'pill-icon')}<b>${save.biscuits}</b><span class="plus">+</span></button>
-        <button class="round-btn" data-act="sound" aria-label="Toggle sound">${save.sound ? '🔊' : '🔇'}</button>
+        <div class="brand">${micahImg('brand-face')}<span>Micah Madness</span></div>
+        <button class="wallet" data-act="shop" aria-label="${save.biscuits} biscuits. Open the Treat Shop">${icon('biscuit', 'biscuit-icon')}<b>${save.biscuits}</b><span class="add">${UI.plus}</span></button>
+        <button class="round-btn" data-act="sound" aria-label="${save.sound ? 'Mute sound' : 'Turn sound on'}">${save.sound ? UI.soundOn : UI.soundOff}</button>
       </header>
       <div class="map-scroll">
         <div class="map" style="height:${height}px">
           <svg class="map-bg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="height:${height}px">
             ${zoneBands}
             ${decor}
-            <path d="${path}" fill="none" stroke="#fff8e6" stroke-width="26" stroke-linecap="round" opacity=".9"/>
-            <path d="${path}" fill="none" stroke="#e6cfa0" stroke-width="4" stroke-dasharray="2 14" stroke-linecap="round"/>
+            <path d="${path}" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" opacity=".55"/>
+            
           </svg>
           ${ZONES.map((z, zi) => {
-            const y = nodePos(zi * 5).y + 46;
-            return `<div class="zone-banner" style="top:${y}px">${z.name}</div>`;
+            const y = nodePos(zi * 5).y + 40;
+            return `<div class="zone-banner" style="top:${y}px"><small>Area ${zi + 1}</small><b>${z.name}</b></div>`;
           }).join('')}
           ${LEVELS.map((lv, i) => {
             const p = nodePos(i);
             const stars = save.stars[lv.id] ?? 0;
             const state = lv.id < unlocked || stars > 0 ? 'done' : lv.id === unlocked ? 'current' : 'locked';
             return `<button class="node ${state}" data-level="${lv.id}" style="left:${(p.x / width) * 100}%;top:${p.y}px" ${state === 'locked' ? 'disabled' : ''}>
-                <span class="num">${state === 'locked' ? '🔒' : lv.id}</span>
-                <span class="node-stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}">★</i>`).join('')}</span>
+                <span class="num">${state === 'locked' ? UI.lock : lv.id}</span>
+                ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
           }).join('')}
           ${(() => {
             const p = nodePos(unlocked - 1);
-            const lobsterSuit = ZONES[Math.floor((unlocked - 1) / 5)].name === 'Lobster Beach';
-            return `<div class="map-micah" style="left:${(p.x / width) * 100}%;top:${p.y - 70}px">${svg(micahFace({ lobster: lobsterSuit }), 'map-micah-face')}</div>`;
+            return `<div class="map-micah" style="left:${(p.x / width) * 100}%;top:${p.y - 104}px">${micahImg('map-micah-face')}</div>`;
           })()}
         </div>
       </div>
+      ${canSave ? '' : '<p class="save-warning">This browser isn\u2019t saving progress, so it resets when you close the page. Private browsing usually causes this.</p>'}
+      ${Object.keys(save.stars).length === 0
+        ? `<div class="welcome">
+            ${micahImg('', 'Micah in his lobster costume')}
+            <div><h2>Help Micah fetch his toys</h2>
+            <p>Swap two neighbouring pieces to line up three of a kind. Each level has a goal and a move limit.</p></div>
+            <button class="btn" data-act="start">Start level 1</button>
+          </div>`
+        : ''}
     </div>`);
 
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
@@ -137,6 +149,7 @@ function showMap(scrollTo?: number): void {
     persist(save);
     showMap();
   });
+  screen.querySelector('[data-act="start"]')?.addEventListener('click', () => showLevelIntro(LEVELS[0]));
   screen.querySelectorAll<HTMLButtonElement>('.node').forEach((n) =>
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
   );
@@ -168,23 +181,28 @@ function showLevelIntro(level: Level): void {
   const zone = ZONES[level.zone];
   const m = modal(
     `
-    <button class="close" aria-label="Close">✕</button>
-    <div class="modal-micah">${svg(micahFace({ lobster: zone.name === 'Lobster Beach' }), 'modal-face')}</div>
-    <h2>Level ${level.id}</h2>
-    <p class="zone-name">${zone.name}</p>
-    <ul class="goal-list">${level.goals.map((g) => `<li>${goalIcon(g)}<span>${goalText(g)}</span></li>`).join('')}</ul>
-    <p class="moves-note">${level.moves} moves</p>
-    <h3>Boosters</h3>
-    <div class="pre-boosters">
+    <header class="modal-head">
+      ${micahImg('modal-avatar')}
+      <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id}</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <section>
+      <h3>Goal</h3>
+      <ul class="goal-list">${level.goals.map((g) => `<li>${goalIcon(g)}<span>${goalText(g)}</span></li>`).join('')}</ul>
+      <p class="meta-row">You have <b>${level.moves} moves</b>${save.best[level.id] ? ` · Best score <b>${save.best[level.id].toLocaleString()}</b>` : ''}</p>
+    </section>
+    <section>
+      <h3>Bring a booster</h3>
+      <div class="booster-grid">
       ${(['zoomies', 'micah'] as const)
         .map(
           (id) => `<button class="pre-booster" data-id="${id}" ${save.inventory[id] ? '' : 'disabled'}>
-            ${icon(id, 'booster-icon')}<span class="count">${save.inventory[id]}</span>
-            <span class="label">${BOOSTERS[id].name}</span></button>`,
+            ${icon(id, 'booster-icon')}<b>${BOOSTERS[id].name}</b><small>${save.inventory[id] ? `${save.inventory[id]} left` : 'None left'}</small></button>`,
         )
         .join('')}
-    </div>
-    <button class="big-btn play">Play!</button>`,
+      </div>
+    </section>
+    <button class="btn play">Start level ${level.id}</button>`,
     () => {},
   );
   m.querySelector('.close')!.addEventListener('click', () => m.remove());
@@ -193,6 +211,7 @@ function showLevelIntro(level: Level): void {
       const id = b.dataset.id as 'zoomies' | 'micah';
       picks[id] = !picks[id];
       b.classList.toggle('picked', picks[id]);
+      b.querySelector('small')!.textContent = picks[id] ? 'Bringing it' : `${save.inventory[id]} left`;
     }),
   );
   m.querySelector('.play')!.addEventListener('click', () => {
@@ -205,17 +224,22 @@ function showLevelIntro(level: Level): void {
 
 function showShop(onClose: () => void): void {
   const render = () => `
-    <button class="close" aria-label="Close">✕</button>
-    <h2>Treat Shop</h2>
-    <p class="shop-wallet">${icon('biscuit', 'pill-icon')} <b>${save.biscuits}</b> biscuits</p>
-    <p class="hint-text">Earn biscuits by winning levels. More stars, more biscuits.</p>
+    <header class="modal-head">
+      ${icon('biscuit', 'modal-avatar')}
+      <div><p class="eyebrow">Spend biscuits</p><h2>Treat Shop</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <p class="wallet-row">${icon('biscuit', 'biscuit-icon')}${save.biscuits} biscuits</p>
+    ${save.biscuits < Math.min(...Object.values(BOOSTERS).map((b) => b.price))
+      ? '<p class="notice">You need more biscuits for anything here. Win a level to earn them: 10 per star, plus 20 the first time you clear it.</p>'
+      : '<p class="notice">Win levels to earn biscuits: 10 per star, plus 20 the first time you clear a level.</p>'}
     <ul class="shop-list">
       ${(Object.keys(BOOSTERS) as BoosterId[])
         .map(
           (id) => `<li>
             ${icon(id, 'booster-icon')}
-            <div class="shop-info"><b>${BOOSTERS[id].name}</b> <small>(own ${save.inventory[id]})</small><span>${BOOSTERS[id].desc}</span></div>
-            <button class="buy" data-id="${id}" ${save.biscuits < BOOSTERS[id].price ? 'disabled' : ''}>${icon('biscuit', 'buy-icon')}${BOOSTERS[id].price}</button>
+            <div class="shop-info"><b>${BOOSTERS[id].name}</b><span>${BOOSTERS[id].desc}</span><small>You have ${save.inventory[id]}</small></div>
+            <button class="buy" data-id="${id}" aria-label="Buy ${BOOSTERS[id].name} for ${BOOSTERS[id].price} biscuits" ${save.biscuits < BOOSTERS[id].price ? 'disabled' : ''}>${icon('biscuit', 'biscuit-icon')}${BOOSTERS[id].price}</button>
           </li>`,
         )
         .join('')}
@@ -244,7 +268,7 @@ function showShop(onClose: () => void): void {
 // ───────────────────────────── Game screen ─────────────────────────────
 
 const CHEERS = ['Good match!', 'Woof!', 'Treat time!', 'Wag wag!', 'Nice!', 'Bork!'];
-const BIG_CHEERS = ['ZOOMIES!', 'Micah Madness!', 'Who’s a good player?', 'Bark-tastic!', 'Pawsome!'];
+const BIG_CHEERS = ['ZOOMIES!', 'Micah Madness!', 'Who\u2019s a good player?', 'Bark-tastic!', 'Pawsome!'];
 
 function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): void {
   const kinds = level.kinds;
@@ -258,6 +282,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let over = false;
   let treatMode = false;
   let selected: Pos | null = null;
+  let bonusPts = 0;
   let hintTimer = 0;
   const totalMud = mudCount(level);
   const remaining = level.goals.map((g) => (g.type === 'collect' ? g.count : g.type === 'mud' ? totalMud : g.target));
@@ -277,21 +302,23 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   const zone = ZONES[level.zone];
   const screen = h(`
-    <div class="screen game-screen" style="--zone-sky:${zone.sky};--zone-ground:${zone.ground}">
-      <header class="game-top">
-        <button class="round-btn back" aria-label="Back to map">‹</button>
+    <div class="screen game-screen">
+      <header class="hud">
+        <button class="round-btn back" aria-label="Back to map">${UI.back}</button>
         <div class="stat"><small>Level</small><b>${level.id}</b></div>
         <div class="stat moves"><small>Moves</small><b class="moves-val">${moves}</b></div>
-        <div class="stat score"><small>Score</small><b class="score-val">0</b>
+        <div class="stat score"><div class="score-line"><small>Score</small><b class="score-val">0</b></div>
           <div class="star-bar"><div class="star-fill"></div>${level.stars
-            .map((s, i) => `<i style="left:${(s / level.stars[2]) * 100}%" data-i="${i}">★</i>`)
+            .map((s, i) => `<i style="left:${(s / level.stars[2]) * 100}%" data-i="${i}">${UI.star}</i>`)
             .join('')}</div>
         </div>
       </header>
-      <div class="goals"></div>
-      <div class="mascot">
-        <div class="mascot-face">${svg(micahFace({ lobster: zone.name === 'Lobster Beach' }), 'mascot-svg')}</div>
-        <div class="bubble">Let's go!</div>
+      <div class="info-row">
+        <div class="mascot">
+          <div class="mascot-face">${micahImg('mascot-img')}</div>
+          <div class="bubble"></div>
+        </div>
+        <div class="goals"></div>
       </div>
       <div class="board-wrap"><div class="board"></div></div>
       <div class="tools"></div>
@@ -302,6 +329,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const bubble = screen.querySelector<HTMLDivElement>('.bubble')!;
   const mascot = screen.querySelector<HTMLDivElement>('.mascot-face')!;
   const tileSize = () => boardEl.clientWidth / COLS;
+  const boardWrap = screen.querySelector<HTMLDivElement>('.board-wrap')!;
+  const fitBoard = () => {
+    const size = Math.floor(Math.min(boardWrap.clientWidth, boardWrap.clientHeight) - 12);
+    boardEl.style.width = `${Math.max(200, size)}px`;
+  };
+  fitBoard();
+  const ro = new ResizeObserver(fitBoard);
+  ro.observe(boardWrap);
 
   // Cell backgrounds (including mud layer).
   const cellEls: HTMLDivElement[][] = [];
@@ -320,12 +355,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
   const tileInner = (t: Tile) =>
-    t.special === 'micah' ? svg(micahFace({ tongue: true }), 'piece') : svg(KINDS[t.kind].svg, 'piece');
+    t.special === 'micah' ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
 
   function makeTileEl(t: Tile): HTMLDivElement {
     const el = document.createElement('div');
     el.className = `tile ${specialClass(t.special)}`;
-    el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '') + (t.special === 'bark' ? '<span class="ring"></span>' : '');
+    el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
     el.dataset.special = t.special;
     boardEl.append(el);
     tileEls.set(t.id, el);
@@ -374,13 +409,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        return `<div class="goal ${done ? 'done' : ''}">${goalIcon(g)}<b>${done ? '✓' : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
+        return `<div class="goal ${done ? 'done' : ''}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
     screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash'] as const)
       .map(
-        (id) => `<button class="tool ${id === 'treat' && treatMode ? 'active' : ''}" data-id="${id}" title="${BOOSTERS[id].desc}">
-          ${icon(id, 'tool-icon')}<span class="count">${save.inventory[id] || '+'}</span><span class="label">${BOOSTERS[id].name}</span></button>`,
+        (id) => `<button class="tool ${id === 'treat' && treatMode ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
+          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
       )
       .join('');
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
@@ -504,7 +539,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       forcedNow = [];
     }
     if (!hasMove(grid)) {
-      say('Squirrel! Shuffling the yard…', 'big');
+      say('No moves left, so Micah shuffled the board.', 'big');
       await wait(400);
       shuffle(grid);
       renderAll();
@@ -526,7 +561,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       swap(grid, a, b);
       renderAll();
       sfx.bad();
-      say('Hmm… no match there.', 'sad');
+      say('That swap doesn\u2019t make a match.', 'sad');
       await wait(170);
       busy = false;
       armHint();
@@ -556,7 +591,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
     if (id === 'treat') {
       treatMode = !treatMode;
-      say(treatMode ? 'Tap a piece and I’ll eat it!' : 'Okay, saving it for later.');
+      say(treatMode ? 'Tap any piece and Micah will eat it.' : 'Treat put away.');
       renderHud();
       return;
     }
@@ -600,13 +635,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       score += bonus;
       renderHud();
       sfx.win();
-      say(bonus ? `We did it! +${bonus} bonus for spare moves` : 'We did it! Good dog!', 'big');
+      bonusPts = bonus;
+      say(bonus ? `Level cleared. ${moves} spare moves add ${bonus} points.` : 'Level cleared. Good dog!', 'big');
       await wait(900);
       finish(true);
     } else if (moves <= 0) {
       over = true;
       sfx.lose();
-      say('Out of moves… one more try?', 'sad');
+      say('Out of moves.', 'sad');
       await wait(700);
       finish(false);
     }
@@ -623,14 +659,20 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       save.biscuits += earned;
       persist(save);
       const m = modal(`
-        <div class="modal-micah">${svg(micahFace({ lobster: zone.name === 'Lobster Beach' }), 'modal-face happy')}</div>
-        <h2>Level ${level.id} cleared!</h2>
-        <div class="result-stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">★</i>`).join('')}</div>
-        <p class="result-score">${score.toLocaleString()} points</p>
-        <p class="earned">${icon('biscuit', 'pill-icon')} +${earned} biscuits</p>
-        <div class="row">
-          <button class="big-btn alt replay">Replay</button>
-          <button class="big-btn next">${level.id < LEVELS.length ? 'Next level' : 'Back to map'}</button>
+        <header class="modal-head">
+          ${micahImg('modal-avatar')}
+          <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id} cleared</h2></div>
+          <span></span>
+        </header>
+        <div class="result-stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
+        <dl class="stat-rows">
+          <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          ${bonusPts ? `<dt>Spare-move bonus</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
+          <dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${earned}</dd>
+        </dl>
+        <div class="actions">
+          <button class="btn next">${level.id < LEVELS.length ? `Play level ${level.id + 1}` : 'Back to map'}</button>
+          <button class="btn secondary replay">Play level ${level.id} again</button>
         </div>`);
       m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
       m.querySelector('.next')!.addEventListener('click', () => {
@@ -640,20 +682,28 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       });
     } else {
       const m = modal(`
-        <div class="modal-micah">${svg(micahFace({ cap: true, tongue: false }), 'modal-face sad')}</div>
-        <h2>Out of moves!</h2>
-        <ul class="goal-list">${level.goals
-          .map((g, i) => {
-            const left = g.type === 'score' ? Math.max(0, g.target - score) : Math.max(0, remaining[i]);
-            return `<li>${goalIcon(g)}<span>${left === 0 ? 'Done ✓' : `${left.toLocaleString()} to go`}</span></li>`;
-          })
-          .join('')}</ul>
-        <button class="big-btn more" ${save.inventory.leash || save.biscuits >= BOOSTERS.leash.price ? '' : 'disabled'}>
-          +5 moves (${save.inventory.leash ? `use Long Leash, own ${save.inventory.leash}` : `${BOOSTERS.leash.price} biscuits`})
-        </button>
-        <div class="row">
-          <button class="big-btn alt quit">Map</button>
-          <button class="big-btn retry">Retry</button>
+        <header class="modal-head">
+          ${micahImg('modal-avatar sad')}
+          <div><p class="eyebrow">Level ${level.id}</p><h2>Out of moves</h2></div>
+          <span></span>
+        </header>
+        <section>
+          <h3>Still to do</h3>
+          <ul class="goal-list">${level.goals
+            .map((g, i) => {
+              const left = g.type === 'score' ? Math.max(0, g.target - score) : Math.max(0, remaining[i]);
+              return `<li class="${left === 0 ? 'done' : ''}">${goalIcon(g)}<span>${goalText(g)}</span><em>${left === 0 ? 'Done' : `${left.toLocaleString()} left`}</em></li>`;
+            })
+            .join('')}</ul>
+        </section>
+        <div class="actions">
+          <button class="btn more" ${save.inventory.leash || save.biscuits >= BOOSTERS.leash.price ? '' : 'disabled'}>
+            ${save.inventory.leash ? 'Add 5 moves (uses 1 Long Leash)' : `Add 5 moves for ${BOOSTERS.leash.price} biscuits`}
+          </button>
+          <div class="pair">
+            <button class="btn secondary quit">Back to map</button>
+            <button class="btn secondary retry">Start over</button>
+          </div>
         </div>`);
       m.querySelector('.more')!.addEventListener('click', () => {
         if (save.inventory.leash) save.inventory.leash--;
@@ -663,7 +713,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         m.remove();
         moves += 5;
         over = false;
-        say('Five more moves, let’s go!', 'big');
+        say('Five more moves. Make them count.', 'big');
         renderHud();
         armHint();
       });
@@ -713,13 +763,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   screen.querySelector('.back')!.addEventListener('click', () => {
     clearHint();
+    ro.disconnect();
     over = true;
     showMap(level.id);
   });
 
   renderAll();
   renderHud();
-  say(level.goals.map(goalText).join(' + ') + '!');
+  say(level.goals.map(goalText).join(', then ') + '.');
   armHint();
   // Safety: a fresh board never starts with a match, but boosters could create none anyway.
   if (findRuns(grid).length) void cascade([]);

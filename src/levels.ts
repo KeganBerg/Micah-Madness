@@ -23,11 +23,11 @@ export interface Zone {
 }
 
 export const ZONES: Zone[] = [
-  { name: 'The Backyard', blurb: 'Where it all begins: sniff, dig, nap.', sky: '#bfe6ff', ground: '#8fd16a' },
-  { name: 'Dog Park', blurb: 'Tennis balls everywhere. Pure chaos.', sky: '#ffe2b8', ground: '#6fbf5a' },
-  { name: 'Lobster Beach', blurb: 'Micah suits up in the lobster costume.', sky: '#9fdcf5', ground: '#f3d9a0' },
-  { name: 'Muddy Trails', blurb: 'Every walk ends with a bath.', sky: '#d7e8c8', ground: '#a07a52' },
-  { name: 'Costume Party', blurb: 'Caps, claws and treats for everyone.', sky: '#e8d4ff', ground: '#c99ae8' },
+  { name: 'The Backyard', blurb: 'Where it all begins: sniff, dig, nap.', sky: '#bfe6ff', ground: '#7db86a' },
+  { name: 'Dog Park', blurb: 'Tennis balls everywhere. Pure chaos.', sky: '#ffe2b8', ground: '#5c9f5a' },
+  { name: 'Lobster Beach', blurb: 'Micah suits up in the lobster costume.', sky: '#9fdcf5', ground: '#e4c98f' },
+  { name: 'Muddy Trails', blurb: 'Every walk ends with a bath.', sky: '#d7e8c8', ground: '#9a7a5a' },
+  { name: 'Costume Party', blurb: 'Caps, claws and treats for everyone.', sky: '#e8d4ff', ground: '#d99a8f' },
 ];
 
 const BONE = 0, BALL = 1, PAW = 2, BOWL = 3, LOBSTER = 4, CAP = 5;
