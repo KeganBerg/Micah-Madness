@@ -28,10 +28,14 @@ import {
   DAILY_REWARDS,
   claimDaily,
   dailyClaimable,
+  exportCode,
+  freshSave,
+  importCode,
   load,
   persist,
   requestDurableStorage,
   starsToSpend,
+  totalStars,
   unlockedUpTo,
   type BoosterId,
   type SaveData,
@@ -145,7 +149,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       <header class="topbar">
         <div class="brand">${micahImg('brand-face')}<span>Micah Madness</span></div>
         <button class="wallet" data-act="shop" aria-label="${save.biscuits} biscuits. Open the Treat Shop">${icon('biscuit', 'biscuit-icon')}<b>${save.biscuits}</b><span class="add">${UI.plus}</span></button>
-        <button class="round-btn" data-act="sound" aria-label="${save.sound ? 'Mute sound' : 'Turn sound on'}">${save.sound ? UI.soundOn : UI.soundOff}</button>
+        <button class="round-btn" data-act="settings" aria-label="Settings and how to play">${UI.settings}</button>
       </header>
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
@@ -192,14 +196,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
-  screen.querySelector('[data-act="sound"]')!.addEventListener('click', () => {
-    save.sound = !save.sound;
-    setSound(save.sound);
-    persist(save);
-    const b = screen.querySelector<HTMLButtonElement>('[data-act="sound"]')!;
-    b.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
-    b.setAttribute('aria-label', save.sound ? 'Mute sound' : 'Turn sound on');
-  });
+  screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
   screen.querySelector('[data-act="start"]')?.addEventListener('click', () => showLevelIntro(LEVELS[0]));
   screen.querySelectorAll<HTMLButtonElement>('.node').forEach((n) =>
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
@@ -455,6 +452,126 @@ function showShop(onClose: () => void): void {
     );
   };
   wire();
+}
+
+// ───────────────────────────── Settings ─────────────────────────────
+
+const HOW_TO: [string, string][] = [
+  ['Swap', 'Drag a piece onto a neighbour. Three or more in a line clears them.'],
+  ['Zoomies', 'Four in a row. Clears its whole row or column.'],
+  ['Big Bark', 'An L or T shape. Clears the 3×3 area around it.'],
+  ['Micah', 'Five in a row. Swap her with any piece to clear every one of that kind.'],
+  ['Mud', 'Make a match on a muddy square to wash it.'],
+  ['Yarn', 'A tangled piece can\u2019t be swapped. Match through it to untangle it.'],
+  ['Stars', 'Spend them in Micah\u2019s Yard. Biscuits buy treats in the shop.'],
+];
+
+function showSettings(): void {
+  const cleared = Object.keys(save.stars).length;
+  const m = modal(`
+    <header class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">Micah Madness</p><h2>Settings</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <section>
+      <button class="setting-row" data-act="sound" role="switch" aria-checked="${save.sound}">
+        <span>${save.sound ? UI.soundOn : UI.soundOff}</span><b>Sound effects</b><i class="switch"></i>
+      </button>
+    </section>
+    <section>
+      <h3>Your progress</h3>
+      <dl class="stat-rows">
+        <dt>Levels cleared</dt><dd>${cleared} of ${LEVELS.length}</dd>
+        <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${totalStars(save)}</dd>
+        <dt>Biscuits</dt><dd>${icon('biscuit', 'biscuit-icon')}${save.biscuits}</dd>
+      </dl>
+    </section>
+    <section>
+      <h3>How to play</h3>
+      <dl class="how-to">${HOW_TO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
+    </section>
+    <section>
+      <h3>Play on another device</h3>
+      <p class="body">Progress is saved in this browser only. Copy your transfer code here, then paste it on the other device.</p>
+      <button class="btn secondary" data-act="copy">${UI.copy}Copy transfer code</button>
+      <textarea class="code-box" rows="3" placeholder="Paste a transfer code" aria-label="Transfer code" spellcheck="false" autocomplete="off"></textarea>
+      <button class="btn secondary" data-act="load">Load this code</button>
+      <p class="code-msg body" role="status"></p>
+    </section>
+    <section>
+      <h3>Start over</h3>
+      <button class="btn secondary danger" data-act="reset">Erase all progress</button>
+    </section>`, () => showMap());
+  const msg = m.querySelector<HTMLElement>('.code-msg')!;
+  const box = m.querySelector<HTMLTextAreaElement>('.code-box')!;
+  m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
+
+  const soundBtn = m.querySelector<HTMLButtonElement>('[data-act="sound"]')!;
+  soundBtn.addEventListener('click', () => {
+    save.sound = !save.sound;
+    setSound(save.sound);
+    persist(save);
+    soundBtn.setAttribute('aria-checked', String(save.sound));
+    soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
+  });
+
+  m.querySelector('[data-act="copy"]')!.addEventListener('click', async () => {
+    const code = exportCode(save);
+    box.value = code;
+    try {
+      await navigator.clipboard.writeText(code);
+      msg.textContent = 'Copied. Paste it into Settings on your other device.';
+    } catch {
+      box.select();
+      msg.textContent = 'Your code is in the box above. Select it and copy it.';
+    }
+  });
+
+  m.querySelector('[data-act="load"]')!.addEventListener('click', () => {
+    const incoming = importCode(box.value);
+    if (!incoming) {
+      msg.textContent = box.value.trim() ? 'That code didn\u2019t work. Check you copied all of it.' : 'Paste a transfer code first.';
+      sfx.bad();
+      return;
+    }
+    const n = Object.keys(incoming.stars).length;
+    save = incoming;
+    setSound(save.sound);
+    persist(save);
+    sfx.coin();
+    m.remove();
+    showMap();
+    toast(`Progress loaded: ${n} level${n === 1 ? '' : 's'} cleared.`);
+  });
+
+  const reset = m.querySelector<HTMLButtonElement>('[data-act="reset"]')!;
+  let armed = false;
+  reset.addEventListener('click', () => {
+    if (!armed) {
+      armed = true;
+      reset.textContent = 'Tap again to erase everything';
+      reset.classList.add('armed');
+      window.setTimeout(() => {
+        armed = false;
+        reset.textContent = 'Erase all progress';
+        reset.classList.remove('armed');
+      }, 4000);
+      return;
+    }
+    save = freshSave();
+    persist(save);
+    m.remove();
+    showMap();
+    toast('Progress erased. Micah is ready to start again.');
+  });
+}
+
+function toast(text: string): void {
+  document.querySelectorAll('.toast').forEach((old) => old.remove());
+  const t = h(`<div class="toast" role="status">${text}</div>`);
+  document.body.append(t);
+  window.setTimeout(() => t.remove(), 3200);
 }
 
 // ───────────────────────────── Game screen ─────────────────────────────

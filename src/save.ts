@@ -181,3 +181,29 @@ export function claimDaily(data: SaveData, now = new Date()): DailyReward | null
   data.daily = { last: localDay(now), day };
   return reward;
 }
+
+// ── Transfer codes: move a save to another browser or device by copy and paste. ──
+
+const CODE_PREFIX = 'MICAH1-';
+
+export function exportCode(data: SaveData): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let bin = '';
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return CODE_PREFIX + btoa(bin);
+}
+
+/** Returns the save inside a transfer code, or null if the code isn't one of ours. */
+export function importCode(code: string): SaveData | null {
+  const trimmed = code.replace(/\s+/g, '');
+  if (!trimmed.startsWith(CODE_PREFIX)) return null;
+  try {
+    const bin = atob(trimmed.slice(CODE_PREFIX.length));
+    const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+    const raw = JSON.parse(new TextDecoder().decode(bytes));
+    if (!raw || typeof raw !== 'object') return null;
+    return migrate(raw);
+  } catch {
+    return null;
+  }
+}
