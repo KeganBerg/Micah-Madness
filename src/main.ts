@@ -104,7 +104,7 @@ function showMap(scrollTo?: number): void {
         <button class="wallet" data-act="shop" aria-label="${save.biscuits} biscuits. Open the Treat Shop">${icon('biscuit', 'biscuit-icon')}<b>${save.biscuits}</b><span class="add">${UI.plus}</span></button>
         <button class="round-btn" data-act="sound" aria-label="${save.sound ? 'Mute sound' : 'Turn sound on'}">${save.sound ? UI.soundOn : UI.soundOff}</button>
       </header>
-      <div class="map-scroll">
+      <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
           <svg class="map-bg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="height:${height}px">
             ${zoneBands}
@@ -113,8 +113,9 @@ function showMap(scrollTo?: number): void {
             
           </svg>
           ${ZONES.map((z, zi) => {
-            const y = nodePos(zi * 5).y + 40;
-            return `<div class="zone-banner" style="top:${y}px"><small>Area ${zi + 1}</small><b>${z.name}</b></div>`;
+            const first = nodePos(zi * 5);
+            const side = first.x < width / 2 ? 'right:16px' : 'left:16px';
+            return `<div class="zone-banner" style="top:${first.y + 8}px;${side}"><small>Area ${zi + 1}</small><b>${z.name}</b></div>`;
           }).join('')}
           ${LEVELS.map((lv, i) => {
             const p = nodePos(i);
@@ -157,7 +158,7 @@ function showMap(scrollTo?: number): void {
   app.replaceChildren(screen);
   const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
   const target = nodePos((scrollTo ?? unlocked) - 1).y;
-  scroller.scrollTop = target - scroller.clientHeight / 2;
+  scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
 }
 
 // ───────────────────────────── Modals ─────────────────────────────
@@ -330,13 +331,23 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const mascot = screen.querySelector<HTMLDivElement>('.mascot-face')!;
   const tileSize = () => boardEl.clientWidth / COLS;
   const boardWrap = screen.querySelector<HTMLDivElement>('.board-wrap')!;
+  // Size the square board to the space the HUD, goals and item bar leave free.
   const fitBoard = () => {
-    const size = Math.floor(Math.min(boardWrap.clientWidth, boardWrap.clientHeight) - 12);
-    boardEl.style.width = `${Math.max(200, size)}px`;
+    const cs = getComputedStyle(screen);
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const gap = parseFloat(cs.rowGap) || 0;
+    const others = ['.hud', '.info-row', '.tools'].reduce((sum, sel) => sum + screen.querySelector<HTMLElement>(sel)!.offsetHeight, 0);
+    const outline = 12;
+    const freeH = screen.clientHeight - padY - others - gap * 3 - outline;
+    const freeW = screen.clientWidth - padX - outline;
+    const size = Math.max(200, Math.floor(Math.min(freeW, freeH)));
+    boardEl.style.width = `${size}px`;
+    boardWrap.style.height = `${size + outline}px`;
   };
   fitBoard();
   const ro = new ResizeObserver(fitBoard);
-  ro.observe(boardWrap);
+  ro.observe(screen);
 
   // Cell backgrounds (including mud layer).
   const cellEls: HTMLDivElement[][] = [];

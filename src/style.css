@@ -111,7 +111,7 @@ h2, h3, p { margin: 0; }
 .map { position: relative; width: 100%; }
 .map-bg { position: absolute; inset: 0; width: 100%; }
 .zone-banner {
-  position: absolute; left: var(--s4); display: flex; flex-direction: column; gap: 0; padding: var(--s2) var(--s3);
+  position: absolute; display: flex; flex-direction: column; gap: 0; padding: var(--s2) var(--s3);
   background: var(--sea-deep); color: #fff; border-radius: var(--radius);
 }
 .zone-banner small { font-size: var(--fs-xs); font-weight: 700; opacity: .7; text-transform: uppercase; letter-spacing: .08em; }
@@ -299,3 +299,8 @@ h2, h3, p { margin: 0; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 .save-warning { position: absolute; top: 72px; left: var(--s4); right: var(--s4); z-index: 3; padding: var(--s3); border-radius: var(--radius); background: var(--panel); color: var(--ink); font-size: var(--fs-sm); }
+.mascot-face img, .map-micah img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.map-scroll.has-welcome .map { margin-bottom: 220px; }
+.board-wrap { flex: none; }
+.game-screen { justify-content: center; }
+.map-scroll { background: #7db86a; }
