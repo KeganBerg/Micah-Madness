@@ -115,6 +115,11 @@ export const sfx = {
   start() {
     [392, 523, 659].forEach((f, i) => later(i * 90, () => tone(f, 0.14, 'triangle', 0.07)));
   },
+  /** Yarn snipped loose. */
+  snip() {
+    noise(0.05, 0.1, 'highpass', 4000);
+    later(60, () => tone(1200, 0.08, 'triangle', 0.05, 1600));
+  },
   /** Micah's paws on the map path. */
   step() {
     noise(0.04, 0.06, 'lowpass', 500);

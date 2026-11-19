@@ -448,3 +448,12 @@ h2, h3, p { margin: 0; }
 .launch-bar { height: 12px; border-radius: 6px; background: var(--sea-deep); overflow: hidden; box-shadow: inset 0 0 0 2px #ffffff1f; }
 .launch-bar i { display: block; width: 0; height: 100%; border-radius: 6px; background: var(--brand); transition: width .35s ease; }
 .launch-step { margin: 0; font-size: var(--fs-sm); font-weight: 700; color: #ffffffcc; text-align: center; min-height: 1.4em; }
+
+/* Yarn: strands over a tangled cell. Pieces under it can't be swapped. */
+.yarn { position: absolute; width: 12.5%; height: 12.5%; z-index: 4; pointer-events: none; }
+.yarn .yarn-strands { width: 100%; height: 100%; display: block; opacity: .85; filter: drop-shadow(0 1px 0 #a83a72); }
+.yarn.tug { animation: yarn-tug .35s; }
+.yarn.snip { animation: yarn-snip .36s forwards; }
+@keyframes yarn-tug { 25% { transform: translateX(-6%) rotate(-4deg); } 75% { transform: translateX(6%) rotate(4deg); } }
+@keyframes yarn-snip { to { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .yarn.tug, .yarn.snip { animation: none; } }

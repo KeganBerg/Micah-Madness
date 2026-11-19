@@ -123,16 +123,21 @@ export function isLegalSwap(grid: Grid, a: Pos, b: Pos): boolean {
   return ok;
 }
 
-export function hasMove(grid: Grid): boolean {
-  return findMove(grid) !== null;
+/** Cells whose piece can't be moved (yarn). */
+export type Locked = (r: number, c: number) => boolean;
+const none: Locked = () => false;
+
+export function hasMove(grid: Grid, locked: Locked = none): boolean {
+  return findMove(grid, locked) !== null;
 }
 
-/** First legal move found, used for hints and dead-board detection. */
-export function findMove(grid: Grid): [Pos, Pos] | null {
+/** First legal move found, used for hints and dead-board detection. Swaps touching a locked cell don't count. */
+export function findMove(grid: Grid, locked: Locked = none): [Pos, Pos] | null {
   for (let r = 0; r < grid.length; r++) {
     for (let c = 0; c < grid[0].length; c++) {
-      if (c + 1 < grid[0].length && isLegalSwap(grid, [r, c], [r, c + 1])) return [[r, c], [r, c + 1]];
-      if (r + 1 < grid.length && isLegalSwap(grid, [r, c], [r + 1, c])) return [[r, c], [r + 1, c]];
+      if (locked(r, c)) continue;
+      if (c + 1 < grid[0].length && !locked(r, c + 1) && isLegalSwap(grid, [r, c], [r, c + 1])) return [[r, c], [r, c + 1]];
+      if (r + 1 < grid.length && !locked(r + 1, c) && isLegalSwap(grid, [r, c], [r + 1, c])) return [[r, c], [r + 1, c]];
     }
   }
   return null;
