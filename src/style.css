@@ -165,7 +165,7 @@ h2, h3, p { margin: 0; }
 .meta-row { display: flex; gap: var(--s2); font-size: var(--fs-sm); color: var(--muted); }
 .meta-row b { color: var(--ink); }
 
-.booster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+.booster-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
 .pre-booster {
   position: relative; display: grid; grid-template-columns: 40px 1fr; gap: var(--s1) var(--s3); align-items: center; padding: var(--s3);
   border-radius: var(--radius); background: var(--panel-2); border: 2px solid transparent; text-align: left;
@@ -286,7 +286,7 @@ h2, h3, p { margin: 0; }
 }
 @keyframes floatup { to { transform: translate(-50%, -140%); opacity: 0; } }
 
-.tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s3); }
+.tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
 .tool {
   position: relative; display: grid; grid-template-columns: 36px 1fr; gap: var(--s2); align-items: center; height: 56px; padding: 0 var(--s3);
   border-radius: var(--radius); background: var(--panel); text-align: left; border: 2px solid transparent;
@@ -457,3 +457,14 @@ h2, h3, p { margin: 0; }
 @keyframes yarn-tug { 25% { transform: translateX(-6%) rotate(-4deg); } 75% { transform: translateX(6%) rotate(4deg); } }
 @keyframes yarn-snip { to { transform: scale(1.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .yarn.tug, .yarn.snip { animation: none; } }
+
+/* ───── Small phones (iPhone SE, compact Androids) ───── */
+html { touch-action: manipulation; }
+@media (max-width: 380px) {
+  .tools { gap: var(--s2); }
+  .tool { grid-template-columns: 1fr; justify-items: center; align-content: center; gap: 2px; padding: 0 var(--s1); text-align: center; }
+  .tool .tool-icon { width: 28px; height: 28px; }
+  .tool .label { white-space: nowrap; }
+  .pre-booster { grid-template-columns: 32px minmax(0, 1fr); gap: var(--s1) var(--s2); padding: var(--s2); }
+  .pre-booster .booster-icon { width: 32px; height: 32px; }
+}

@@ -60,6 +60,13 @@ const h = (html: string): HTMLElement => {
   t.innerHTML = html.trim();
   return t.content.firstElementChild as HTMLElement;
 };
+/** Clean-up for whatever screen is showing (timers, observers), run before the next one replaces it. */
+let leaveScreen: (() => void) | null = null;
+function mount(screen: HTMLElement, onLeave?: () => void): void {
+  leaveScreen?.();
+  leaveScreen = onLeave ?? null;
+  app.replaceChildren(screen);
+}
 const icon = (id: string, cls = 'icon') => svg(BOOSTER_ICONS[id], cls);
 const micahImg = (cls: string, alt = '') => `<img src="${micahUrl}" class="${cls}" alt="${alt}" draggable="false">`;
 const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : ''}">${UI.star}</i>`).join('');
@@ -157,7 +164,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
             const p = nodePos(i);
             const stars = save.stars[lv.id] ?? 0;
             const state = lv.id < unlocked || stars > 0 ? 'done' : lv.id === unlocked ? 'current' : 'locked';
-            return `<button class="node ${state}" data-level="${lv.id}" style="left:${(p.x / width) * 100}%;top:${p.y}px" ${state === 'locked' ? 'disabled' : ''}>
+            return `<button class="node ${state}" data-level="${lv.id}" aria-label="Level ${lv.id}, ${state === 'locked' ? 'locked' : `${stars} of 3 stars`}" style="left:${(p.x / width) * 100}%;top:${p.y}px" ${state === 'locked' ? 'disabled' : ''}>
                 <span class="num">${state === 'locked' ? UI.lock : lv.id}</span>
                 ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
@@ -189,14 +196,16 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     save.sound = !save.sound;
     setSound(save.sound);
     persist(save);
-    showMap();
+    const b = screen.querySelector<HTMLButtonElement>('[data-act="sound"]')!;
+    b.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
+    b.setAttribute('aria-label', save.sound ? 'Mute sound' : 'Turn sound on');
   });
   screen.querySelector('[data-act="start"]')?.addEventListener('click', () => showLevelIntro(LEVELS[0]));
   screen.querySelectorAll<HTMLButtonElement>('.node').forEach((n) =>
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
   );
 
-  app.replaceChildren(screen);
+  mount(screen);
 
   // Micah stands just beside the node she is on, on the side away from the path's next bend.
   const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
@@ -288,7 +297,7 @@ function showYard(): void {
       showYard();
     }),
   );
-  app.replaceChildren(screen);
+  mount(screen);
 }
 
 // ───────────────────────────── Daily treat ─────────────────────────────
@@ -338,6 +347,18 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
     });
   }
   document.body.append(m);
+  m.querySelector<HTMLElement>('.modal')!.setAttribute('role', 'dialog');
+  m.querySelector<HTMLElement>('.modal')!.setAttribute('aria-modal', 'true');
+  // Keyboard: focus starts inside the pop-up, Escape closes it the same way the close button does.
+  requestAnimationFrame(() => m.querySelector<HTMLElement>('.btn, .close, button')?.focus({ preventScroll: true }));
+  const onKey = (e: KeyboardEvent) => {
+    if (!m.isConnected) return document.removeEventListener('keydown', onKey);
+    if (e.key !== 'Escape' || document.querySelector('.modal-wrap:last-of-type') !== m) return;
+    const close = m.querySelector<HTMLButtonElement>('.close');
+    if (close) close.click();
+    else if (onClose) (m.remove(), onClose());
+  };
+  document.addEventListener('keydown', onKey);
   return m;
 }
 
@@ -358,7 +379,7 @@ function showLevelIntro(level: Level): void {
     </section>
     ${TIPS[level.id] ? `<p class="tip"><b>Tip</b>${TIPS[level.id]}</p>` : ''}
     ${streakZoomies()
-      ? `<p class="streak">${icon('zoomies', 'booster-icon')}<span><b>${save.winStreak} win streak.</b> You start with ${streakZoomies()} free Zoomies. Lose a level and the streak resets.</span></p>`
+      ? `<p class="streak">${icon('zoomies', 'booster-icon')}<span><b>${save.winStreak} win streak.</b> You start with ${streakZoomies()} free Zoomies. Lose or leave a level and the streak resets.</span></p>`
       : ''}
     <section>
       <h3>Bring a booster</h3>
@@ -460,6 +481,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let bonusPts = 0;
   let goalsDone = 0;
   let hintTimer = 0;
+  // A level counts as lost until it is won, so quitting or closing the tab ends the streak too.
+  const streakAtStart = save.winStreak;
+  const freeZoomies = streakZoomies();
+  save.winStreak = 0;
+  persist(save);
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
@@ -474,7 +500,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       grid[r][c]!.special = i % 2 ? 'zoomCol' : 'zoomRow';
     }
   }
-  for (let i = 0; i < streakZoomies(); i++) {
+  for (let i = 0; i < freeZoomies; i++) {
     const [r, c] = randomCell();
     grid[r][c]!.special = i % 2 ? 'zoomCol' : 'zoomRow';
   }
@@ -506,8 +532,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       <div class="board-wrap"><div class="board"></div></div>
       <div class="tools"></div>
     </div>`);
-  app.replaceChildren(screen);
-
+  // Leaving the level (back arrow, map, replay) stops its timers and resize watching.
+  mount(screen, () => {
+    over = true;
+    clearHint();
+    ro.disconnect();
+  });
   const boardEl = screen.querySelector<HTMLDivElement>('.board')!;
   const bubble = screen.querySelector<HTMLDivElement>('.bubble')!;
   const mascot = screen.querySelector<HTMLDivElement>('.mascot-face')!;
@@ -958,7 +988,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const earned = stars * 10 + (firstClear ? 20 : 0);
       const newStars = Math.max(0, stars - (save.stars[level.id] ?? 0));
       save.stars[level.id] = Math.max(save.stars[level.id] ?? 0, stars);
-      save.winStreak++;
+      save.winStreak = streakAtStart + 1;
       save.best[level.id] = Math.max(save.best[level.id] ?? 0, score);
       save.biscuits += earned;
       persist(save);
@@ -986,10 +1016,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         </div>`);
       m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
       // Going back to the map shows Micah walking on to the newly unlocked level.
-      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap(undefined, level.id)));
+      // Only a first clear unlocks a new level, so replays don't send her walking.
+      const walkFrom = firstClear ? level.id : undefined;
+      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap(level.id, walkFrom)));
       m.querySelector('.next')?.addEventListener('click', () => {
         m.remove();
-        showMap(undefined, level.id, () => showLevelIntro(LEVELS[level.id]));
+        showMap(level.id + 1, walkFrom, () => showLevelIntro(LEVELS[level.id]));
       });
     } else {
       const m = modal(`
@@ -1077,12 +1109,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     else selectCell(p);
   });
 
-  screen.querySelector('.back')!.addEventListener('click', () => {
-    clearHint();
-    ro.disconnect();
-    over = true;
-    showMap(level.id);
-  });
+  boardEl.addEventListener('pointercancel', () => (dragStart = null));
+
+  screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id));
 
   renderAll();
   renderHud();
