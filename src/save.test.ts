@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SAVE_VERSION, claimDaily, dailyClaimable, freshSave, load, migrate, persist, starsToSpend, unlockedUpTo } from './save';
+import { SAVE_VERSION, claimDaily, dailyClaimable, exportCode, freshSave, importCode, load, migrate, persist, starsToSpend, unlockedUpTo } from './save';
 
 class MemoryStorage {
   store = new Map<string, string>();
@@ -99,5 +99,27 @@ describe('yard stars', () => {
     s.stars = { 1: 3, 2: 2 };
     s.spentStars = 4;
     expect(starsToSpend(s)).toBe(1);
+  });
+});
+
+describe('transfer codes', () => {
+  it('round-trips a save', () => {
+    const s = freshSave();
+    s.stars = { 1: 3, 2: 2 };
+    s.biscuits = 321;
+    s.decor = ['bed'];
+    const back = importCode(exportCode(s))!;
+    expect(back.stars).toEqual({ 1: 3, 2: 2 });
+    expect(back.biscuits).toBe(321);
+    expect(back.decor).toEqual(['bed']);
+  });
+  it('tolerates spaces and line breaks from pasting', () => {
+    const code = exportCode(freshSave());
+    expect(importCode(` ${code.slice(0, 10)}\n${code.slice(10)} `)).not.toBeNull();
+  });
+  it('rejects anything else', () => {
+    expect(importCode('hello')).toBeNull();
+    expect(importCode('MICAH1-!!!')).toBeNull();
+    expect(importCode('MICAH1-' + btoa('[1,2]'))).not.toBeNull(); // migrate repairs odd shapes
   });
 });

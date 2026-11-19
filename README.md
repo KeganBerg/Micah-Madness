@@ -32,7 +32,7 @@ npm run dev      # open the printed URL (works on phones on the same Wi-Fi with 
 - **Victory lap:** spare moves turn into Zoomies that go off when you clear a level.
 - **Tips:** levels 1 to 6 each introduce one mechanic with a short tip.
 
-Progress (stars, scores, biscuits, boosters, yard, streaks, sound) saves automatically in the browser's localStorage. Each browser/device keeps its own save. Saves are versioned and migrate forward on updates.
+Progress (stars, scores, biscuits, boosters, yard, streaks, sound) saves automatically in the browser's localStorage. Each browser/device keeps its own save; Settings has a copy-and-paste transfer code to move it to another device, plus a reset. Saves are versioned and migrate forward on updates.
 
 ## Why these mechanics
 
