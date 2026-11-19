@@ -79,11 +79,10 @@ const TIPS: Record<number, string> = {
   6: 'Swap two power-ups into each other for a bigger blast.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
-let dailyShownThisVisit = false;
 
 // ───────────────────────────── Map screen ─────────────────────────────
 
-function showMap(scrollTo?: number): void {
+function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void {
   const unlocked = Math.min(unlockedUpTo(save), LEVELS.length);
   const spacing = 112;
   const width = 360;
@@ -151,16 +150,13 @@ function showMap(scrollTo?: number): void {
                 ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
           }).join('')}
-          ${(() => {
-            const p = nodePos(unlocked - 1);
-            return `<div class="map-micah" style="left:${(p.x / width) * 100}%;top:${p.y - 104}px">${micahImg('map-micah-face')}</div>`;
-          })()}
+          <button class="map-micah" aria-label="Micah">${micahImg('micah-idle')}</button>
         </div>
       </div>
       ${canSave ? '' : '<p class="save-warning">This browser isn\u2019t saving progress, so it resets when you close the page. Private browsing usually causes this.</p>'}
       ${Object.keys(save.stars).length === 0
         ? `<div class="welcome">
-            ${micahImg('', 'Micah in his lobster costume')}
+            ${micahImg('micah-idle', 'Micah in his lobster costume')}
             <div><h2>Help Micah fetch his toys</h2>
             <p>Swap two neighbouring pieces to line up three of a kind. Each level has a goal and a move limit.</p></div>
             <button class="btn" data-act="start">Start level 1</button>
@@ -189,14 +185,42 @@ function showMap(scrollTo?: number): void {
   );
 
   app.replaceChildren(screen);
-  const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
-  const target = nodePos((scrollTo ?? unlocked) - 1).y;
-  scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
-  // Returning players get their daily treat offered once per visit.
-  if (!dailyShownThisVisit && dailyClaimable(save) && Object.keys(save.stars).length > 0) {
-    dailyShownThisVisit = true;
-    showDaily();
+
+  // Micah stands just beside the node he is on, on the side away from the path's next bend.
+  const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
+  const placeMicah = (lv: number) => {
+    const p = nodePos(lv - 1);
+    const next = nodePos(Math.min(lv, LEVELS.length - 1));
+    const side = next.x >= p.x ? -1 : 1; // stand opposite the direction the path goes
+    micahEl.style.left = `${((p.x + side * 52) / width) * 100}%`;
+    micahEl.style.top = `${p.y - 56}px`;
+    micahEl.classList.toggle('facing-left', side > 0);
+  };
+  micahEl.addEventListener('click', () => {
+    sfx.bark();
+    micahEl.classList.remove('tilt');
+    void micahEl.offsetWidth;
+    micahEl.classList.add('tilt');
+  });
+  if (walkFrom && walkFrom !== unlocked) {
+    placeMicah(walkFrom);
+    void micahEl.offsetWidth;
+    requestAnimationFrame(() => {
+      micahEl.classList.add('walking');
+      placeMicah(unlocked);
+      setTimeout(() => {
+        micahEl.classList.remove('walking');
+        after?.();
+      }, 1100);
+    });
+  } else {
+    placeMicah(unlocked);
+    if (after) setTimeout(after, 0);
   }
+
+  const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
+  const target = nodePos((walkFrom ?? scrollTo ?? unlocked) - 1).y;
+  scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
 }
 
 // ───────────────────────────── Micah's Yard ─────────────────────────────
@@ -310,7 +334,7 @@ function showLevelIntro(level: Level): void {
   const m = modal(
     `
     <header class="modal-head">
-      ${micahImg('modal-avatar')}
+      ${micahImg('modal-avatar micah-idle')}
       <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </header>
@@ -451,7 +475,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       </header>
       <div class="info-row">
         <div class="mascot">
-          <div class="mascot-face">${micahImg('mascot-img')}</div>
+          <div class="mascot-face">${micahImg('mascot-img micah-idle')}</div>
           <div class="bubble"></div>
         </div>
         <div class="goals"></div>
@@ -540,9 +564,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     bubble.classList.remove('show');
     void bubble.offsetWidth;
     bubble.classList.add('show');
-    mascot.classList.remove('bounce', 'shake');
+    mascot.classList.remove('bounce', 'shake', 'cheer', 'sleepy');
     void mascot.offsetWidth;
-    mascot.classList.add(mood === 'sad' ? 'shake' : 'bounce');
+    mascot.classList.add(mood === 'sad' ? 'shake' : mood === 'big' ? 'cheer' : 'bounce');
   }
 
   function renderHud() {
@@ -571,6 +595,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   function clearHint() {
     window.clearTimeout(hintTimer);
+    mascot.classList.remove('sleepy');
     boardEl.querySelectorAll('.hint').forEach((e) => e.classList.remove('hint'));
   }
   function armHint() {
@@ -580,6 +605,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const mv = findMove(grid);
       if (!mv) return;
       for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('hint');
+      // Left alone a while longer, Micah dozes off.
+      hintTimer = window.setTimeout(() => {
+        if (busy || over) return;
+        mascot.classList.remove('bounce', 'shake', 'cheer');
+        mascot.classList.add('sleepy');
+        bubble.textContent = 'Zzz… psst, try the wiggling pieces.';
+      }, 8000);
     }, 6000);
   }
 
@@ -860,7 +892,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       persist(save);
       const m = modal(`
         <header class="modal-head">
-          ${micahImg('modal-avatar')}
+          ${micahImg('modal-avatar cheer')}
           <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id} cleared</h2></div>
           <span></span>
         </header>
@@ -873,14 +905,18 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           <dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${earned}</dd>
         </dl>
         <div class="actions">
-          <button class="btn next">${level.id < LEVELS.length ? `Play level ${level.id + 1}` : 'Back to map'}</button>
-          <button class="btn secondary replay">Play level ${level.id} again</button>
+          ${level.id < LEVELS.length ? `<button class="btn next">Play level ${level.id + 1}</button>` : ''}
+          <div class="pair">
+            <button class="btn secondary to-map">Back to map</button>
+            <button class="btn secondary replay">Play again</button>
+          </div>
         </div>`);
       m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
-      m.querySelector('.next')!.addEventListener('click', () => {
+      // Going back to the map shows Micah walking on to the newly unlocked level.
+      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap(undefined, level.id)));
+      m.querySelector('.next')?.addEventListener('click', () => {
         m.remove();
-        showMap(level.id + 1);
-        if (level.id < LEVELS.length) showLevelIntro(LEVELS[level.id]);
+        showMap(undefined, level.id, () => showLevelIntro(LEVELS[level.id]));
       });
     } else {
       const m = modal(`
@@ -983,3 +1019,5 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 }
 
 showMap();
+// Returning players get their daily treat offered once, when they open the game.
+if (dailyClaimable(save) && Object.keys(save.stars).length > 0) showDaily();
