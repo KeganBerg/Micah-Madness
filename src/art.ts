@@ -97,7 +97,16 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <circle cx="44" cy="46" r="3" fill="#94631c"/><circle cx="56" cy="52" r="3" fill="#94631c"/><circle cx="48" cy="60" r="3" fill="#94631c"/>`,
   mud: `<path d="M14 60 C10 40 30 30 44 36 C54 22 82 28 82 46 C94 52 90 74 72 74 C60 84 32 82 26 74 C14 74 10 66 14 60Z" fill="#7a5233" stroke="#4f331d" stroke-width="3"/>
           <ellipse cx="40" cy="50" rx="8" ry="4" fill="#9a7050"/><ellipse cx="62" cy="60" rx="6" ry="3" fill="#9a7050"/>`,
+  yarn: `<circle cx="50" cy="52" r="32" fill="#e86aa6" stroke="#a83a72" stroke-width="3"/>
+          <path d="M24 40 C40 30 64 30 80 44 M20 56 C40 44 66 46 82 62 M28 74 C44 62 64 64 74 78 M44 22 C34 40 34 64 42 82" fill="none" stroke="#a83a72" stroke-width="3" stroke-linecap="round"/>
+          <path d="M78 74 C88 82 90 90 84 94" fill="none" stroke="#a83a72" stroke-width="3" stroke-linecap="round"/>`,
 };
+
+/** Loose strands drawn over a tangled cell; see-through so the piece underneath still reads. */
+export const YARN_OVERLAY = `<svg viewBox="0 0 100 100" class="yarn-strands" aria-hidden="true" preserveAspectRatio="none">
+  <path d="M-4 22 C30 6 62 40 104 18 M-4 52 C26 34 70 70 104 46 M-4 82 C34 62 66 98 104 76" fill="none" stroke="#e86aa6" stroke-width="7" stroke-linecap="round"/>
+  <path d="M18 -4 C6 34 40 62 22 104 M74 -4 C92 36 56 64 80 104" fill="none" stroke="#ff9cc8" stroke-width="6" stroke-linecap="round"/>
+</svg>`;
 
 /** Interface icons from the Lucide set (ISC licence), all on a 24px grid at the same stroke weight. */
 export const UI = {

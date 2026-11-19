@@ -20,7 +20,8 @@ npm run dev      # open the printed URL (works on phones on the same Wi-Fi with 
   - L or T shape → **Big Bark**: clears a 3×3 area.
   - 5 in a row → **Micah**: swap her with any piece to fetch every piece of that kind. Micah + Micah clears the board.
 - **Goals:** collect pieces, reach a score, or clean the **mud** off the yard, within a move limit. Stars come from your score.
-- **Level path:** 20 levels across five zones (The Backyard, Dog Park, Lobster Beach, Muddy Trails, Costume Party).
+- **Level path:** 40 levels across eight zones (The Backyard, Dog Park, Lobster Beach, Muddy Trails, Costume Party, Snow Day, The Big Dog Show, Micah’s Birthday).
+- **Yarn** (from level 21): a tangled piece can’t be swapped. Match through it or blast it to untangle it. `SIM=1 npx vitest run scripts/sim.test.ts` estimates each level’s win rate for tuning.
 - **Items:** earn **biscuits** by winning and spend them in the **Treat Shop**:
   - In-level: **Treat** (Micah eats one piece), **Squirrel!** (shuffle), **Long Leash** (+5 moves).
   - Pre-level: **Zoomies Start** and **Micah Start**.

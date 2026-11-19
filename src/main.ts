@@ -21,8 +21,8 @@ import {
   type Special,
   type Tile,
 } from './board';
-import { BOOSTER_ICONS, KINDS, UI, micahUrl, svg } from './art';
-import { LEVELS, ZONES, mudCount, type Goal, type Level } from './levels';
+import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, micahUrl, svg } from './art';
+import { LEVELS, ZONES, mudCount, yarnCount, type Goal, type Level } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -74,11 +74,13 @@ const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : 
 function goalIcon(goal: Goal): string {
   if (goal.type === 'collect') return svg(KINDS[goal.kind].svg, 'goal-icon');
   if (goal.type === 'mud') return svg(BOOSTER_ICONS.mud, 'goal-icon');
+  if (goal.type === 'yarn') return svg(BOOSTER_ICONS.yarn, 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
 function goalText(goal: Goal): string {
   if (goal.type === 'collect') return `Collect ${goal.count} ${KINDS[goal.kind].plural.toLowerCase()}`;
   if (goal.type === 'mud') return 'Wash away every mud patch';
+  if (goal.type === 'yarn') return 'Untangle every ball of yarn';
   return `Score ${goal.target.toLocaleString()} points`;
 }
 
@@ -90,6 +92,10 @@ const TIPS: Record<number, string> = {
   4: 'Mud sits under pieces. Make a match on top of a muddy square to wash it.',
   5: 'Five in a row makes a Micah piece. Swap her with any piece to clear every one of that kind.',
   6: 'Swap two power-ups into each other for a bigger blast.',
+  21: 'Yarn ties a piece down so you can\u2019t swap it. Make a match through it, or blast it, to untangle it.',
+  26: 'Big score goals: chain power-ups together and let the cascades do the work.',
+  31: 'Fewer moves from here on. Save your power-ups for the hardest corner.',
+  36: 'Micah\u2019s birthday! Every trick you\u2019ve learned comes together.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
 
@@ -114,7 +120,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     return `<rect x="0" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${z.ground}"/>`;
   }).join('');
 
-  const decorKinds = [[0, 1, 2], [1, 1, 3], [4, 4, 5], [2, 3, 0], [5, 4, 1]];
+  const decorKinds = [[0, 1, 2], [1, 1, 3], [4, 4, 5], [2, 3, 0], [5, 4, 1], [3, 2, 0], [1, 0, 1], [5, 1, 2]];
   const decor = LEVELS.map((_, i) => {
     const { y } = nodePos(i);
     const z = Math.floor(i / 5);
@@ -462,6 +468,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const mud: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) => (level.mud?.[r]?.[c] ?? '.') === 'm'),
   );
+  const yarn: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
+    Array.from({ length: COLS }, (_, c) => (level.yarn?.[r]?.[c] ?? '.') === 'y'),
+  );
+  const locked = (r: number, c: number) => yarn[r][c];
   let moves = level.moves;
   let score = 0;
   let busy = false;
@@ -477,7 +487,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   save.winStreak = 0;
   persist(save);
   const totalMud = mudCount(level);
-  const remaining = level.goals.map((g) => (g.type === 'collect' ? g.count : g.type === 'mud' ? totalMud : g.target));
+  const totalYarn = yarnCount(level);
+  const remaining = level.goals.map((g) =>
+    g.type === 'collect' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.target,
+  );
 
   // Pre-level boosters: drop specials onto random cells.
   const randomCell = (): Pos => [2 + Math.floor(Math.random() * 4), Math.floor(Math.random() * COLS)];
@@ -561,6 +574,19 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       cellEls[r].push(cell);
     }
   }
+  // Yarn sits above the pieces, so it gets its own layer.
+  const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) =>
+    row.map((on, c) => {
+      if (!on) return null;
+      const el = document.createElement('div');
+      el.className = 'yarn';
+      el.style.left = `${(c / COLS) * 100}%`;
+      el.style.top = `${(r / ROWS) * 100}%`;
+      el.innerHTML = YARN_OVERLAY;
+      boardEl.append(el);
+      return el;
+    }),
+  );
 
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
@@ -642,7 +668,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     clearHint();
     hintTimer = window.setTimeout(() => {
       if (busy || over) return;
-      const mv = findMove(grid);
+      const mv = findMove(grid, locked);
       if (!mv) return;
       for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('hint');
       // Left alone a while longer, Micah dozes off.
@@ -726,6 +752,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const points = res.cleared.size * 20 * chain + res.created.length * 100;
       score += points;
       let washed = false;
+      let untangled = false;
       level.goals.forEach((g, i) => {
         if (g.type === 'collect') remaining[i] -= res.collected[g.kind];
       });
@@ -738,9 +765,18 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           washed = true;
           level.goals.forEach((g, i) => g.type === 'mud' && remaining[i]--);
         }
+        if (yarn[r][c]) {
+          yarn[r][c] = false;
+          const y = yarnEls[r][c];
+          y?.classList.add('snip');
+          setTimeout(() => y?.remove(), 360);
+          untangled = true;
+          level.goals.forEach((g, i) => g.type === 'yarn' && remaining[i]--);
+        }
       }
       sfx.pop(chain);
       if (washed) sfx.splash();
+      if (untangled) sfx.snip();
       if (res.created.length) setTimeout(() => sfx.powerUp(), 120);
       const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
       if (doneNow > goalsDone) {
@@ -795,7 +831,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       preferredNow = [];
       forcedNow = [];
     }
-    if (!hasMove(grid)) {
+    if (!hasMove(grid, locked)) {
       say('No moves left, so Micah shuffled the board.', 'big');
       await wait(400);
       shuffle(grid);
@@ -806,6 +842,16 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   async function trySwap(a: Pos, b: Pos) {
     if (busy || over || !isAdjacent(a, b)) return;
+    if (locked(...a) || locked(...b)) {
+      selectCell(null);
+      sfx.bad();
+      const y = yarnEls[a[0]][a[1]] ?? yarnEls[b[0]][b[1]];
+      y?.classList.remove('tug');
+      void y?.offsetWidth;
+      y?.classList.add('tug');
+      say('That piece is tangled in yarn. Match through it to free it.', 'sad');
+      return;
+    }
     busy = true;
     clearHint();
     selectCell(null);

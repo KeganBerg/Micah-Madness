@@ -5,6 +5,7 @@ import {
   comboClears,
   computeClear,
   createGrid,
+  findMove,
   findRuns,
   hasMove,
   isLegalSwap,
@@ -142,5 +143,17 @@ describe('shuffle', () => {
     shuffle(g, rng(9));
     expect(findRuns(g)).toHaveLength(0);
     expect(hasMove(g)).toBe(true);
+  });
+});
+
+describe('locked cells (yarn)', () => {
+  // The only move is swapping (0,2) with (1,2) to make 000 along the top row.
+  const g = () => grid(['0012', '3404', '5252', '4343']);
+  it('finds the move when nothing is locked', () => {
+    expect(findMove(g())).toEqual([[0, 2], [1, 2]]);
+  });
+  it('ignores swaps that touch a locked cell', () => {
+    expect(hasMove(g(), (r, c) => r === 1 && c === 2)).toBe(false);
+    expect(hasMove(g(), (r, c) => r === 3 && c === 3)).toBe(true);
   });
 });
