@@ -10,9 +10,17 @@ export interface SaveData {
   biscuits: number;
   inventory: Record<BoosterId, number>;
   sound: boolean;
+  /** Stars spent on yard decorations. */
+  spentStars: number;
+  /** Decorations bought for Micah's yard. */
+  decor: string[];
+  /** Daily treat: last claim date (YYYY-MM-DD, local) and the streak day it was. */
+  daily: { last: string; day: number };
+  /** Levels won in a row (resets when a level is lost). */
+  winStreak: number;
 }
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 
@@ -32,6 +40,10 @@ export function freshSave(): SaveData {
     biscuits: 100,
     inventory: { treat: 2, squirrel: 2, leash: 1, zoomies: 1, micah: 1 },
     sound: true,
+    spentStars: 0,
+    decor: [],
+    daily: { last: '', day: 0 },
+    winStreak: 0,
   };
 }
 
@@ -65,6 +77,13 @@ export function migrate(raw: unknown): SaveData {
     biscuits: num(d.biscuits) ?? base.biscuits,
     inventory,
     sound: typeof d.sound === 'boolean' ? d.sound : base.sound,
+    spentStars: num(d.spentStars) ?? 0,
+    decor: Array.isArray(d.decor) ? d.decor.filter((x): x is string => typeof x === 'string') : [],
+    daily: (() => {
+      const dd = (d.daily && typeof d.daily === 'object' ? d.daily : {}) as Record<string, unknown>;
+      return { last: typeof dd.last === 'string' ? dd.last : '', day: num(dd.day, 0, 7) ?? 0 };
+    })(),
+    winStreak: num(d.winStreak, 0, 99) ?? 0,
   };
 }
 
@@ -116,4 +135,49 @@ export function unlockedUpTo(data: SaveData): number {
   let n = 1;
   while ((data.stars[n] ?? 0) > 0) n++;
   return n;
+}
+
+export function totalStars(data: SaveData): number {
+  return Object.values(data.stars).reduce((a, b) => a + b, 0);
+}
+
+export function starsToSpend(data: SaveData): number {
+  return Math.max(0, totalStars(data) - data.spentStars);
+}
+
+// ── Daily treat ──
+export type DailyReward = { biscuits?: number; booster?: BoosterId; label: string };
+export const DAILY_REWARDS: DailyReward[] = [
+  { biscuits: 20, label: '20 biscuits' },
+  { booster: 'treat', label: '1 Treat' },
+  { biscuits: 30, label: '30 biscuits' },
+  { booster: 'squirrel', label: '1 Squirrel!' },
+  { biscuits: 40, label: '40 biscuits' },
+  { booster: 'leash', label: '1 Long Leash' },
+  { booster: 'micah', label: '1 Micah Start' },
+];
+
+export function localDay(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Which streak day (1-7) can be claimed today, or 0 if today's treat is already claimed. */
+export function dailyClaimable(data: SaveData, now = new Date()): number {
+  const today = localDay(now);
+  if (data.daily.last === today) return 0;
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  const continues = data.daily.last === localDay(y);
+  return continues ? (data.daily.day % 7) + 1 : 1;
+}
+
+export function claimDaily(data: SaveData, now = new Date()): DailyReward | null {
+  const day = dailyClaimable(data, now);
+  if (!day) return null;
+  const reward = DAILY_REWARDS[day - 1];
+  if (reward.biscuits) data.biscuits += reward.biscuits;
+  if (reward.booster) data.inventory[reward.booster]++;
+  data.daily = { last: localDay(now), day };
+  return reward;
 }
