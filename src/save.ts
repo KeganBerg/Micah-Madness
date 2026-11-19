@@ -18,9 +18,13 @@ export interface SaveData {
   daily: { last: string; day: number };
   /** Levels won in a row (resets when a level is lost). */
   winStreak: number;
+  /** Lifetime counters for collar tags (mud washed, Zoomies made, and so on). */
+  tally: Record<string, number>;
+  /** Collar tags already earned (and paid out). */
+  badges: string[];
 }
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 
@@ -44,6 +48,8 @@ export function freshSave(): SaveData {
     decor: [],
     daily: { last: '', day: 0 },
     winStreak: 0,
+    tally: {},
+    badges: [],
   };
 }
 
@@ -84,6 +90,17 @@ export function migrate(raw: unknown): SaveData {
       return { last: typeof dd.last === 'string' ? dd.last : '', day: num(dd.day, 0, 7) ?? 0 };
     })(),
     winStreak: num(d.winStreak, 0, 99) ?? 0,
+    tally: (() => {
+      const out: Record<string, number> = {};
+      if (d.tally && typeof d.tally === 'object') {
+        for (const [k, v] of Object.entries(d.tally)) {
+          const n = num(v);
+          if (n !== undefined) out[k] = n;
+        }
+      }
+      return out;
+    })(),
+    badges: Array.isArray(d.badges) ? [...new Set(d.badges.filter((x): x is string => typeof x === 'string'))] : [],
   };
 }
 

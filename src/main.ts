@@ -42,6 +42,7 @@ import {
 } from './save';
 import { DECOR, yardScene } from './yard';
 import { runLaunch } from './launch';
+import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { setSound, sfx } from './sound';
 
 const ROWS = 8;
@@ -186,14 +187,16 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
           </div>`
         : ''}
       <nav class="dock" aria-label="Main">
-        <button class="dock-btn" data-act="yard">${UI.home}<span>Micah's Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
-        <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily treat</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
-        <button class="dock-btn" data-act="shop2">${UI.bag}<span>Treat Shop</span></button>
+        <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
+        <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
+        <button class="dock-btn" data-act="collar">${UI.award}<span>Collar</span><em class="tally">${save.badges.length}/${BADGES.length}</em></button>
+        <button class="dock-btn" data-act="shop2">${UI.bag}<span>Shop</span></button>
       </nav>
     </div>`);
 
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
+  screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
@@ -289,9 +292,11 @@ function showYard(): void {
       if (starsToSpend(save) < d.cost || save.decor.includes(d.id)) return;
       save.spentStars += d.cost;
       save.decor.push(d.id);
+      const tags = awardBadges(save);
       persist(save);
       sfx.build();
       showYard();
+      celebrate(tags);
     }),
   );
   mount(screen);
@@ -324,10 +329,12 @@ function showDaily(): void {
   m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
   m.querySelector('.claim')?.addEventListener('click', () => {
     claimDaily(save);
+    const tags = awardBadges(save);
     persist(save);
     sfx.coin();
     m.remove();
     showDaily();
+    celebrate(tags);
   });
 }
 
@@ -454,6 +461,50 @@ function showShop(onClose: () => void): void {
   wire();
 }
 
+// ───────────────────────────── Collar tags ─────────────────────────────
+
+const tagSvg = (b: Badge, on: boolean) => `<svg viewBox="0 0 48 48" class="tag-icon" aria-hidden="true">
+  <path d="M24 3 L41 13 V35 L24 45 L7 35 V13 Z" fill="${on ? b.color : '#d6e0e6'}" stroke="${on ? '#0f2a3d' : '#b6c3cc'}" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="24" cy="11" r="3" fill="#fff" stroke="${on ? '#0f2a3d' : '#b6c3cc'}" stroke-width="2"/>
+  ${on ? '<path d="M17 26 l5 5 9-10" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
+</svg>`;
+
+function showCollar(): void {
+  const owned = save.badges.length;
+  const m = modal(`
+    <header class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">${owned} of ${BADGES.length} earned</p><h2>Micah\u2019s Collar</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <p class="body">Every tag on Micah\u2019s collar pays out biscuits the moment you earn it.</p>
+    <ul class="tag-list">
+      ${BADGES.map((b) => {
+        const on = save.badges.includes(b.id) || isEarned(b, save);
+        const [cur, target] = b.progress(save);
+        const pct = Math.min(100, Math.round((cur / target) * 100));
+        return `<li class="${on ? 'on' : ''}">
+          ${tagSvg(b, on)}
+          <div class="tag-info"><b>${b.name}</b><span>${b.desc}</span>
+            ${on ? '' : `<span class="tag-bar" role="progressbar" aria-valuenow="${Math.min(cur, target)}" aria-valuemax="${target}"><i style="width:${pct}%"></i></span><small>${Math.min(cur, target)} / ${target}</small>`}
+          </div>
+          <span class="tag-reward">${on ? UI.check : `${icon('biscuit', 'biscuit-icon')}${b.reward}`}</span>
+        </li>`;
+      }).join('')}
+    </ul>`, () => showMap());
+  m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
+}
+
+/** Announce newly earned tags one after another. */
+function celebrate(tags: Badge[]): void {
+  tags.forEach((b, i) =>
+    window.setTimeout(() => {
+      sfx.goal();
+      toast(`${tagSvg(b, true)}<span><b>New collar tag: ${b.name}</b> +${b.reward} biscuits</span>`, 'tag-toast');
+    }, i * 3400),
+  );
+}
+
 // ───────────────────────────── Settings ─────────────────────────────
 
 const HOW_TO: [string, string][] = [
@@ -567,9 +618,9 @@ function showSettings(): void {
   });
 }
 
-function toast(text: string): void {
+function toast(html: string, cls = ''): void {
   document.querySelectorAll('.toast').forEach((old) => old.remove());
-  const t = h(`<div class="toast" role="status">${text}</div>`);
+  const t = h(`<div class="toast ${cls}" role="status">${html}</div>`);
   document.body.append(t);
   window.setTimeout(() => t.remove(), 3200);
 }
@@ -880,6 +931,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           cellEls[r][c].classList.remove('mud');
           cellEls[r][c].classList.add('cleaned');
           washed = true;
+          bump(save, 'mud');
           level.goals.forEach((g, i) => g.type === 'mud' && remaining[i]--);
         }
         if (yarn[r][c]) {
@@ -888,6 +940,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           y?.classList.add('snip');
           setTimeout(() => y?.remove(), 360);
           untangled = true;
+          bump(save, 'yarn');
           level.goals.forEach((g, i) => g.type === 'yarn' && remaining[i]--);
         }
       }
@@ -922,6 +975,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         }
       }
       applyClear(grid, res);
+      for (const { tile } of res.created) {
+        bump(save, tile.special === 'bark' ? 'bark' : tile.special === 'micah' ? 'micah' : 'zoomies');
+      }
       for (const { pos, tile } of res.created) {
         const el = makeTileEl(tile);
         placeEl(el, pos[0], pos[1]);
@@ -1044,6 +1100,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   async function eatTile(p: Pos) {
     treatMode = false;
     save.inventory.treat--;
+    bump(save, 'treats');
     persist(save);
     busy = true;
     sfx.crunch();
@@ -1106,9 +1163,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const newStars = Math.max(0, stars - (save.stars[level.id] ?? 0));
       save.stars[level.id] = Math.max(save.stars[level.id] ?? 0, stars);
       save.winStreak = streakAtStart + 1;
+      bump(save, 'wins');
+      save.tally.bestStreak = Math.max(save.tally.bestStreak ?? 0, save.winStreak);
       save.best[level.id] = Math.max(save.best[level.id] ?? 0, score);
       save.biscuits += earned;
+      const tags = awardBadges(save);
       persist(save);
+      setTimeout(() => celebrate(tags), 1400);
       for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
       const m = modal(`
         <header class="modal-head">
@@ -1240,7 +1301,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
 async function boot() {
   await runLaunch(app);
+  // Tags earned before they existed (or on another device) pay out now.
+  const tags = awardBadges(save);
+  if (tags.length) persist(save);
   showMap();
+  if (tags.length) window.setTimeout(() => celebrate(tags), 600);
   // Returning players get their daily treat offered once, when they open the game.
   if (dailyClaimable(save) && Object.keys(save.stars).length > 0) showDaily();
 }
