@@ -28,6 +28,7 @@ npm run dev      # open the printed URL (works on phones on the same Wi-Fi with 
 
 - **Micah's Yard:** spend the stars you earn on nine decorations for Micah's yard (doghouse, bed, ball pit and more).
 - **Daily treat:** a 7-day reward streak. Missing a day starts it over.
+- **Micah's Collar:** 14 collar tags (clear 20 levels, wash 100 mud, make 10 Micah pieces...) that each pay out biscuits. Tags check the save directly, so older saves get credit for work already done.
 - **Win streak:** each win in a row starts the next level with a free Zoomies (up to 3). Losing a level resets it.
 - **Victory lap:** spare moves turn into Zoomies that go off when you clear a level.
 - **Tips:** levels 1 to 6 each introduce one mechanic with a short tip.

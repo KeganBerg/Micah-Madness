@@ -496,3 +496,23 @@ html { touch-action: manipulation; }
   padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--sea-deep); color: #fff; font-weight: 700; font-size: var(--fs-sm);
   box-shadow: 0 8px 24px #0006; animation: popin .2s;
 }
+
+/* ───── Micah's Collar (achievements) ───── */
+.dock { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dock-btn .tally { position: absolute; top: 2px; right: calc(50% - 40px); padding: 0 5px; border-radius: 8px; background: #ffffff22; font-style: normal; font-size: 10px; line-height: 16px; }
+.tag-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.tag-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) var(--s3); border-radius: var(--radius); background: var(--panel-2); }
+.tag-icon { width: 44px; height: 44px; display: block; }
+.tag-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tag-info b { font-size: var(--fs-md); }
+.tag-info span { font-size: var(--fs-sm); color: var(--muted); }
+.tag-info small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; }
+.tag-bar { display: block; height: 6px; margin-top: var(--s1); border-radius: 3px; background: var(--line); overflow: hidden; }
+.tag-bar i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
+.tag-reward { display: flex; align-items: center; gap: 2px; font-weight: 800; font-size: var(--fs-sm); }
+.tag-reward .biscuit-icon { width: 18px; height: 18px; }
+.tag-list li.on .tag-reward { color: var(--good); }
+.tag-list li.on .tag-reward .ui-icon { width: 22px; height: 22px; }
+.tag-toast { width: max-content; max-width: min(340px, calc(100% - var(--s6))); display: flex; align-items: center; gap: var(--s3); }
+.tag-toast .tag-icon { width: 32px; height: 32px; flex: none; }
+.tag-toast b { display: block; }
