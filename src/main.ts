@@ -23,7 +23,20 @@ import {
 } from './board';
 import { BOOSTER_ICONS, KINDS, UI, micahUrl, svg } from './art';
 import { LEVELS, ZONES, mudCount, type Goal, type Level } from './levels';
-import { BOOSTERS, load, persist, requestDurableStorage, unlockedUpTo, type BoosterId, type SaveData } from './save';
+import {
+  BOOSTERS,
+  DAILY_REWARDS,
+  claimDaily,
+  dailyClaimable,
+  load,
+  persist,
+  requestDurableStorage,
+  starsToSpend,
+  unlockedUpTo,
+  type BoosterId,
+  type SaveData,
+} from './save';
+import { DECOR, yardScene } from './yard';
 import { setSound, sfx } from './sound';
 
 const ROWS = 8;
@@ -55,6 +68,18 @@ function goalText(goal: Goal): string {
   if (goal.type === 'mud') return 'Wash away every mud patch';
   return `Score ${goal.target.toLocaleString()} points`;
 }
+
+/** One tip the first time a mechanic appears, so the difficulty ramps with the teaching. */
+const TIPS: Record<number, string> = {
+  1: 'Drag a piece onto a neighbour to swap them. Three or more in a line clears them.',
+  2: 'Line up four in a row to make Zoomies, which clears its whole row or column.',
+  3: 'Make an L or T shape to get a Big Bark, which clears the 3×3 area around it.',
+  4: 'Mud sits under pieces. Make a match on top of a muddy square to wash it.',
+  5: 'Five in a row makes a Micah piece. Swap him with any piece to clear every one of that kind.',
+  6: 'Swap two power-ups into each other for a bigger blast.',
+};
+const streakZoomies = () => Math.min(3, save.winStreak);
+let dailyShownThisVisit = false;
 
 // ───────────────────────────── Map screen ─────────────────────────────
 
@@ -141,8 +166,16 @@ function showMap(scrollTo?: number): void {
             <button class="btn" data-act="start">Start level 1</button>
           </div>`
         : ''}
+      <nav class="dock" aria-label="Main">
+        <button class="dock-btn" data-act="yard">${UI.home}<span>Micah's Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
+        <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily treat</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
+        <button class="dock-btn" data-act="shop2">${UI.bag}<span>Treat Shop</span></button>
+      </nav>
     </div>`);
 
+  screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
+  screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
+  screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="sound"]')!.addEventListener('click', () => {
     save.sound = !save.sound;
@@ -159,6 +192,100 @@ function showMap(scrollTo?: number): void {
   const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
   const target = nodePos((scrollTo ?? unlocked) - 1).y;
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
+  // Returning players get their daily treat offered once per visit.
+  if (!dailyShownThisVisit && dailyClaimable(save) && Object.keys(save.stars).length > 0) {
+    dailyShownThisVisit = true;
+    showDaily();
+  }
+}
+
+// ───────────────────────────── Micah's Yard ─────────────────────────────
+
+function showYard(): void {
+  const owned = save.decor;
+  const left = starsToSpend(save);
+  const done = owned.length === DECOR.length;
+  const screen = h(`
+    <div class="screen yard-screen">
+      <header class="topbar">
+        <button class="round-btn" data-act="back" aria-label="Back to map">${UI.back}</button>
+        <div class="brand"><span>Micah's Yard</span></div>
+        <div class="wallet star-wallet" aria-label="${left} stars to spend"><span class="star-pill">${UI.star}</span><b>${left}</b></div>
+      </header>
+      <div class="yard-body">
+        <div class="yard-frame">${yardScene(owned, micahUrl)}</div>
+        <div class="yard-progress">
+          <p><b>${owned.length} of ${DECOR.length}</b> built</p>
+          <div class="bar"><i style="width:${(owned.length / DECOR.length) * 100}%"></i></div>
+        </div>
+        <p class="notice">${
+          done
+            ? 'Micah\u2019s yard is finished. Every star you earn from now on is a bragging right.'
+            : left
+              ? 'Spend the stars you earn in levels to build Micah\u2019s yard.'
+              : 'You have no stars to spend yet. Win levels to earn up to three stars each.'
+        }</p>
+        <ul class="shop-list">
+          ${DECOR.map((d) => {
+            const has = owned.includes(d.id);
+            return `<li class="${has ? 'owned' : ''}">
+              ${svg(d.svg, 'booster-icon')}
+              <div class="shop-info"><b>${d.name}</b><span>${d.desc}</span></div>
+              ${has
+                ? `<span class="built">${UI.check}Built</span>`
+                : `<button class="buy" data-id="${d.id}" aria-label="Build ${d.name} for ${d.cost} stars" ${left < d.cost ? 'disabled' : ''}><span class="star-pill">${UI.star}</span>${d.cost}</button>`}
+            </li>`;
+          }).join('')}
+        </ul>
+      </div>
+    </div>`);
+  screen.querySelector('[data-act="back"]')!.addEventListener('click', () => showMap());
+  screen.querySelectorAll<HTMLButtonElement>('.buy').forEach((b) =>
+    b.addEventListener('click', () => {
+      const d = DECOR.find((x) => x.id === b.dataset.id)!;
+      if (starsToSpend(save) < d.cost || save.decor.includes(d.id)) return;
+      save.spentStars += d.cost;
+      save.decor.push(d.id);
+      persist(save);
+      sfx.win();
+      showYard();
+    }),
+  );
+  app.replaceChildren(screen);
+}
+
+// ───────────────────────────── Daily treat ─────────────────────────────
+
+function showDaily(): void {
+  const day = dailyClaimable(save);
+  const current = day || save.daily.day;
+  const m = modal(`
+    <header class="modal-head">
+      ${icon('treat', 'modal-avatar')}
+      <div><p class="eyebrow">Come back every day</p><h2>Daily treat</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <p class="body">Claim a treat once a day. Come back on consecutive days for bigger rewards. Missing a day starts you back at day 1.</p>
+    <ol class="daily-grid">
+      ${DAILY_REWARDS.map((r, i) => {
+        const n = i + 1;
+        const state = n < current || (!day && n === current) ? 'claimed' : n === current ? 'today' : '';
+        return `<li class="${state}"><small>Day ${n}</small>${r.booster ? icon(r.booster, 'booster-icon') : icon('biscuit', 'booster-icon')}<span>${r.label}</span></li>`;
+      }).join('')}
+    </ol>
+    ${day
+      ? `<button class="btn claim">Claim day ${day}: ${DAILY_REWARDS[day - 1].label}</button>`
+      : `<p class="notice">Today's treat is claimed. Come back tomorrow for day ${(save.daily.day % 7) + 1}.</p>`}`,
+    () => showMap(),
+  );
+  m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
+  m.querySelector('.claim')?.addEventListener('click', () => {
+    claimDaily(save);
+    persist(save);
+    sfx.win();
+    m.remove();
+    showDaily();
+  });
 }
 
 // ───────────────────────────── Modals ─────────────────────────────
@@ -192,6 +319,10 @@ function showLevelIntro(level: Level): void {
       <ul class="goal-list">${level.goals.map((g) => `<li>${goalIcon(g)}<span>${goalText(g)}</span></li>`).join('')}</ul>
       <p class="meta-row">You have <b>${level.moves} moves</b>${save.best[level.id] ? ` · Best score <b>${save.best[level.id].toLocaleString()}</b>` : ''}</p>
     </section>
+    ${TIPS[level.id] ? `<p class="tip"><b>Tip</b>${TIPS[level.id]}</p>` : ''}
+    ${streakZoomies()
+      ? `<p class="streak">${icon('zoomies', 'booster-icon')}<span><b>${save.winStreak} win streak.</b> You start with ${streakZoomies()} free Zoomies. Lose a level and the streak resets.</span></p>`
+      : ''}
     <section>
       <h3>Bring a booster</h3>
       <div class="booster-grid">
@@ -295,6 +426,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const [r, c] = randomCell();
       grid[r][c]!.special = i % 2 ? 'zoomCol' : 'zoomRow';
     }
+  }
+  for (let i = 0; i < streakZoomies(); i++) {
+    const [r, c] = randomCell();
+    grid[r][c]!.special = i % 2 ? 'zoomCol' : 'zoomRow';
   }
   if (picks.micah) {
     const [r, c] = randomCell();
@@ -448,7 +583,36 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }, 6000);
   }
 
+  function shake() {
+    boardEl.classList.remove('shake');
+    void boardEl.offsetWidth;
+    boardEl.classList.add('shake');
+  }
+
+  /** A few coloured crumbs burst from every cleared piece. */
+  function burst(cells: Set<number>) {
+    const frag = document.createDocumentFragment();
+    let n = 0;
+    for (const k of cells) {
+      const [r, c] = unkey(k);
+      const t = grid[r][c];
+      if (!t || n > 120) continue;
+      const color = t.kind >= 0 ? KINDS[t.kind].color : '#ffc12e';
+      for (let i = 0; i < 3; i++, n++) {
+        const p = document.createElement('i');
+        p.className = 'crumb';
+        const a = Math.random() * Math.PI * 2;
+        const d = 18 + Math.random() * 26;
+        p.style.cssText = `left:${((c + 0.5) / COLS) * 100}%;top:${((r + 0.5) / ROWS) * 100}%;background:${color};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px`;
+        frag.append(p);
+      }
+    }
+    boardEl.append(frag);
+    setTimeout(() => boardEl.querySelectorAll('.crumb').forEach((e) => e.remove()), 600);
+  }
+
   function flashEffects(res: ClearResult) {
+    burst(res.cleared);
     for (const f of res.fired) {
       const fx = document.createElement('div');
       fx.className = `fx fx-${f.special}`;
@@ -457,6 +621,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       fx.style.setProperty('--c', String(c));
       boardEl.append(fx);
       setTimeout(() => fx.remove(), 500);
+      if (f.special === 'bark' || f.special === 'micah') shake();
       if (f.special === 'bark') sfx.bark();
       else sfx.zoom();
     }
@@ -642,13 +807,35 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (over) return;
     if (goalsMet()) {
       over = true;
-      const bonus = moves * 250;
-      score += bonus;
-      renderHud();
       sfx.win();
-      bonusPts = bonus;
-      say(bonus ? `Level cleared. ${moves} spare moves add ${bonus} points.` : 'Level cleared. Good dog!', 'big');
-      await wait(900);
+      if (moves > 0) {
+        // Victory lap: each spare move turns a random piece into Zoomies, then they all go off.
+        say(`Level cleared. Victory lap with ${moves} spare moves!`, 'big');
+        const before = score;
+        const laps = Math.min(moves, 12);
+        const forced: number[] = [];
+        for (let i = 0; i < laps; i++) {
+          const r = Math.floor(Math.random() * ROWS);
+          const c = Math.floor(Math.random() * COLS);
+          const t = grid[r][c];
+          if (!t || t.special !== 'none') continue;
+          t.special = Math.random() < 0.5 ? 'zoomRow' : 'zoomCol';
+          forced.push(key(r, c));
+          moves--;
+          renderAll();
+          renderHud();
+          sfx.swap();
+          await wait(120);
+        }
+        score += moves * 100; // any moves that couldn't become Zoomies still count
+        moves = 0;
+        await cascade([], forced);
+        bonusPts = score - before;
+        renderHud();
+      } else {
+        say('Level cleared. Good dog!', 'big');
+      }
+      await wait(700);
       finish(true);
     } else if (moves <= 0) {
       over = true;
@@ -665,7 +852,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const stars = level.stars.filter((s) => score >= s).length || 1;
       const firstClear = !(save.stars[level.id] > 0);
       const earned = stars * 10 + (firstClear ? 20 : 0);
+      const newStars = Math.max(0, stars - (save.stars[level.id] ?? 0));
       save.stars[level.id] = Math.max(save.stars[level.id] ?? 0, stars);
+      save.winStreak++;
       save.best[level.id] = Math.max(save.best[level.id] ?? 0, score);
       save.biscuits += earned;
       persist(save);
@@ -678,7 +867,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         <div class="result-stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
         <dl class="stat-rows">
           <dt>Score</dt><dd>${score.toLocaleString()}</dd>
-          ${bonusPts ? `<dt>Spare-move bonus</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
+          ${bonusPts ? `<dt>Victory lap</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
+          ${newStars ? `<dt>New stars for Micah's Yard</dt><dd><span class="star-pill">${UI.star}</span>${newStars}</dd>` : ''}
+          <dt>Win streak</dt><dd>${save.winStreak}</dd>
           <dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${earned}</dd>
         </dl>
         <div class="actions">
@@ -728,8 +919,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         renderHud();
         armHint();
       });
-      m.querySelector('.quit')!.addEventListener('click', () => (m.remove(), showMap(level.id)));
-      m.querySelector('.retry')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
+      const endStreak = () => {
+        save.winStreak = 0;
+        persist(save);
+      };
+      m.querySelector('.quit')!.addEventListener('click', () => (endStreak(), m.remove(), showMap(level.id)));
+      m.querySelector('.retry')!.addEventListener('click', () => (endStreak(), m.remove(), showLevelIntro(level)));
     }
   }
 

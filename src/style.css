@@ -304,3 +304,54 @@ h2, h3, p { margin: 0; }
 .board-wrap { flex: none; }
 .game-screen { justify-content: center; }
 .map-scroll { background: #7db86a; }
+
+/* ───── Dock (map) ───── */
+.dock { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); padding: var(--s2) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--sea-deep); z-index: 4; }
+.dock-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s2) 0; border-radius: var(--radius); color: #fff; font-size: var(--fs-xs); font-weight: 800; }
+.dock-btn .ui-icon { width: 24px; height: 24px; }
+.dock-btn:active { background: #ffffff1a; }
+.dock-btn .count { top: 2px; right: calc(50% - 30px); font-style: normal; }
+.dock-btn .count.dot { width: 14px; min-width: 14px; height: 14px; padding: 0; font-size: 0; top: 4px; right: calc(50% - 22px); }
+.welcome { bottom: calc(var(--s4) + 72px); }
+.map-screen .save-warning { top: 72px; }
+
+/* ───── Yard ───── */
+.yard-screen .topbar .brand { font-size: var(--fs-lg); }
+.yard-body { flex: 1; overflow-y: auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s4); }
+.yard-frame { border-radius: var(--radius-lg); overflow: hidden; outline: 6px solid var(--sea-deep); }
+.yard-scene { width: 100%; height: auto; }
+.yard-progress { display: grid; grid-template-columns: auto 1fr; gap: var(--s3); align-items: center; color: #fff; font-size: var(--fs-sm); }
+.yard-progress .bar { height: 10px; border-radius: 5px; background: #ffffff33; overflow: hidden; }
+.yard-progress .bar i { display: block; height: 100%; background: var(--gold); }
+.yard-body .notice { background: #ffffff1a; color: #fff; }
+.yard-body .shop-list li { background: var(--panel); }
+.shop-list li.owned { opacity: .75; }
+.built { display: flex; align-items: center; gap: var(--s1); font-size: var(--fs-sm); font-weight: 800; color: var(--good); }
+.built .ui-icon { width: 18px; height: 18px; }
+.star-pill { display: inline-block; width: 18px; height: 18px; color: var(--gold); }
+.star-wallet { padding: 0 var(--s3) 0 var(--s2); gap: var(--s1); }
+.star-wallet .star-pill { width: 22px; height: 22px; }
+
+/* ───── Daily treat ───── */
+.daily-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); }
+.daily-grid li { display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s2) var(--s1); border-radius: var(--radius); background: var(--panel-2); border: 2px solid transparent; text-align: center; }
+.daily-grid li:last-child { grid-column: span 2; }
+.daily-grid small { font-size: var(--fs-xs); font-weight: 800; color: var(--muted); }
+.daily-grid span { font-size: var(--fs-xs); font-weight: 700; line-height: 1.2; }
+.daily-grid .booster-icon { width: 36px; height: 36px; }
+.daily-grid li.today { border-color: var(--brand); background: #fdeceb; }
+.daily-grid li.claimed { opacity: .5; }
+
+/* ───── Level intro extras ───── */
+.tip { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); border-radius: var(--radius); background: #fff6db; font-size: var(--fs-sm); }
+.tip b { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; color: #8a6500; }
+.streak { display: grid; grid-template-columns: 36px 1fr; gap: var(--s3); align-items: center; padding: var(--s3); border-radius: var(--radius); background: var(--panel-2); font-size: var(--fs-sm); }
+.streak .booster-icon { width: 36px; height: 36px; }
+.stat-rows .star-pill { width: 20px; height: 20px; }
+
+/* ───── Game juice ───── */
+.crumb { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; pointer-events: none; z-index: 4; animation: crumb .55s ease-out forwards; }
+@keyframes crumb { to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+.board.shake { animation: boardshake .3s; }
+@keyframes boardshake { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, 1px); } 80% { transform: translate(2px, 0); } }
+.yard-frame, .yard-progress, .yard-body .notice, .yard-body .shop-list { flex: none; }
