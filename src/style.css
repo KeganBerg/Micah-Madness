@@ -355,3 +355,69 @@ h2, h3, p { margin: 0; }
 .board.shake { animation: boardshake .3s; }
 @keyframes boardshake { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, 1px); } 80% { transform: translate(2px, 0); } }
 .yard-frame, .yard-progress, .yard-body .notice, .yard-body .shop-list { flex: none; }
+
+/* ───── Wallet pill: even padding, centred contents ───── */
+.wallet { height: 40px; padding: 0 6px; gap: 6px; }
+.wallet .biscuit-icon { width: 28px; height: 28px; }
+.wallet b { min-width: 2ch; line-height: 1; text-align: center; }
+.wallet .add { width: 28px; height: 28px; }
+.wallet .add .ui-icon { width: 16px; height: 16px; }
+.star-wallet { padding: 0 var(--s3) 0 var(--s2); }
+
+/* ───── Micah animations ───── */
+/* Idle: a slow breathe from his feet, so he never looks like a sticker. */
+.micah-idle { transform-origin: 50% 92%; animation: micah-breathe 2.6s ease-in-out infinite; }
+@keyframes micah-breathe {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  30% { transform: scale(1.02, .97) rotate(-2deg); }
+  60% { transform: scale(.99, 1.03) rotate(2deg); }
+}
+
+/* Map: Micah stands beside his level, tilts his head when tapped, hops along the path. */
+.map-micah {
+  position: absolute; width: 64px; height: 64px; margin: 0 0 0 -32px; z-index: 2; padding: 0;
+  transition: left 1s ease-in-out, top 1s ease-in-out; filter: drop-shadow(0 4px 3px #0005);
+}
+.map-micah img { width: 100%; height: 100%; display: block; }
+.map-micah.facing-left img { scale: -1 1; }
+.map-micah.tilt img { animation: micah-tilt .6s ease-in-out; }
+.map-micah.walking img { animation: micah-hop .25s ease-in-out 4; }
+@keyframes micah-tilt { 30% { transform: rotate(-16deg) translateY(-4px); } 70% { transform: rotate(10deg); } }
+@keyframes micah-hop {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  15% { transform: translateY(0) scale(1.1, .88); }
+  55% { transform: translateY(-18px) scale(.94, 1.08); }
+}
+
+/* Game: reactions play on the wrapper while the idle keeps going on the image. */
+.mascot-face { transform-origin: 50% 90%; }
+.mascot-face.bounce { animation: micah-hop .45s ease-in-out; }
+.mascot-face.cheer { animation: micah-cheer .8s ease-in-out; }
+.mascot-face.shake { animation: micah-sad .7s ease-in-out; }
+.mascot-face.sleepy { animation: micah-sleep 3s ease-in-out infinite; }
+.mascot-face.sleepy img { animation-play-state: paused; }
+@keyframes micah-cheer {
+  0% { transform: translateY(0) rotate(0); }
+  20% { transform: translateY(0) scale(1.12, .86); }
+  45% { transform: translateY(-22px) rotate(-12deg) scale(.95, 1.08); }
+  65% { transform: translateY(-10px) rotate(12deg); }
+  85% { transform: translateY(0) scale(1.06, .94); }
+}
+@keyframes micah-sad {
+  20% { transform: rotate(-10deg) translateY(3px) scale(1, .94); }
+  50% { transform: rotate(8deg) translateY(3px) scale(1, .94); }
+  80% { transform: rotate(-4deg) translateY(2px); }
+}
+@keyframes micah-sleep {
+  0%, 100% { transform: rotate(14deg) translateY(4px) scale(1, .95); }
+  50% { transform: rotate(18deg) translateY(5px) scale(1.02, .93); }
+}
+
+/* Modals: he bounces when you win, droops when you lose. */
+.modal-avatar.cheer { transform-origin: 50% 90%; animation: micah-cheer .9s ease-in-out 3; }
+.modal-avatar.sad { animation: micah-sad .9s ease-in-out 1 both; }
+
+/* The Micah power-up piece wiggles to show it can be swapped with anything. */
+.sp-micah .piece { animation: micah-piece 1.8s ease-in-out infinite; }
+@keyframes micah-piece { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg) scale(1.05); } }
+.map-micah { pointer-events: auto; cursor: pointer; }
