@@ -12,10 +12,19 @@
   </head>
   <body style="margin:0;background:#173a52">
     <div id="app">
-      <div class="splash" role="status">
-        <img src="/src/assets/micah.png" alt="" />
-        <p>Fetching the toys…</p>
-        <div class="dots"><i></i><i></i><i></i></div>
+      <div class="launch" role="status" aria-live="polite">
+        <div class="launch-center">
+          <div class="launch-stage">
+            <span class="launch-shadow"></span>
+            <img class="launch-micah" src="/src/assets/micah.png" alt="Micah in her lobster costume" />
+          </div>
+          <h1 class="launch-title"><span>Micah</span><span>Madness</span></h1>
+          <p class="launch-tag">A match-3 puzzle for dog lovers</p>
+        </div>
+        <div class="launch-foot">
+          <div class="launch-bar" aria-hidden="true"><i></i></div>
+          <p class="launch-step">Fetching the toys…</p>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

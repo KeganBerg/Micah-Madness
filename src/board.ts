@@ -178,7 +178,7 @@ export function computeClear(grid: Grid, preferred: Pos[] = [], forced: Iterable
   };
 
   const used = new Set<Run>();
-  // 5 in a row: Micah himself.
+  // 5 in a row: Micah herself.
   for (const run of runs) {
     if (run.cells.length >= 5) {
       place(pickCell(run.cells), MICAH_KIND, 'micah');
@@ -281,7 +281,7 @@ export function comboClears(grid: Grid, a: Pos, b: Pos): number[] | null {
         grid[r][c]!.special = other.special === 'bark' ? 'bark' : Math.random() < 0.5 ? 'zoomRow' : 'zoomCol';
       }
     }
-    // Micah's own power is spent by the combo, so he is cleared plainly.
+    // Micah's own power is spent by the combo, so she is cleared plainly.
     grid[m[0]][m[1]]!.special = 'none';
     return [key(m[0], m[1]), ...cells];
   }

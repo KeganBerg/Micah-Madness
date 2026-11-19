@@ -37,12 +37,18 @@ import {
   type SaveData,
 } from './save';
 import { DECOR, yardScene } from './yard';
+import { runLaunch } from './launch';
 import { setSound, sfx } from './sound';
 
 const ROWS = 8;
 const COLS = 8;
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let save: SaveData = load();
+// Every button gives a soft tap; the board and Micah have their own sounds.
+document.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest('button');
+  if (b && !b.disabled && !b.matches('.map-micah, .buy, .claim, .play, .tool')) sfx.tap();
+});
 const canSave = persist(save);
 requestDurableStorage();
 window.addEventListener('pagehide', () => persist(save));
@@ -75,7 +81,7 @@ const TIPS: Record<number, string> = {
   2: 'Line up four in a row to make Zoomies, which clears its whole row or column.',
   3: 'Make an L or T shape to get a Big Bark, which clears the 3×3 area around it.',
   4: 'Mud sits under pieces. Make a match on top of a muddy square to wash it.',
-  5: 'Five in a row makes a Micah piece. Swap him with any piece to clear every one of that kind.',
+  5: 'Five in a row makes a Micah piece. Swap her with any piece to clear every one of that kind.',
   6: 'Swap two power-ups into each other for a bigger blast.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
@@ -156,8 +162,8 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${canSave ? '' : '<p class="save-warning">This browser isn\u2019t saving progress, so it resets when you close the page. Private browsing usually causes this.</p>'}
       ${Object.keys(save.stars).length === 0
         ? `<div class="welcome">
-            ${micahImg('micah-idle', 'Micah in his lobster costume')}
-            <div><h2>Help Micah fetch his toys</h2>
+            ${micahImg('micah-idle', 'Micah in her lobster costume')}
+            <div><h2>Help Micah fetch her toys</h2>
             <p>Swap two neighbouring pieces to line up three of a kind. Each level has a goal and a move limit.</p></div>
             <button class="btn" data-act="start">Start level 1</button>
           </div>`
@@ -186,7 +192,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
 
   app.replaceChildren(screen);
 
-  // Micah stands just beside the node he is on, on the side away from the path's next bend.
+  // Micah stands just beside the node she is on, on the side away from the path's next bend.
   const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
   const placeMicah = (lv: number) => {
     const p = nodePos(lv - 1);
@@ -208,6 +214,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     requestAnimationFrame(() => {
       micahEl.classList.add('walking');
       placeMicah(unlocked);
+      for (let i = 0; i < 4; i++) setTimeout(() => sfx.step(), 120 + i * 250);
       setTimeout(() => {
         micahEl.classList.remove('walking');
         after?.();
@@ -271,7 +278,7 @@ function showYard(): void {
       save.spentStars += d.cost;
       save.decor.push(d.id);
       persist(save);
-      sfx.win();
+      sfx.build();
       showYard();
     }),
   );
@@ -306,7 +313,7 @@ function showDaily(): void {
   m.querySelector('.claim')?.addEventListener('click', () => {
     claimDaily(save);
     persist(save);
-    sfx.win();
+    sfx.coin();
     m.remove();
     showDaily();
   });
@@ -374,6 +381,7 @@ function showLevelIntro(level: Level): void {
     for (const id of ['zoomies', 'micah'] as const) if (picks[id]) save.inventory[id]--;
     persist(save);
     m.remove();
+    sfx.start();
     startLevel(level, picks);
   });
 }
@@ -412,6 +420,7 @@ function showShop(onClose: () => void): void {
         if (save.biscuits < BOOSTERS[id].price) return;
         save.biscuits -= BOOSTERS[id].price;
         save.inventory[id]++;
+        sfx.coin();
         persist(save);
         m.querySelector('.modal')!.innerHTML = render();
         wire();
@@ -439,6 +448,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let treatMode = false;
   let selected: Pos | null = null;
   let bonusPts = 0;
+  let goalsDone = 0;
   let hintTimer = 0;
   const totalMud = mudCount(level);
   const remaining = level.goals.map((g) => (g.type === 'collect' ? g.count : g.type === 'mud' ? totalMud : g.target));
@@ -685,6 +695,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       if (res.cleared.size === 0) break;
       const points = res.cleared.size * 20 * chain + res.created.length * 100;
       score += points;
+      let washed = false;
       level.goals.forEach((g, i) => {
         if (g.type === 'collect') remaining[i] -= res.collected[g.kind];
       });
@@ -694,10 +705,18 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           mud[r][c] = false;
           cellEls[r][c].classList.remove('mud');
           cellEls[r][c].classList.add('cleaned');
+          washed = true;
           level.goals.forEach((g, i) => g.type === 'mud' && remaining[i]--);
         }
       }
       sfx.pop(chain);
+      if (washed) sfx.splash();
+      if (res.created.length) setTimeout(() => sfx.powerUp(), 120);
+      const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
+      if (doneNow > goalsDone) {
+        goalsDone = doneNow;
+        setTimeout(() => sfx.goal(), 200);
+      }
       flashEffects(res);
       floatScore(points, res.cleared);
       if (res.fired.some((f) => f.special === 'micah') || res.cleared.size >= 12) say(BIG_CHEERS[Math.floor(Math.random() * BIG_CHEERS.length)], 'big');
@@ -776,6 +795,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       return;
     }
     moves--;
+    if (moves === 5) sfx.warn();
     renderHud();
     const forced = comboClears(grid, a, b) ?? [];
     if (forced.length) renderAll();
@@ -788,7 +808,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   function selectCell(p: Pos | null) {
     boardEl.querySelectorAll('.selected').forEach((e) => e.classList.remove('selected'));
     selected = p;
-    if (p) tileEls.get(grid[p[0]][p[1]]!.id)?.classList.add('selected');
+    if (p) {
+      tileEls.get(grid[p[0]][p[1]]!.id)?.classList.add('selected');
+      sfx.select();
+    }
   }
 
   async function useTool(id: BoosterId) {
@@ -807,11 +830,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     persist(save);
     if (id === 'leash') {
       moves += 5;
+      sfx.whoosh();
       say('Long walk! +5 moves', 'big');
       renderHud();
     }
     if (id === 'squirrel') {
       busy = true;
+      sfx.squirrel();
       say('SQUIRREL!!', 'big');
       shuffle(grid);
       renderAll();
@@ -828,6 +853,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     save.inventory.treat--;
     persist(save);
     busy = true;
+    sfx.crunch();
     say('Nom nom nom!', 'big');
     await cascade([], [key(p[0], p[1])]);
     busy = false;
@@ -890,6 +916,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       save.best[level.id] = Math.max(save.best[level.id] ?? 0, score);
       save.biscuits += earned;
       persist(save);
+      for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
       const m = modal(`
         <header class="modal-head">
           ${micahImg('modal-avatar cheer')}
@@ -950,6 +977,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         persist(save);
         m.remove();
         moves += 5;
+        sfx.whoosh();
         over = false;
         say('Five more moves. Make them count.', 'big');
         renderHud();
@@ -1018,6 +1046,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   if (findRuns(grid).length) void cascade([]);
 }
 
-showMap();
-// Returning players get their daily treat offered once, when they open the game.
-if (dailyClaimable(save) && Object.keys(save.stars).length > 0) showDaily();
+async function boot() {
+  await runLaunch(app);
+  showMap();
+  // Returning players get their daily treat offered once, when they open the game.
+  if (dailyClaimable(save) && Object.keys(save.stars).length > 0) showDaily();
+}
+void boot();

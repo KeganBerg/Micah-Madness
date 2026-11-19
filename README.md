@@ -18,7 +18,7 @@ npm run dev      # open the printed URL (works on phones on the same Wi-Fi with 
 - **Power-ups made by matching:**
   - 4 in a row → **Zoomies**: clears its whole row or column.
   - L or T shape → **Big Bark**: clears a 3×3 area.
-  - 5 in a row → **Micah**: swap him with any piece to fetch every piece of that kind. Micah + Micah clears the board.
+  - 5 in a row → **Micah**: swap her with any piece to fetch every piece of that kind. Micah + Micah clears the board.
 - **Goals:** collect pieces, reach a score, or clean the **mud** off the yard, within a move limit. Stars come from your score.
 - **Level path:** 20 levels across five zones (The Backyard, Dog Park, Lobster Beach, Muddy Trails, Costume Party).
 - **Items:** earn **biscuits** by winning and spend them in the **Treat Shop**:
