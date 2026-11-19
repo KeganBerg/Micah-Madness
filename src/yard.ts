@@ -63,7 +63,7 @@ export const DECOR: Decor[] = [
   { id: 'lobster', name: 'Lobster Plush', desc: 'Micah’s favourite squeaky toy.', cost: 3, x: 300, y: 140, w: 50, svg: KINDS[4].svg },
   { id: 'hydrant', name: 'Fire Hydrant', desc: 'Every yard needs one.', cost: 4, x: 130, y: 98, w: 56, svg: hydrant },
   { id: 'ballpit', name: 'Ball Pit', desc: 'A tub full of tennis balls.', cost: 4, x: 6, y: 186, w: 100, svg: ballPit },
-  { id: 'flowers', name: 'Flower Bed', desc: 'Freshly dug. Micah swears it wasn’t him.', cost: 5, x: 180, y: 196, w: 88, svg: flowers },
+  { id: 'flowers', name: 'Flower Bed', desc: 'Freshly dug. Micah swears it wasn’t her.', cost: 5, x: 180, y: 196, w: 88, svg: flowers },
   { id: 'sprinkler', name: 'Sprinkler', desc: 'Zoomies through the water.', cost: 5, x: 130, y: 150, w: 54, svg: sprinkler },
 ];
 

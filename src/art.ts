@@ -67,7 +67,7 @@ export const KINDS: KindInfo[] = [
 
 export { micahUrl };
 
-/** Micah in his lobster costume (the player's own photo cut-out). */
+/** Micah in her lobster costume (the player's own photo cut-out). */
 export function micahFace(_opts: { cap?: boolean; lobster?: boolean; tongue?: boolean } = {}): string {
   return `<image href="${micahUrl}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
 }
