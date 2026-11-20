@@ -163,7 +163,7 @@ describe('sound', () => {
     await tap(['touchstart', 'pointerup', 'touchend']);
     expect(contexts[0].state).toBe('running');
     expect(sounds()).toBeGreaterThan(0);
-    expect(navigator.audioSession?.type).toBe('playback');
+    expect((navigator as unknown as { audioSession: { type: string } }).audioSession.type).toBe('playback');
   });
 
   it('plays effects during a level and keeps the music going', async () => {
