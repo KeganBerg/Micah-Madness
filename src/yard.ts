@@ -62,12 +62,14 @@ export const DECOR: Decor[] = [
   { id: 'sprinkler', name: 'Sprinkler', desc: 'Zoomies through the water.', cost: 5, x: 130, y: 150, w: 54, svg: sprinkler },
 ];
 
-/** The whole yard scene, with bought items drawn and the rest shown as empty spots. */
+/** The whole yard scene, with bought items drawn and the rest shown as empty spots.
+ * Built items are tappable groups; roam.ts moves Micah (the .ym group) between them. */
 export function yardScene(owned: string[], micahUrl: string): string {
   const items = DECOR.map((d) => {
     const has = owned.includes(d.id);
     const s = d.w / 100;
-    if (has) return `<g transform="translate(${d.x} ${d.y}) scale(${s})">${d.svg}</g>`;
+    if (has)
+      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${d.svg}</g></g></g>`;
     const cx = d.x + d.w / 2;
     const cy = d.y + d.w / 2;
     return `<g opacity=".7"><circle cx="${cx}" cy="${cy}" r="${Math.min(26, d.w / 3)}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 5"/>
@@ -77,10 +79,13 @@ export function yardScene(owned: string[], micahUrl: string): string {
     <rect width="360" height="300" fill="#7db86a"/>
     <rect width="360" height="64" fill="#bfe6ff"/>
     <g fill="#ffffff" opacity=".9">${Array.from({ length: 19 }, (_, i) => `<rect x="${i * 20 + 2}" y="40" width="12" height="34" rx="3"/>`).join('')}<rect x="0" y="52" width="360" height="6"/></g>
-    ${items}
-    ${owned.includes('bed')
-      ? `<g class="yard-micah nap" transform="translate(274 196)"><image href="${micahUrl}" width="72" height="72" class="yard-micah-img"/></g>
-    <text x="336" y="204" font-size="16" font-weight="900" fill="#ffffff" font-family="Nunito, sans-serif" class="yard-zzz">z<tspan dx="2" dy="-8" font-size="12">z</tspan></text>`
-      : `<g class="yard-micah" transform="translate(192 96)"><image href="${micahUrl}" width="72" height="72" class="yard-micah-img"/></g>`}
+    <g class="yard-layer">
+      ${items}
+      <g class="ym" transform="translate(228 168)" role="button" aria-label="Micah">
+        <ellipse class="ym-shadow" cx="0" cy="-2" rx="20" ry="5" fill="#000" opacity=".18"/>
+        <g class="ym-flip"><g class="ym-pose"><image href="${micahUrl}" x="-40" y="-78" width="80" height="80"/></g></g>
+        <text class="ym-emote" x="0" y="-82" text-anchor="middle"></text>
+      </g>
+    </g>
   </svg>`;
 }
