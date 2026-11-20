@@ -378,9 +378,20 @@ const effects = {
 };
 
 type Effects = typeof effects;
+/** Sound must never break the game: any Web Audio error is logged and swallowed. */
+function safely(run: () => void): void {
+  try {
+    run();
+  } catch (err) {
+    console.warn('sound failed', err);
+  }
+}
 /** Every effect goes through whenLive, so nothing is lost while iOS is waking the audio up. */
 export const sfx = Object.fromEntries(
-  Object.entries(effects).map(([k, fn]) => [k, (...args: unknown[]) => whenLive(() => (fn as (...a: unknown[]) => void)(...args))]),
+  Object.entries(effects).map(([k, fn]) => [
+    k,
+    (...args: unknown[]) => safely(() => whenLive(() => safely(() => (fn as (...a: unknown[]) => void)(...args)))),
+  ]),
 ) as Effects;
 
 // ───────────────────────────── Music ─────────────────────────────
