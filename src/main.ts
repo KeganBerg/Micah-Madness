@@ -55,6 +55,7 @@ import { playMusic, setMusic, setSound, sfx } from './sound';
 import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
 import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
+import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
@@ -67,7 +68,7 @@ document.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest('button');
   if (b && !b.disabled && !b.matches('.map-micah, .buy, .claim, .play, .tool')) sfx.tap();
 });
-const canSave = persist(save);
+const canSave = persist(save, false);
 requestDurableStorage();
 setupInstall();
 window.addEventListener('pagehide', () => persist(save));
@@ -85,6 +86,7 @@ setSound(save.sound);
 setMusic(save.music);
 setHaptics(save.haptics);
 installTapFx();
+startAutoSync(() => save);
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 const h = (html: string): HTMLElement => {
@@ -838,8 +840,22 @@ function showSettings(): void {
       ${canPrompt() ? '<button class="btn secondary" data-act="install">Add to Home Screen</button>' : installSteps()}
     </section>`}
     <section>
-      <h3>Play on another device</h3>
-      <p class="body">Progress is saved in this browser only. Copy your transfer code here, then paste it on the other device.</p>
+      <h3>Cloud save</h3>
+      ${save.cloud
+        ? `<p class="body">Cloud save is on. Progress saves online by itself. To play on another phone or computer, open Settings there and enter this code:</p>
+           <p class="cloud-code" aria-label="Your cloud code">${prettyCode(save.cloud)}</p>
+           <div class="pair"><button class="btn secondary" data-act="cloud-copy">${UI.copy}Copy code</button><button class="btn secondary" data-act="cloud-sync">Save now</button></div>
+           <p class="body setting-hint">Keep this code to yourself: anyone with it can load your progress.</p>
+           <button class="btn secondary" data-act="cloud-off">Turn off on this device</button>`
+        : `<p class="body">Save your progress online so it follows you to any phone or computer, and is safe if this one is lost.</p>
+           <button class="btn secondary" data-act="cloud-on">Turn on cloud save</button>
+           <input class="code-input" data-act="cloud-code" placeholder="Have a code? ABCDE-FGHJK" aria-label="Cloud code from another device" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="14" />
+           <button class="btn secondary" data-act="cloud-load">Load progress from this code</button>`}
+      <p class="cloud-msg body" role="status"></p>
+    </section>
+    <section>
+      <h3>No internet? Use a transfer code</h3>
+      <p class="body">Copy your transfer code here, then paste it on the other device.</p>
       <button class="btn secondary" data-act="copy">${UI.copy}Copy transfer code</button>
       <textarea class="code-box" rows="3" placeholder="Paste a transfer code" aria-label="Transfer code" spellcheck="false" autocomplete="off"></textarea>
       <button class="btn secondary" data-act="load">Load this code</button>
@@ -880,6 +896,59 @@ function showSettings(): void {
     persist(save);
     musicBtn.setAttribute('aria-checked', String(save.music));
     musicBtn.querySelector('span')!.innerHTML = save.music ? UI.musicOn : UI.musicOff;
+  });
+
+  const cloudMsg = m.querySelector<HTMLElement>('.cloud-msg')!;
+  m.querySelector('[data-act="cloud-on"]')?.addEventListener('click', async () => {
+    cloudMsg.textContent = 'Turning on\u2026';
+    save.cloud = newCode();
+    persist(save);
+    if (await upload(save)) {
+      m.remove();
+      showSettings();
+      toast('Cloud save is on.');
+    } else {
+      save.cloud = '';
+      persist(save);
+      cloudMsg.textContent = 'Couldn\u2019t reach the cloud. Check your internet and try again.';
+    }
+  });
+  m.querySelector('[data-act="cloud-copy"]')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(prettyCode(save.cloud));
+      cloudMsg.textContent = 'Code copied.';
+    } catch {
+      cloudMsg.textContent = 'Write the code down, or long-press it to copy.';
+    }
+  });
+  m.querySelector('[data-act="cloud-sync"]')?.addEventListener('click', async () => {
+    persist(save);
+    cloudMsg.textContent = (await upload(save)) ? 'Saved to the cloud.' : 'Couldn\u2019t reach the cloud. It will try again later.';
+  });
+  m.querySelector('[data-act="cloud-off"]')?.addEventListener('click', () => {
+    save.cloud = '';
+    persist(save);
+    m.remove();
+    showSettings();
+    toast('Cloud save is off on this device. Your online copy is still there.');
+  });
+  m.querySelector('[data-act="cloud-load"]')?.addEventListener('click', async () => {
+    const input = m.querySelector<HTMLInputElement>('[data-act="cloud-code"]')!;
+    const code = cleanCode(input.value);
+    if (!validCode(code)) {
+      cloudMsg.textContent = 'Cloud codes are 10 letters and numbers, like ABCDE-FGHJK.';
+      sfx.bad();
+      return;
+    }
+    cloudMsg.textContent = 'Fetching\u2026';
+    const remote = await download(code);
+    if (remote === 'missing') return void (cloudMsg.textContent = 'No progress is saved under that code.');
+    if (!remote) return void (cloudMsg.textContent = 'Couldn\u2019t reach the cloud. Check your internet and try again.');
+    adoptSave(remote);
+    m.remove();
+    showMap();
+    const p = progressOf(remote);
+    toast(`Progress loaded: ${p.levels} level${p.levels === 1 ? '' : 's'} cleared.`);
   });
 
   m.querySelector('[data-act="copy"]')!.addEventListener('click', async () => {
@@ -2103,6 +2172,57 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   if (findRuns(grid).length) void runLocked(() => cascade([]));
 }
 
+/** Swap in a save from somewhere else (the cloud, another device) and apply its settings. */
+function adoptSave(next: SaveData): void {
+  save = next;
+  setSound(save.sound);
+  setMusic(save.music);
+  setHaptics(save.haptics);
+  persist(save, false);
+}
+
+/** On launch, pick up newer progress saved from another device. */
+async function syncFromCloud(): Promise<void> {
+  if (!save.cloud) return;
+  const remote = await download(save.cloud);
+  if (remote === 'missing') return void upload(save);
+  if (!remote) return;
+  if (remote.savedAt <= save.savedAt + 2000) return void upload(save);
+  const here = progressOf(save);
+  const there = progressOf(remote);
+  if (there.stars >= here.stars && there.levels >= here.levels) {
+    adoptSave(remote);
+    if (document.querySelector('.map-screen') && !document.querySelector('.modal-wrap')) showMap();
+    toast('Loaded your latest progress from the cloud.');
+    return;
+  }
+  // The cloud copy is newer but has less progress (this device played offline?): ask.
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">Cloud save</p><h2>Which progress should Micah keep?</h2></div>
+      <span></span>
+    </div>
+    <dl class="stat-rows">
+      <dt>This device</dt><dd>${here.levels} levels, ${here.stars} stars</dd>
+      <dt>Cloud (saved more recently)</dt><dd>${there.levels} levels, ${there.stars} stars</dd>
+    </dl>
+    <div class="actions">
+      <button class="btn" data-act="keep">Keep this device</button>
+      <button class="btn secondary" data-act="cloud">Use the cloud copy</button>
+    </div>`);
+  m.querySelector('[data-act="keep"]')!.addEventListener('click', () => {
+    m.remove();
+    persist(save);
+    void upload(save);
+  });
+  m.querySelector('[data-act="cloud"]')!.addEventListener('click', () => {
+    m.remove();
+    adoptSave(remote);
+    showMap();
+  });
+}
+
 async function boot() {
   app.querySelector('.launch-micah')?.setAttribute('src', costumeUrl(save.costume));
   await runLaunch(app);
@@ -2113,5 +2233,6 @@ async function boot() {
   if (tags.length) window.setTimeout(() => celebrate(tags), 600);
   // Returning players get their daily treat offered once, when they open the game.
   if (dailyClaimable(save) && Object.keys(save.stars).length > 0) showDaily();
+  void syncFromCloud();
 }
 void boot();
