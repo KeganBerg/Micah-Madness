@@ -1,3 +1,4 @@
+// Lives outside netlify/functions because Netlify deploys every file in that folder as a function.
 import { describe, expect, it, vi } from 'vitest';
 
 const mem = new Map<string, unknown>();
@@ -7,7 +8,7 @@ vi.mock('@netlify/blobs', () => ({
     setJSON: async (k: string, v: unknown) => void mem.set(k, v),
   }),
 }));
-const { default: handler } = await import('./cloud.mts');
+const { default: handler } = await import('../netlify/functions/cloud.mts');
 
 const url = (code: string) => `https://example.test/api/cloud?code=${code}`;
 
