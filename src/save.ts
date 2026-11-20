@@ -28,9 +28,13 @@ export interface SaveData {
   costume: string;
   /** Outfits bought with biscuits. */
   wardrobe: string[];
+  /** Phone vibration on matches (Android only). */
+  haptics: boolean;
+  /** One-time notes already shown, such as the add-to-home-screen nudge. */
+  seen: string[];
 }
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 
@@ -61,6 +65,8 @@ export function freshSave(): SaveData {
     badges: [],
     costume: 'lobster',
     wardrobe: [],
+    haptics: true,
+    seen: [],
   };
 }
 
@@ -115,6 +121,8 @@ export function migrate(raw: unknown): SaveData {
     badges: Array.isArray(d.badges) ? [...new Set(d.badges.filter((x): x is string => typeof x === 'string'))] : [],
     costume: typeof d.costume === 'string' ? d.costume : base.costume,
     wardrobe: Array.isArray(d.wardrobe) ? [...new Set(d.wardrobe.filter((x): x is string => typeof x === 'string'))] : [],
+    haptics: typeof d.haptics === 'boolean' ? d.haptics : base.haptics,
+    seen: Array.isArray(d.seen) ? [...new Set(d.seen.filter((x): x is string => typeof x === 'string'))] : [],
   };
 }
 
