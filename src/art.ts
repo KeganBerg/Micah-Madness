@@ -109,6 +109,8 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <path d="M14 40 H40 M10 50 H36 M14 60 H40" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
           <path d="M60 40 L76 50 L60 60 Z" fill="#b58a00"/>`,
   micah: micahFace({ cap: true }),
+  bark: `<path d="M50 12 L58 30 L78 22 L72 42 L90 50 L72 58 L78 78 L58 70 L50 88 L42 70 L22 78 L28 58 L10 50 L28 42 L22 22 L42 30 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="50" cy="50" r="18" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="6 5"/>`,
   biscuit: `<path d="M50 18 L58 34 L76 30 L70 48 L84 60 L66 66 L64 84 L50 74 L36 84 L34 66 L16 60 L30 48 L24 30 L42 34 Z" fill="#e3a64e" stroke="#94631c" stroke-width="3" stroke-linejoin="round"/>
           <circle cx="44" cy="46" r="3" fill="#94631c"/><circle cx="56" cy="52" r="3" fill="#94631c"/><circle cx="48" cy="60" r="3" fill="#94631c"/>`,
   mud: `<path d="M14 60 C10 40 30 30 44 36 C54 22 82 28 82 46 C94 52 90 74 72 74 C60 84 32 82 26 74 C14 74 10 66 14 60Z" fill="#7a5233" stroke="#4f331d" stroke-width="3"/>

@@ -278,6 +278,7 @@ h2, h3, p { margin: 0; }
 .cell { position: absolute; width: 12.5%; height: 12.5%; background: var(--panel); }
 .cell.alt { background: var(--panel-2); }
 .cell.mud { background: #7a5233; box-shadow: inset 0 0 0 2px #5e3d24; }
+.cell.mud.deep { background: #4a2f1b; box-shadow: inset 0 0 0 3px #2f1c0f, inset 0 0 10px 2px #2a180c; }
 .cell.cleaned { animation: sparkle .6s; }
 @keyframes sparkle { 0% { background: var(--gold); } }
 
