@@ -76,6 +76,14 @@ export function svg(inner: string, cls = ''): string {
   return `<svg viewBox="0 0 100 100" class="${cls}" aria-hidden="true">${inner}</svg>`;
 }
 
+/** Micah's orthopedic bed: light blue, with a thick memory-foam cushion. Shared by the shop icon and the yard. */
+export const ORTHO_BED = `
+<path d="M8 58 C8 44 18 38 30 40 L70 40 C82 38 92 44 92 58 L92 74 Q92 84 80 84 L20 84 Q8 84 8 74 Z" fill="#8cc8ec" stroke="#3a7aa8" stroke-width="3" stroke-linejoin="round"/>
+<path d="M18 58 Q18 50 28 50 L72 50 Q82 50 82 58 L82 66 Q82 72 74 72 L26 72 Q18 72 18 66 Z" fill="#eaf6ff" stroke="#3a7aa8" stroke-width="2.5"/>
+<path d="M26 62 Q50 68 74 62" fill="none" stroke="#b8dcf2" stroke-width="3" stroke-linecap="round"/>
+<circle cx="32" cy="57" r="1.8" fill="#b8dcf2"/><circle cx="50" cy="56" r="1.8" fill="#b8dcf2"/><circle cx="68" cy="57" r="1.8" fill="#b8dcf2"/>
+<path d="M14 78 H86" stroke="#3a7aa8" stroke-width="2" opacity=".45"/>`;
+
 /** Booster icons (shop, in-level tools). */
 export const BOOSTER_ICONS: Record<string, string> = {
   treat: `<path d="M20 50 Q20 26 50 26 Q80 26 80 50 Q80 74 50 74 Q20 74 20 50Z" fill="#c98a4b" stroke="#7a4f25" stroke-width="3"/>
@@ -89,6 +97,14 @@ export const BOOSTER_ICONS: Record<string, string> = {
   leash: `<path d="M20 80 C30 60 30 40 50 34 C70 28 78 40 70 52 C62 64 44 58 50 44" fill="none" stroke="#2f8fe0" stroke-width="7" stroke-linecap="round"/>
           <circle cx="20" cy="80" r="7" fill="#999" stroke="#555" stroke-width="3"/>
           <text x="66" y="84" font-size="26" font-weight="900" fill="#2b9a46" font-family="sans-serif" text-anchor="middle">+5</text>`,
+  dust: `<path d="M30 52 Q24 86 50 86 Q76 86 70 52 Z" fill="#8e5bd6" stroke="#5a3392" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M30 52 Q50 44 70 52" fill="none" stroke="#5a3392" stroke-width="3"/>
+          <path d="M34 50 L40 40 M66 50 L60 40" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/>
+          <ellipse cx="42" cy="68" rx="5" ry="8" fill="#fff" opacity=".3"/>
+          <path d="M50 8 L54 20 L66 24 L54 28 L50 40 L46 28 L34 24 L46 20 Z" fill="#ffd23f" stroke="#b58a00" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M78 26 L80 32 L86 34 L80 36 L78 42 L76 36 L70 34 L76 32 Z" fill="#ffd23f" stroke="#b58a00" stroke-width="1.5" stroke-linejoin="round"/>
+          <circle cx="24" cy="30" r="3.5" fill="#ffd23f"/><circle cx="84" cy="56" r="2.5" fill="#ffd23f"/>`,
+  bed: ORTHO_BED,
   zoomies: `<circle cx="50" cy="50" r="30" fill="#ffd23f" stroke="#b58a00" stroke-width="3"/>
           <path d="M14 40 H40 M10 50 H36 M14 60 H40" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
           <path d="M60 40 L76 50 L60 60 Z" fill="#b58a00"/>`,
@@ -121,6 +137,7 @@ export const UI = {
   plus: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
   home: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
   gift: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>`,
+  shirt: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>`,
   bag: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
   settings: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
   award: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>`,

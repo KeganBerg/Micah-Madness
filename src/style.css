@@ -109,7 +109,7 @@ h2, h3, p { margin: 0; }
 
 .map-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
 .map { position: relative; width: 100%; }
-.map-bg { position: absolute; inset: 0; width: 100%; }
+.scenery { position: absolute; inset: 0; }
 .zone-banner {
   position: absolute; display: flex; flex-direction: column; gap: 0; padding: var(--s2) var(--s3);
   background: var(--sea-deep); color: #fff; border-radius: var(--radius);
@@ -142,10 +142,37 @@ h2, h3, p { margin: 0; }
 .welcome .btn { grid-column: 1 / -1; }
 
 /* ───── Modals ───── */
-.modal-wrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--s4); background: #0f2a3dcc; animation: fade .15s; }
+/*
+  Pop-ups must always fit on screen, including iPhone Safari with its toolbar showing.
+  The wrap covers the screen for the dim backdrop, but the pop-up is centred in a single
+  grid row sized to the visible area (--vvh is set from visualViewport in main.ts; svh
+  is the height with browser toolbars shown). The pop-up scrolls inside itself when its
+  content is taller, and its main button sticks to its bottom edge so it is always tappable.
+*/
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 50; display: grid; background: #0f2a3dcc; animation: fade .15s;
+  grid-template-rows: 100%;
+  grid-template-rows: min(100%, 100svh, var(--vvh, 100svh));
+  grid-template-columns: 100%;
+  --mt: max(var(--s4), env(safe-area-inset-top));
+  --mb: max(var(--s4), env(safe-area-inset-bottom));
+  --mx: max(var(--s4), env(safe-area-inset-left), env(safe-area-inset-right));
+}
 .modal {
-  width: min(400px, 100%); max-height: calc(100% - var(--s6)); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s5);
-  padding: var(--s5); border-radius: var(--radius-lg); background: var(--panel); text-align: left; box-shadow: 0 12px 40px #0008; animation: popin .2s;
+  --pad: var(--s5);
+  align-self: center; justify-self: center; margin: var(--mt) var(--mx) var(--mb);
+  width: min(400px, calc(100% - 2 * var(--mx))); max-height: calc(100% - var(--mt) - var(--mb));
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: var(--s5);
+  padding: var(--pad); border-radius: var(--radius-lg); background: var(--panel); text-align: left; box-shadow: 0 12px 40px #0008; animation: popin .2s;
+}
+.modal > * { flex: none; }
+/* Main action pinned to the bottom of the pop-up while the rest scrolls. */
+.modal > .actions:last-child {
+  position: sticky; bottom: calc(-1 * var(--pad)); z-index: 1;
+  margin: calc(-1 * var(--s3)) calc(-1 * var(--pad)) calc(-1 * var(--pad));
+  padding: var(--s3) var(--pad) var(--pad); background: var(--panel);
+  box-shadow: 0 -10px 12px -8px #0f2a3d33; border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .modal-head { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--s4); align-items: center; }
 .modal-avatar { width: 64px; height: 64px; }
@@ -566,3 +593,168 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
   .tap-float { display: none; }
 }
 .shop-info small.tap-pop { align-self: flex-start; transform-origin: left center; }
+/* ───── Five in-level items: icon above label so they fit side by side ───── */
+.tools { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s2); }
+.tool { grid-template-columns: 1fr; justify-items: center; align-content: center; gap: 2px; padding: 0 var(--s1); text-align: center; height: 60px; }
+.tool .tool-icon { width: 30px; height: 30px; }
+.tool .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tile.dusted .piece { filter: drop-shadow(0 0 6px #ffd23f); }
+
+/* ───── Level map scenery (src/scenery.ts) ───── */
+.zone-layer, .path-layer { position: absolute; left: 0; width: 100%; overflow: visible; }
+.path-layer { top: 0; pointer-events: none; }
+.zone-layer :is(.p, .sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { transform-box: fill-box; }
+.zone-layer .p { transform-origin: 50% 100%; cursor: pointer; }
+.zone-layer :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { animation-play-state: paused; }
+.zone-layer.live :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { animation-play-state: running; }
+.sway { transform-origin: 50% 100%; animation: sc-sway 3.6s ease-in-out infinite; }
+.bob { animation: sc-bob 2.8s ease-in-out infinite; }
+.wag { transform-origin: 100% 100%; animation: sc-wag .45s ease-in-out infinite alternate; }
+.flap { transform-origin: 50% 50%; animation: sc-flap .22s ease-in-out infinite alternate; }
+.flutter { animation: sc-flutter 7s ease-in-out infinite; }
+.peck { transform-origin: 50% 100%; animation: sc-peck 4s ease-in-out infinite; }
+.scuttle { animation: sc-scuttle 3s ease-in-out infinite; }
+.foam { animation: sc-foam 3.2s ease-in-out infinite; }
+.ripple { transform-origin: 50% 50%; animation: sc-ripple 3s ease-out infinite; }
+.flicker { transform-origin: 50% 100%; animation: sc-flicker .5s ease-in-out infinite alternate; }
+.twinkle { transform-origin: 50% 50%; animation: sc-twinkle 2.4s ease-in-out infinite; }
+.flake { animation: sc-fall 7s linear infinite; }
+.lamp-glow { animation: sc-twinkle 4s ease-in-out infinite; }
+@keyframes sc-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes sc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes sc-wag { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
+@keyframes sc-flap { from { transform: scaleX(1); } to { transform: scaleX(.3); } }
+@keyframes sc-flutter {
+  0%, 100% { transform: translate(0, 0); } 25% { transform: translate(14px, -10px); }
+  50% { transform: translate(4px, -20px); } 75% { transform: translate(-12px, -8px); }
+}
+@keyframes sc-peck { 0%, 70%, 100% { transform: rotate(0); } 76% { transform: rotate(14deg); } 82% { transform: rotate(0); } 88% { transform: rotate(14deg); } }
+@keyframes sc-scuttle { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-7px); } 60% { transform: translateX(6px); } }
+@keyframes sc-foam { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+@keyframes sc-ripple { from { transform: scale(.5); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes sc-flicker { from { transform: scale(1, 1); opacity: 1; } to { transform: scale(.8, 1.15); opacity: .8; } }
+@keyframes sc-twinkle { 0%, 100% { opacity: .25; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes sc-fall { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .95; } 85% { opacity: .95; } 100% { transform: translate(14px, 140px); opacity: 0; } }
+
+/* Tap reactions */
+.poke-bounce { animation: sc-bounce .8s ease-out; }
+.poke-rustle { animation: sc-rustle .6s ease-in-out; }
+.poke-wobble { animation: sc-wobble .55s ease-in-out; }
+.poke-hop { animation: sc-hop .55s ease-out; }
+.poke-spin { transform-origin: 50% 50%; animation: sc-spin .7s ease-in-out; }
+.poke-flyoff { animation: sc-flyoff 4.5s ease-in-out; }
+.poke-float { animation: sc-float 5s ease-in-out; }
+.poke-splash { animation: sc-splash .5s ease-out; }
+.poke-scuttle { animation: sc-dash 1.6s ease-in-out; }
+.poke-glow { animation: sc-glow .9s ease-out; }
+@keyframes sc-bounce {
+  0% { transform: translateY(0) scale(1.15, .8); } 30% { transform: translateY(-34px) scale(.92, 1.08); }
+  55% { transform: translateY(0) scale(1.1, .88); } 75% { transform: translateY(-12px); } 100% { transform: translateY(0); }
+}
+@keyframes sc-rustle { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-7deg); } 40% { transform: rotate(6deg); } 60% { transform: rotate(-4deg); } 80% { transform: rotate(2deg); } }
+@keyframes sc-wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 60% { transform: rotate(4deg); } }
+@keyframes sc-hop { 0%, 100% { transform: translateY(0) scale(1, 1); } 20% { transform: scale(1.12, .86); } 50% { transform: translateY(-16px) scale(.94, 1.08); } }
+@keyframes sc-spin { from { transform: rotate(0) scale(1); } 50% { transform: rotate(200deg) scale(1.25); } to { transform: rotate(360deg) scale(1); } }
+@keyframes sc-flyoff {
+  0% { transform: translate(0, 0); opacity: 1; } 8% { transform: translate(0, -6px); }
+  35% { transform: translate(70px, -160px) scale(.6); opacity: 0; } 80% { transform: translate(-30px, -20px); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes sc-float { 0% { transform: translateY(0); opacity: 1; } 40% { transform: translateY(-180px); opacity: 0; } 85% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes sc-splash { 0%, 100% { transform: scale(1, 1); } 30% { transform: scale(1.18, .8); } 60% { transform: scale(.95, 1.06); } }
+@keyframes sc-dash { 0%, 100% { transform: translateX(0); } 35%, 60% { transform: translateX(46px); } }
+@keyframes sc-glow { 0%, 100% { filter: none; } 30% { filter: drop-shadow(0 0 8px #ffe28a) brightness(1.3); } }
+.fx-bit { animation: sc-burst .8s ease-out forwards; pointer-events: none; }
+@keyframes sc-burst {
+  0% { transform: translate(0, 0) scale(.4); opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 18px)) scale(1.1) rotate(160deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zone-layer * { animation: none !important; }
+}
+/* ───── Short screens: phones in landscape, small phones with browser bars showing ───── */
+@media (max-height: 740px) {
+  .modal { --pad: var(--s4); gap: var(--s3); }
+  .modal-head { grid-template-columns: 48px 1fr auto; gap: var(--s3); }
+  .modal-avatar { width: 48px; height: 48px; }
+  .modal h2 { font-size: 24px; }
+  .goal-list li { min-height: 44px; padding: var(--s1) var(--s3); }
+  .goal-list li .goal-icon, .goal-list li .goal-score { width: 32px; height: 32px; }
+  .goal-list { gap: var(--s1); }
+  .tip, .streak, .notice { padding: var(--s2) var(--s3); }
+  .streak { grid-template-columns: 28px 1fr; gap: var(--s2); }
+  .streak .booster-icon { width: 28px; height: 28px; }
+  .pre-booster { padding: var(--s2) var(--s3); }
+  .result-stars i { width: 44px; height: 44px; }
+  .shop-list li, .tag-list li { padding: var(--s2) var(--s3); }
+  .daily-grid .booster-icon { width: 28px; height: 28px; }
+}
+@media (max-height: 480px) {
+  .modal { width: min(560px, calc(100% - 2 * var(--mx))); }
+  .modal h2 { font-size: 22px; }
+  .modal-avatar { width: 40px; height: 40px; }
+  .modal-head { grid-template-columns: 40px 1fr auto; }
+  .daily-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .daily-grid li:last-child { grid-column: auto; }
+  .actions .pair, .actions { gap: var(--s2); }
+  .modal .btn { min-height: 44px; }
+}
+/* ───── Micah's Yard: she roams, naps and plays ───── */
+.yard-scene { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.yard-item, .ym { cursor: pointer; }
+.yard-item-art { transform-box: fill-box; transform-origin: 50% 100%; }
+.yard-item-art.wiggle { animation: wiggle .5s ease-in-out 2; }
+.ym { transition: opacity .35s ease; }
+.ym.inside { opacity: 0; }
+.ym-pose { transform-box: fill-box; transform-origin: 50% 100%; }
+.ym-pose.walk { animation: micah-hop .32s ease-in-out infinite; }
+.ym-pose.run { animation: ym-run .2s ease-in-out infinite; }
+.ym-pose.sniff { animation: ym-sniff .5s ease-in-out 3; }
+.ym-pose.sit { animation: micah-breathe 2.6s ease-in-out infinite; }
+.ym-pose.nap { animation: ym-nap 3s ease-in-out infinite; }
+.ym-pose.eat { animation: ym-eat .3s ease-in-out infinite; }
+.ym-pose.dig { animation: ym-dig .18s linear infinite; }
+.ym-pose.jump { animation: micah-cheer .8s ease-in-out; }
+.ym-pose.scratch { animation: ym-scratch .14s linear 6; }
+@keyframes ym-run { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+@keyframes ym-sniff { 50% { transform: rotate(14deg) translateY(4px) scale(1, .94); } }
+@keyframes ym-nap { 0%, 100% { transform: rotate(80deg) translate(-6px, 10px) scale(.92, .82); } 50% { transform: rotate(80deg) translate(-6px, 10px) scale(.94, .86); } }
+@keyframes ym-eat { 50% { transform: rotate(18deg) translateY(6px); } }
+@keyframes ym-dig { 0%, 100% { transform: rotate(16deg) translateY(4px); } 50% { transform: rotate(10deg) translate(3px, 6px); } }
+@keyframes ym-scratch { 50% { transform: rotate(-6deg) translateX(-2px); } }
+.ym-emote { font: 900 18px var(--font-display); fill: #fff; stroke: #173a52; stroke-width: 4px; paint-order: stroke; opacity: 0; pointer-events: none; }
+.ym-emote.show { animation: ym-emote 2.4s ease-out forwards; }
+@keyframes ym-emote { 0% { opacity: 0; transform: translateY(6px); } 15%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-14px); } }
+.ym-flip { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ym-pose, .yard-item-art, .ym-emote.show { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
+
+/* Map: Micah sniffs about beside her level while you decide. */
+.map-micah.sniff img { animation: ym-sniff .5s ease-in-out 3; }
+.map-micah.scratch img { animation: ym-scratch .14s linear 6; }
+.map-micah.pace { transition: left 1.2s ease-in-out, top 1.2s ease-in-out; }
+.map-micah.pace img { animation: micah-hop .3s ease-in-out 4; }
+
+/* ───── Wardrobe ───── */
+.yard-actions { display: flex; gap: var(--s2); }
+.yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
+.yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
+.yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
+.wardrobe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.wardrobe li { display: contents; }
+.wardrobe button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); border: 3px solid transparent; font: inherit; text-align: center; min-width: 0; }
+.wardrobe button img { width: 72px; height: 72px; }
+.wardrobe button b { font-size: var(--fs-sm); line-height: 1.15; }
+.wardrobe button small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 2px; }
+.wardrobe button small .biscuit-icon { width: 16px; height: 16px; }
+.wardrobe button.wearing { border-color: var(--brand); background: #fff; }
+.wardrobe button.wearing small { color: var(--brand); }
+.wardrobe button.locked img { filter: grayscale(1) brightness(.6); opacity: .55; }
+.wardrobe button.locked { color: var(--muted); }
+.wardrobe button.affordable small { color: var(--good); }
+.modal .wardrobe-preview { display: block; width: 120px; height: 120px; margin: 0 auto; }
+
+.dock { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.dock-btn .tally { right: calc(50% - 36px); }

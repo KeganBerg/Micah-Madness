@@ -2,9 +2,11 @@ import './style.css';
 import {
   applyClear,
   applyGravity,
+  cloneGrid,
   comboClears,
   computeClear,
   createGrid,
+  dustTarget,
   findMove,
   findRuns,
   hasMove,
@@ -14,6 +16,7 @@ import {
   newTile,
   shuffle,
   swap,
+  transformKind,
   unkey,
   type ClearResult,
   type Grid,
@@ -21,7 +24,10 @@ import {
   type Special,
   type Tile,
 } from './board';
-import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, micahUrl, svg } from './art';
+import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, svg } from './art';
+import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
+import { startYard } from './roam';
+import { sceneryHTML, wireScenery } from './scenery';
 import { LEVELS, ZONES, mudCount, yarnCount, type Goal, type Level } from './levels';
 import {
   BOOSTERS,
@@ -76,7 +82,10 @@ function mount(screen: HTMLElement, onLeave?: () => void): void {
   app.replaceChildren(screen);
 }
 const icon = (id: string, cls = 'icon') => svg(BOOSTER_ICONS[id], cls);
-const micahImg = (cls: string, alt = '') => `<img src="${micahUrl}" class="${cls}" alt="${alt}" draggable="false">`;
+/** Micah, in whatever she's wearing today. */
+const micahImg = (cls: string, alt = '') =>
+  `<img src="${costumeUrl(save.costume)}" class="${cls}" alt="${alt}" draggable="false">`;
+const micahAlt = () => `Micah in her ${costumeById(save.costume).name.toLowerCase()}`;
 const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : ''}">${UI.star}</i>`).join('');
 
 function goalIcon(goal: Goal): string {
@@ -122,32 +131,11 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     return { x, y };
   };
 
-  // Zone backgrounds, bottom to top.
-  const zoneBands = ZONES.map((z, zi) => {
-    const yTop = zi === ZONES.length - 1 ? 0 : nodePos(zi * 5 + 4).y - spacing / 2;
-    const yBot = zi === 0 ? height : nodePos(zi * 5).y + spacing / 2;
-    return `<rect x="0" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${z.ground}"/>`;
-  }).join('');
-
-  const decorKinds = [[0, 1, 2], [1, 1, 3], [4, 4, 5], [2, 3, 0], [5, 4, 1], [3, 2, 0], [1, 0, 1], [5, 1, 2]];
-  const decor = LEVELS.map((_, i) => {
-    const { y } = nodePos(i);
-    const z = Math.floor(i / 5);
-    const kind = decorKinds[z][i % 3];
-    const side = Math.sin(i * 0.95) > 0 ? 40 : width - 70;
-    return `<g transform="translate(${side - 10} ${y - 30}) scale(.42)" opacity=".55">${KINDS[kind].svg}</g>`;
-  }).join('');
-
-  let path = '';
-  LEVELS.forEach((_, i) => {
-    const p = nodePos(i);
-    if (i === 0) path += `M ${p.x} ${p.y}`;
-    else {
-      const prev = nodePos(i - 1);
-      const my = (prev.y + p.y) / 2;
-      path += ` C ${prev.x} ${my}, ${p.x} ${my}, ${p.x} ${p.y}`;
-    }
-  });
+  // Area bands, bottom to top (Area 1 at the bottom of the map).
+  const bands = ZONES.map((_, zi) => ({
+    top: zi === ZONES.length - 1 ? 0 : nodePos(zi * 5 + 4).y - spacing / 2,
+    bottom: zi === 0 ? height : nodePos(zi * 5).y + spacing / 2,
+  }));
 
   const screen = h(`
     <div class="screen map-screen">
@@ -158,12 +146,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       </header>
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
-          <svg class="map-bg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="height:${height}px">
-            ${zoneBands}
-            ${decor}
-            <path d="${path}" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" opacity=".55"/>
-            
-          </svg>
+          <div class="scenery" aria-hidden="true"></div>
           ${ZONES.map((z, zi) => {
             const first = nodePos(zi * 5);
             const side = first.x < width / 2 ? 'right:16px' : 'left:16px';
@@ -184,7 +167,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${canSave ? '' : '<p class="save-warning">This browser isn\u2019t saving progress, so it resets when you close the page. Private browsing usually causes this.</p>'}
       ${Object.keys(save.stars).length === 0
         ? `<div class="welcome">
-            ${micahImg('micah-idle', 'Micah in her lobster costume')}
+            ${micahImg('micah-idle', micahAlt())}
             <div><h2>Help Micah fetch her toys</h2>
             <p>Swap two neighbouring pieces to line up three of a kind. Each level has a goal and a move limit.</p></div>
             <button class="btn" data-act="start">Start level 1</button>
@@ -194,6 +177,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
         <button class="dock-btn" data-act="collar">${UI.award}<span>Collar</span><em class="tally">${save.badges.length}/${BADGES.length}</em></button>
+        <button class="dock-btn" data-act="closet">${UI.shirt}<span>Closet</span></button>
         <button class="dock-btn" data-act="shop2">${UI.bag}<span>Shop</span></button>
       </nav>
     </div>`);
@@ -201,6 +185,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
+  screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
   screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
@@ -209,7 +194,35 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
   );
 
-  mount(screen);
+  // Scenery is drawn at the map's real pixel width so props keep their shape on any phone,
+  // and redrawn if that width changes.
+  const mapEl = screen.querySelector<HTMLElement>('.map')!;
+  const sceneEl = screen.querySelector<HTMLElement>('.scenery')!;
+  let unwire = () => {};
+  let drawnWidth = 0;
+  const paintScenery = () => {
+    const w = Math.round(mapEl.clientWidth);
+    if (!w || w === drawnWidth) return;
+    drawnWidth = w;
+    unwire();
+    const sx = w / width;
+    const banners = ZONES.map((_, zi) => {
+      const first = nodePos(zi * 5);
+      const bw = 150;
+      return { x: first.x < width / 2 ? w - 16 - bw : 16, y: first.y + 8, w: bw, h: 60 };
+    });
+    sceneEl.innerHTML = sceneryHTML({
+      width: w, height, bands, banners,
+      nodes: LEVELS.map((_, i) => { const p = nodePos(i); return { x: p.x * sx, y: p.y }; }),
+    });
+    unwire = wireScenery(sceneEl, playScenerySound);
+  };
+  const resizeWatch = new ResizeObserver(paintScenery);
+  // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
+  let idleTimer = 0;
+  mount(screen, () => (clearTimeout(idleTimer), resizeWatch.disconnect(), unwire()));
+  paintScenery();
+  resizeWatch.observe(mapEl);
 
   // Micah stands just beside the node she is on, on the side away from the path's next bend.
   const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
@@ -221,6 +234,31 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     micahEl.style.top = `${p.y - 56}px`;
     micahEl.classList.toggle('facing-left', side > 0);
   };
+  let homeLeft = '';
+  const fidget = () => {
+    idleTimer = window.setTimeout(() => {
+      if (!micahEl.isConnected) return;
+      if (!micahEl.matches('.walking, .pace')) {
+        micahEl.classList.remove('sniff', 'scratch', 'tilt');
+        void micahEl.offsetWidth;
+        const r = Math.random();
+        if (r < 0.4) micahEl.classList.add('sniff');
+        else if (r < 0.6) micahEl.classList.add('scratch');
+        else {
+          // Trot a few steps away and back.
+          homeLeft ||= micahEl.style.left;
+          const away = micahEl.style.left === homeLeft;
+          const dx = (Math.random() < 0.5 ? -1 : 1) * 18;
+          micahEl.classList.add('pace');
+          micahEl.classList.toggle('facing-left', away ? dx < 0 : !micahEl.classList.contains('facing-left'));
+          micahEl.style.left = away ? `calc(${homeLeft} + ${dx}px)` : homeLeft;
+          setTimeout(() => micahEl.classList.remove('pace'), 1250);
+        }
+      }
+      fidget();
+    }, 2500 + Math.random() * 3500);
+  };
+  if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) fidget();
   micahEl.addEventListener('click', () => {
     sfx.bark();
     micahEl.classList.remove('tilt');
@@ -249,6 +287,24 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
 }
 
+const SCENERY_SOUNDS: Record<string, () => void> = {
+  boing: () => sfx.pop(2),
+  pop: () => sfx.pop(6),
+  rustle: () => sfx.whoosh(),
+  whoosh: () => sfx.whoosh(),
+  flutter: () => sfx.select(),
+  tweet: () => sfx.squirrel(),
+  bark: () => sfx.bark(),
+  woof: () => sfx.bark(),
+  knock: () => sfx.step(),
+  dig: () => sfx.step(),
+  scuttle: () => sfx.step(),
+  splash: () => sfx.splash(),
+  chime: () => sfx.coin(),
+  tap: () => sfx.tap(),
+};
+const playScenerySound = (name: string) => SCENERY_SOUNDS[name]?.();
+
 // ───────────────────────────── Micah's Yard ─────────────────────────────
 
 function showYard(): void {
@@ -264,7 +320,11 @@ function showYard(): void {
         <div class="wallet star-wallet" aria-label="${left} stars to spend"><span class="star-pill">${UI.star}</span><b>${left}</b></div>
       </header>
       <div class="yard-body">
-        <div class="yard-frame">${yardScene(owned, micahUrl)}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume))}</div>
+        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'}</p>
+        <div class="yard-actions">
+          <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
+        </div>
         <div class="yard-progress">
           <p><b>${owned.length} of ${DECOR.length}</b> built</p>
           <div class="bar"><i style="width:${(owned.length / DECOR.length) * 100}%"></i></div>
@@ -291,6 +351,7 @@ function showYard(): void {
       </div>
     </div>`);
   screen.querySelector('[data-act="back"]')!.addEventListener('click', () => showMap());
+  screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showYard()));
   screen.querySelectorAll<HTMLButtonElement>('.buy').forEach((b) =>
     b.addEventListener('click', () => {
       const d = DECOR.find((x) => x.id === b.dataset.id)!;
@@ -307,7 +368,76 @@ function showYard(): void {
       celebrate(tags);
     }),
   );
-  mount(screen);
+  let stopRoam: (() => void) | null = null;
+  mount(screen, () => stopRoam?.());
+  stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx);
+}
+
+// ───────────────────────────── Wardrobe ─────────────────────────────
+
+/** Highest level cleared so far (costumes unlock as you go). */
+const clearedUpTo = () => unlockedUpTo(save) - 1;
+
+function showWardrobe(onClose: () => void): void {
+  const card = (c: Costume) => {
+    const open = isUnlocked(c, clearedUpTo(), save.wardrobe);
+    const wearing = save.costume === c.id;
+    const price = 'biscuits' in c.unlock ? c.unlock.biscuits : 0;
+    const state = wearing ? 'wearing' : open ? 'open' : price && save.biscuits >= price ? 'locked affordable' : 'locked';
+    const label = wearing
+      ? 'Wearing'
+      : open
+        ? 'Wear'
+        : price
+          ? `${icon('biscuit', 'biscuit-icon')}${price}`
+          : `${UI.lock}${unlockText(c)}`;
+    return `<li><button class="${state}" data-id="${c.id}" aria-pressed="${wearing}" aria-label="${c.name}: ${open ? (wearing ? 'wearing' : 'wear') : unlockText(c)}">
+      <img src="${costumeUrl(c.id)}" alt="" draggable="false"><b>${c.name}</b><small>${label}</small></button></li>`;
+  };
+  const render = () => {
+    const c = costumeById(save.costume);
+    return `
+    <header class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">Micah\u2019s closet</p><h2>${c.name}</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <p class="body">${c.desc} Clear levels to unlock more outfits, or buy some with biscuits. You have ${save.biscuits}.</p>
+    <ul class="wardrobe">${COSTUMES.map(card).join('')}</ul>`;
+  };
+  const m = modal(render(), onClose);
+  const close = () => (m.remove(), onClose());
+  const wire = () => {
+    m.querySelector('.close')!.addEventListener('click', close);
+    m.querySelectorAll<HTMLButtonElement>('.wardrobe button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const c = costumeById(b.dataset.id!);
+        if (!isUnlocked(c, clearedUpTo(), save.wardrobe)) {
+          if (!('biscuits' in c.unlock)) {
+            sfx.warn();
+            toast(`<span><b>${c.name}</b> unlocks when you clear level ${'level' in c.unlock ? c.unlock.level : ''}.</span>`);
+            return;
+          }
+          if (save.biscuits < c.unlock.biscuits) {
+            sfx.warn();
+            toast(`<span>You need ${c.unlock.biscuits - save.biscuits} more biscuits for <b>${c.name}</b>.</span>`);
+            return;
+          }
+          save.biscuits -= c.unlock.biscuits;
+          save.wardrobe.push(c.id);
+          sfx.coin();
+        } else {
+          sfx.select();
+        }
+        save.costume = c.id;
+        persist(save);
+        m.querySelector('.modal')!.innerHTML = render();
+        wire();
+        pop(m.querySelector('.modal-head .modal-avatar'));
+      }),
+    );
+  };
+  wire();
 }
 
 // ───────────────────────────── Daily treat ─────────────────────────────
@@ -351,6 +481,13 @@ function showDaily(): void {
 
 // ───────────────────────────── Modals ─────────────────────────────
 
+// The visible height on iPhone Safari changes as its toolbars show and hide; pop-ups size to it.
+const syncViewportHeight = () =>
+  document.documentElement.style.setProperty('--vvh', `${Math.round(window.visualViewport ? window.visualViewport.height * window.visualViewport.scale : window.innerHeight)}px`);
+syncViewportHeight();
+window.visualViewport?.addEventListener('resize', syncViewportHeight);
+window.addEventListener('resize', syncViewportHeight);
+
 function modal(inner: string, onClose?: () => void): HTMLElement {
   const m = h(`<div class="modal-wrap"><div class="modal">${inner}</div></div>`);
   if (onClose) {
@@ -360,6 +497,14 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
         onClose();
       }
     });
+  }
+  // A lone main button at the end becomes a sticky footer, so it never scrolls out of view.
+  const last = m.querySelector('.modal')!.lastElementChild;
+  if (last?.classList.contains('btn')) {
+    const foot = document.createElement('div');
+    foot.className = 'actions';
+    last.replaceWith(foot);
+    foot.append(last);
   }
   document.body.append(m);
   m.querySelector<HTMLElement>('.modal')!.setAttribute('role', 'dialog');
@@ -677,6 +822,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let busy = false;
   let over = false;
   let treatMode = false;
+  let dustMode = false;
+  /** The board just before the last swap, for the Orthopedic Bed's undo. */
+  type Snap = { grid: Grid; mud: boolean[][]; yarn: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
+  let undoSnap: Snap | null = null;
   let selected: Pos | null = null;
   let bonusPts = 0;
   let goalsDone = 0;
@@ -776,18 +925,16 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
   // Yarn sits above the pieces, so it gets its own layer.
-  const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) =>
-    row.map((on, c) => {
-      if (!on) return null;
-      const el = document.createElement('div');
-      el.className = 'yarn';
-      el.style.left = `${(c / COLS) * 100}%`;
-      el.style.top = `${(r / ROWS) * 100}%`;
-      el.innerHTML = YARN_OVERLAY;
-      boardEl.append(el);
-      return el;
-    }),
-  );
+  const makeYarnEl = (r: number, c: number) => {
+    const el = document.createElement('div');
+    el.className = 'yarn';
+    el.style.left = `${(c / COLS) * 100}%`;
+    el.style.top = `${(r / ROWS) * 100}%`;
+    el.innerHTML = YARN_OVERLAY;
+    boardEl.append(el);
+    return el;
+  };
+  const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) => row.map((on, c) => (on ? makeYarnEl(r, c) : null)));
 
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
@@ -799,6 +946,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     el.className = `tile ${specialClass(t.special)}`;
     el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
     el.dataset.special = t.special;
+    el.dataset.kind = String(t.kind);
     boardEl.append(el);
     tileEls.set(t.id, el);
     return el;
@@ -808,7 +956,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   }
   function syncTileEl(t: Tile, r: number, c: number) {
     let el = tileEls.get(t.id);
-    if (!el || el.dataset.special !== t.special) {
+    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind)) {
       el?.remove();
       el = makeTileEl(t);
     }
@@ -849,10 +997,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         return `<div class="goal ${done ? 'done' : ''}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
-    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash'] as const)
+    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash', 'dust', 'bed'] as const)
       .map(
-        (id) => `<button class="tool ${id === 'treat' && treatMode ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
-          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
+        (id) => `<button class="tool ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
+          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
       )
       .join('');
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
@@ -1063,6 +1211,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     selectCell(null);
     sfx.swap();
     const legal = isLegalSwap(grid, a, b);
+    const before: Snap = {
+      grid: cloneGrid(grid),
+      mud: mud.map((row) => [...row]),
+      yarn: yarn.map((row) => [...row]),
+      remaining: [...remaining],
+      moves,
+      score,
+      goalsDone,
+    };
     swap(grid, a, b);
     renderAll();
     await wait(170);
@@ -1076,6 +1233,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       armHint();
       return;
     }
+    undoSnap = before;
     moves--;
     if (moves === 5) sfx.warn();
     renderHud();
@@ -1104,10 +1262,37 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
     if (id === 'treat') {
       treatMode = !treatMode;
+      dustMode = false;
       say(treatMode ? 'Tap any piece and Micah will eat it.' : 'Treat put away.');
       renderHud();
       return;
     }
+    if (id === 'dust') {
+      dustMode = !dustMode;
+      treatMode = false;
+      say(dustMode ? 'Tap a piece. Every piece like it turns into the kind you need.' : 'Magic Dust put away.');
+      renderHud();
+      return;
+    }
+    if (id === 'bed') {
+      if (!undoSnap) {
+        say('Make a move first. The bed remembers your last one.', 'sad');
+        return;
+      }
+      save.inventory.bed--;
+      persist(save);
+      busy = true;
+      treatMode = dustMode = false;
+      restore(undoSnap);
+      undoSnap = null;
+      sfx.whoosh();
+      say('Micah had a nap on her memory foam. Last move undone!', 'big');
+      await wait(350);
+      busy = false;
+      armHint();
+      return;
+    }
+    undoSnap = null;
     save.inventory[id]--;
     persist(save);
     if (id === 'leash') {
@@ -1130,7 +1315,71 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
 
+  /** Put the board back exactly as it was in a snapshot (Orthopedic Bed). */
+  function restore(snap: Snap) {
+    clearHint();
+    selectCell(null);
+    grid = cloneGrid(snap.grid);
+    moves = snap.moves;
+    score = snap.score;
+    goalsDone = snap.goalsDone;
+    snap.remaining.forEach((v, i) => (remaining[i] = v));
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        mud[r][c] = snap.mud[r][c];
+        cellEls[r][c].classList.toggle('mud', mud[r][c]);
+        cellEls[r][c].classList.remove('cleaned');
+        yarn[r][c] = snap.yarn[r][c];
+        if (yarn[r][c] && !yarnEls[r][c]?.isConnected) yarnEls[r][c] = makeYarnEl(r, c);
+        else if (!yarn[r][c] && yarnEls[r][c]) {
+          yarnEls[r][c]!.remove();
+          yarnEls[r][c] = null;
+        }
+      }
+    }
+    for (const el of tileEls.values()) el.remove();
+    tileEls.clear();
+    renderAll();
+    for (const el of tileEls.values()) el.classList.add('born');
+    renderHud();
+  }
+
+  async function dustTile(p: Pos) {
+    const t = grid[p[0]][p[1]];
+    if (!t || t.kind < 0) {
+      say('Sprinkle the dust on a regular piece, not Micah.', 'sad');
+      return;
+    }
+    dustMode = false;
+    undoSnap = null;
+    save.inventory.dust--;
+    persist(save);
+    busy = true;
+    clearHint();
+    selectCell(null);
+    const from = t.kind;
+    const wanted = level.goals.flatMap((g, i) => (g.type === 'collect' ? [{ kind: g.kind, left: remaining[i] }] : []));
+    const to = dustTarget(grid, from, kinds, wanted);
+    const changed = transformKind(grid, from, to);
+    sfx.powerUp();
+    say(`Sparkle! Every ${KINDS[from].name.toLowerCase()} became a ${KINDS[to].name.toLowerCase()}.`, 'big');
+    renderAll();
+    for (const k of changed) {
+      const [r, c] = unkey(k);
+      tileEls.get(grid[r][c]!.id)?.classList.add('born', 'dusted');
+    }
+    renderHud();
+    await wait(450);
+    boardEl.querySelectorAll('.dusted').forEach((e) => e.classList.remove('dusted'));
+    await cascade([]);
+    busy = false;
+    renderHud();
+    await checkEnd();
+    armHint();
+  }
+
   async function eatTile(p: Pos) {
+    undoSnap = null;
     treatMode = false;
     save.inventory.treat--;
     bump(save, 'treats');
@@ -1299,6 +1548,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       void eatTile(p);
       return;
     }
+    if (dustMode) {
+      void dustTile(p);
+      return;
+    }
     dragStart = { p, x: e.clientX, y: e.clientY };
     pressedPiece = tileEls.get(grid[p[0]][p[1]]?.id ?? -1)?.querySelector('.piece') ?? null;
     pressDown(pressedPiece);
@@ -1339,6 +1592,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 }
 
 async function boot() {
+  app.querySelector('.launch-micah')?.setAttribute('src', costumeUrl(save.costume));
   await runLaunch(app);
   // Tags earned before they existed (or on another device) pay out now.
   const tags = awardBadges(save);

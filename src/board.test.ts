@@ -5,6 +5,7 @@ import {
   comboClears,
   computeClear,
   createGrid,
+  dustTarget,
   findMove,
   findRuns,
   hasMove,
@@ -12,6 +13,7 @@ import {
   key,
   newTile,
   shuffle,
+  transformKind,
   type Grid,
 } from './board';
 
@@ -155,5 +157,29 @@ describe('locked cells (yarn)', () => {
   it('ignores swaps that touch a locked cell', () => {
     expect(hasMove(g(), (r, c) => r === 1 && c === 2)).toBe(false);
     expect(hasMove(g(), (r, c) => r === 3 && c === 3)).toBe(true);
+  });
+});
+
+describe('Magic Dust', () => {
+  it('turns every piece of the tapped kind into the target kind', () => {
+    const g = grid(['012', '201', '120']);
+    const changed = transformKind(g, 0, 2);
+    expect(changed).toHaveLength(3);
+    expect(g.flat().filter((t) => t!.kind === 0)).toHaveLength(0);
+    expect(g.flat().filter((t) => t!.kind === 2)).toHaveLength(6);
+  });
+  it('leaves Micah pieces and other kinds alone, and keeps specials', () => {
+    const g = grid(['0M1']);
+    g[0][0]!.special = 'zoomRow';
+    transformKind(g, 0, 1);
+    expect(g[0][0]).toMatchObject({ kind: 1, special: 'zoomRow' });
+    expect(g[0][1]!.special).toBe('micah');
+  });
+  it('prefers a kind the level still needs, then the most common other kind', () => {
+    const g = grid(['0011', '1112', '3333']);
+    expect(dustTarget(g, 0, 4, [{ kind: 2, left: 5 }, { kind: 1, left: 9 }])).toBe(1);
+    expect(dustTarget(g, 0, 4, [{ kind: 2, left: 0 }])).toBe(1);
+    expect(dustTarget(g, 1, 4)).toBe(3);
+    expect(dustTarget(g, 3, 4, [{ kind: 3, left: 4 }])).toBe(1);
   });
 });

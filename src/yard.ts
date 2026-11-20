@@ -1,5 +1,5 @@
 // Micah's Yard: a long-term goal. Stars earned in levels are spent on decorations.
-import { KINDS } from './art';
+import { KINDS, ORTHO_BED } from './art';
 
 export interface Decor {
   id: string;
@@ -27,11 +27,6 @@ const tree = `
 <circle cx="34" cy="48" r="18" fill="#5fae57"/><circle cx="66" cy="46" r="18" fill="#5fae57"/>
 <circle cx="40" cy="30" r="5" fill="#e8352f"/><circle cx="62" cy="26" r="5" fill="#e8352f"/><circle cx="56" cy="50" r="5" fill="#e8352f"/>`;
 
-const bed = `
-<ellipse cx="50" cy="66" rx="44" ry="22" fill="#3d6f9a"/>
-<ellipse cx="50" cy="62" rx="34" ry="14" fill="#9fc6e6"/>
-<path d="M24 60 Q50 72 76 60" stroke="#fff" stroke-width="3" fill="none" opacity=".6"/>`;
-
 const ballPit = `
 <path d="M8 50 H92 L84 90 H16 Z" fill="#2f8fe0" stroke="#17599a" stroke-width="3" stroke-linejoin="round"/>
 <g transform="translate(10 18) scale(.36)">${KINDS[1].svg}</g>
@@ -57,7 +52,7 @@ ${[18, 36, 54, 72].map((x, i) => `<path d="M${x + 4} 78 V52" stroke="#3f8a3a" st
 
 export const DECOR: Decor[] = [
   { id: 'doghouse', name: 'Doghouse', desc: 'A red-roofed home with Micah’s name on it.', cost: 1, x: 10, y: 56, w: 110, svg: doghouse },
-  { id: 'bed', name: 'Comfy Bed', desc: 'For naps between levels.', cost: 2, x: 262, y: 200, w: 96, svg: bed },
+  { id: 'bed', name: 'Orthopedic Bed', desc: 'Light blue, with memory foam for Micah’s naps.', cost: 2, x: 262, y: 200, w: 96, svg: ORTHO_BED },
   { id: 'tree', name: 'Shade Tree', desc: 'Perfect for hiding from the sun.', cost: 2, x: 268, y: 24, w: 90, svg: tree },
   { id: 'bowl', name: 'Snack Station', desc: 'A bowl that is never empty.', cost: 3, x: 112, y: 212, w: 64, svg: KINDS[3].svg },
   { id: 'lobster', name: 'Lobster Plush', desc: 'Micah’s favourite squeaky toy.', cost: 3, x: 300, y: 140, w: 50, svg: KINDS[4].svg },
@@ -67,12 +62,14 @@ export const DECOR: Decor[] = [
   { id: 'sprinkler', name: 'Sprinkler', desc: 'Zoomies through the water.', cost: 5, x: 130, y: 150, w: 54, svg: sprinkler },
 ];
 
-/** The whole yard scene, with bought items drawn and the rest shown as empty spots. */
+/** The whole yard scene, with bought items drawn and the rest shown as empty spots.
+ * Built items are tappable groups; roam.ts moves Micah (the .ym group) between them. */
 export function yardScene(owned: string[], micahUrl: string): string {
   const items = DECOR.map((d) => {
     const has = owned.includes(d.id);
     const s = d.w / 100;
-    if (has) return `<g transform="translate(${d.x} ${d.y}) scale(${s})">${d.svg}</g>`;
+    if (has)
+      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${d.svg}</g></g></g>`;
     const cx = d.x + d.w / 2;
     const cy = d.y + d.w / 2;
     return `<g opacity=".7"><circle cx="${cx}" cy="${cy}" r="${Math.min(26, d.w / 3)}" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 5"/>
@@ -82,7 +79,13 @@ export function yardScene(owned: string[], micahUrl: string): string {
     <rect width="360" height="300" fill="#7db86a"/>
     <rect width="360" height="64" fill="#bfe6ff"/>
     <g fill="#ffffff" opacity=".9">${Array.from({ length: 19 }, (_, i) => `<rect x="${i * 20 + 2}" y="40" width="12" height="34" rx="3"/>`).join('')}<rect x="0" y="52" width="360" height="6"/></g>
-    ${items}
-    <image href="${micahUrl}" x="192" y="96" width="72" height="72"/>
+    <g class="yard-layer">
+      ${items}
+      <g class="ym" transform="translate(228 168)" role="button" aria-label="Micah">
+        <ellipse class="ym-shadow" cx="0" cy="-2" rx="20" ry="5" fill="#000" opacity=".18"/>
+        <g class="ym-flip"><g class="ym-pose"><image href="${micahUrl}" x="-40" y="-78" width="80" height="80"/></g></g>
+        <text class="ym-emote" x="0" y="-82" text-anchor="middle"></text>
+      </g>
+    </g>
   </svg>`;
 }
