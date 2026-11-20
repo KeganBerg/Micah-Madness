@@ -48,6 +48,7 @@ let unlocked = false;
 let gestured = false;
 /** Set when iOS may have quietly broken the context (app backgrounded, call, audio route change). */
 let stale = false;
+let lastRebuild = -Infinity;
 
 // iOS before 17 has no audioSession: a looping silent <audio> element started in a tap
 // moves the page onto the media channel so the silent switch doesn't mute Web Audio.
@@ -67,7 +68,7 @@ function silentWav(): string {
 }
 function mediaChannelFallback(): void {
   if ((navigator as unknown as { audioSession?: unknown }).audioSession) return;
-  if (!/iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
+  if (!IOS) return;
   try {
     if (!silentEl) {
       silentEl = document.createElement('audio');
@@ -94,6 +95,8 @@ function rebuild(): void {
   playing = null;
   unlocked = false;
   stale = false;
+  noiseBuf = null;
+  clockAt = -1;
   if (old) void old.close().catch(() => {});
 }
 
@@ -103,7 +106,12 @@ function unlock(inGesture = false): void {
   preferPlayback();
   if (inGesture) {
     mediaChannelFallback();
-    if (stale && !document.hidden) rebuild();
+    // At most one rebuild every few seconds, so a device whose clock really is stuck doesn't
+    // restart the music on every tap.
+    if (stale && !document.hidden && performance.now() - lastRebuild > 4000) {
+      lastRebuild = performance.now();
+      rebuild();
+    }
   }
   const fresh = !ctx;
   const a = graph();
@@ -133,6 +141,21 @@ function onRunning(): void {
 }
 
 const TOUCH = typeof document !== 'undefined' && 'ontouchend' in document;
+/** iPhone, iPod, or an iPad (which reports itself as a Mac but has touch). */
+const IOS = typeof navigator !== 'undefined' && TOUCH && /iP(hone|ad|od)|Macintosh/.test(navigator.userAgent);
+
+// A context that says "running" but whose clock has stopped makes no sound. iOS does this after
+// calls, Siri, headphone changes and the lock screen. A watchdog notices and the next tap rebuilds it.
+let clockAt = -1;
+function watchClock(): void {
+  const a = ctx;
+  if (!a || a.state !== 'running' || document.hidden) {
+    clockAt = -1;
+    return;
+  }
+  if (clockAt >= 0 && a.currentTime === clockAt) stale = true;
+  clockAt = a.currentTime;
+}
 
 if (typeof window !== 'undefined') {
   // Every kind of tap counts: iOS only lets audio start on touchend/click, and dragging a piece
@@ -147,22 +170,25 @@ if (typeof window !== 'undefined') {
     }, { capture: true, passive: true });
   }
   // Pause the music when the app is hidden. iOS can leave the context "running" but silent after
-  // that, so the next tap rebuilds it from scratch.
+  // that, so on iPhone/iPad the next tap rebuilds it from scratch. Android and desktop resume fine.
   const away = () => {
+    clockAt = -1;
     if (!ctx) return;
-    if (TOUCH) stale = true;
+    if (IOS) stale = true;
     stopScheduler();
     void ctx.suspend().catch(() => {});
   };
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) away();
-    else if (ctx) {
-      void ctx.resume().then(() => {
-        if (musicOn && wantMood) startMusic(wantMood);
-      }, () => {});
-    }
-  });
+  const back = () => {
+    if (document.hidden || !ctx || stale) return;
+    // Coming back doesn't need a tap on Android/desktop. On iOS the first tap rebuilds instead.
+    void ctx.resume().then(() => {
+      if (musicOn && wantMood) startMusic(wantMood);
+    }, () => {});
+  };
+  document.addEventListener('visibilitychange', () => (document.hidden ? away() : back()));
   window.addEventListener('pagehide', away);
+  window.addEventListener('pageshow', back);
+  window.setInterval(watchClock, 1500);
 }
 
 // Effects asked for while audio is still waking up wait a moment instead of being dropped.
@@ -170,7 +196,7 @@ const pending: { run: () => void; at: number }[] = [];
 function flushPending(): void {
   const now = performance.now();
   const due = pending.splice(0);
-  for (const p of due) if (now - p.at < 600) p.run();
+  for (const p of due) if (now - p.at < 900) p.run();
 }
 function whenLive(run: () => void): void {
   if (!sfxOn) return;
@@ -644,8 +670,9 @@ function tick(): void {
   const a = ctx;
   if (!a || !tune || !sc || a.state !== 'running') return;
   const sixteenth = 60 / tune.bpm / 4;
-  if (nextTime < a.currentTime - 0.2) nextTime = a.currentTime + 0.05;
-  while (nextTime < a.currentTime + 0.15) {
+  if (nextTime < a.currentTime - 0.25) nextTime = a.currentTime + 0.05;
+  // Look 0.3 s ahead so a busy phone (cascades, scenery) can miss a few timer ticks without gaps.
+  while (nextTime < a.currentTime + 0.3) {
     // Swing pushes every off-beat eighth (and the 16th after it) later.
     const pos = step % 4;
     const swing = pos === 2 ? tune.swing * sixteenth : pos === 3 ? tune.swing * sixteenth * 0.5 : 0;
