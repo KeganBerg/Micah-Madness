@@ -798,6 +798,109 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .tool .label { font-size: 12px; letter-spacing: -.01em; }
 @media (max-width: 360px) { .tools { gap: var(--s1); } .tool { padding: 0; } }
 
+/* ───── Level backdrop (src/backdrop.ts) ─────
+   Only transform and opacity move, on HTML boxes, so phones slide them without repainting.
+   --lane (set by fitBoard) is the free space under the item bar; --base is where Micah's feet touch the path. */
+.game-screen { isolation: isolate; }
+.backdrop {
+  position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--sky);
+  --base: max(calc(var(--lane, 0px) - 84px), calc(10px + env(safe-area-inset-bottom)));
+}
+.backdrop svg { overflow: visible; }
+.bd-sun { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 20px; width: 44px; height: 44px; border-radius: 50%; background: #ffd84a; box-shadow: 0 0 0 8px #ffd84a40; }
+.bd-sunset { width: 64px; height: 64px; background: #ffcf6a; box-shadow: 0 0 0 12px #ffcf6a3a; }
+.bd-moon { background: #fff4c8; box-shadow: 0 0 0 10px #fff4c81f; }
+.bd-moon::after { content: ''; position: absolute; width: 36px; height: 36px; border-radius: 50%; top: -6px; left: -12px; background: var(--sky); }
+.bd-cloud { position: absolute; left: 0; width: 100%; top: calc(env(safe-area-inset-top) + 6px); animation: bd-drift 80s linear infinite; will-change: transform; }
+.bd-cloud svg { position: absolute; left: -96px; }
+.bd-cloud.c0 { animation-delay: -18s; }
+.bd-cloud.c1 { top: calc(env(safe-area-inset-top) + 34px); animation-duration: 110s; animation-delay: -74s; }
+.bd-cloud.c1 svg { width: 62px; height: 28px; }
+.bd-cloud.c2 { top: calc(env(safe-area-inset-top) + 18px); animation-duration: 95s; animation-delay: -52s; }
+.bd-cloud.c2 svg { width: 74px; height: 33px; }
+@keyframes bd-drift { from { transform: translateX(0); } to { transform: translateX(calc(100% + 100px)); } }
+
+.bd-weather { position: absolute; z-index: 2; top: -120px; left: 0; right: 0; bottom: 0; background-repeat: repeat; animation: bd-fall 9s linear infinite; will-change: transform; opacity: .85; }
+.bd-rain { animation-duration: .8s; opacity: .6; }
+.bd-confetti { animation-duration: 8s; opacity: .7; }
+.bd-leaves { left: -120px; animation-name: bd-fall-side; animation-duration: 11s; }
+.bd-stars { z-index: 0; top: 0; animation: none; opacity: .8; }
+.bd-twinkle { z-index: 0; top: 0; animation: bd-twinkle 2.6s ease-in-out infinite alternate; }
+@keyframes bd-fall { to { transform: translateY(120px); } }
+@keyframes bd-fall-side { to { transform: translate(120px, 120px); } }
+@keyframes bd-twinkle { from { opacity: .05; } to { opacity: .9; } }
+
+.bd-land { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; height: calc(var(--base) + 130px); }
+.bd-hills { position: absolute; left: 0; width: 100%; height: 60px; bottom: calc(var(--base) + 34px); }
+.bd-ground { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--base) + 36px); background-color: var(--ground); background-position: 0 100%; }
+.bd-props { position: absolute; left: 0; right: 0; bottom: calc(var(--base) + 14px); height: 0; }
+.bd-prop { position: absolute; bottom: -2px; margin-left: -40px; }
+.bd-path { position: absolute; left: -10px; right: -10px; bottom: calc(var(--base) - 9px); height: 20px; border-radius: 10px; background: var(--path); opacity: .9; }
+/* Sits exactly where Micah's big jump peaks (see bd-cross and bd-hop). */
+.bd-hurdle { position: absolute; left: calc(48.8% + 4px); margin-left: -27px; bottom: calc(var(--base) - 2px); }
+
+/* Each runner rides a full-width track, so one keyframe list crosses any screen width. */
+.bd-track { position: absolute; left: 0; width: 100%; height: 0; bottom: var(--base); animation: bd-cross 18s linear infinite; will-change: transform; }
+.bd-face { position: absolute; left: 0; bottom: 0; width: 84px; animation: bd-face 18s step-end infinite; }
+.bd-lead, .bd-lead .bd-face { animation-delay: -.9s; } /* the thing she chases stays just ahead */
+.bd-hop { animation: bd-hop 18s infinite; }
+.bd-runner { display: block; margin-bottom: -3px; }
+/* Stays on the ground while she jumps. */
+.bd-shadow { position: absolute; left: 18px; bottom: -4px; width: 46px; height: 7px; border-radius: 50%; background: #0000002a; }
+@keyframes bd-cross {
+  0% { transform: translateX(-100px); }
+  42%, 50% { transform: translateX(calc(100% + 16px)); }
+  92%, 100% { transform: translateX(-100px); }
+}
+@keyframes bd-face { 0% { transform: none; } 46% { transform: scaleX(-1); } 96% { transform: none; } }
+@keyframes bd-hop {
+  0%, 18%, 23%, 64%, 67%, 70%, 73%, 100% { transform: translateY(0); animation-timing-function: ease-out; }
+  20.5% { transform: translateY(-42px); animation-timing-function: ease-in; }
+  65.5%, 71.5% { transform: translateY(-20px); animation-timing-function: ease-in; }
+}
+.bd-leg { animation: bd-leg-a .36s ease-in-out infinite alternate; }
+.bd-leg.b1, .bd-leg.b2 { animation-name: bd-leg-b; }
+.bd-leg.f2, .bd-leg.b2 { animation-delay: -.07s; }
+.bd-bob { animation: bd-bob .18s ease-in-out infinite alternate; }
+.bd-tail { animation: bd-tail .24s ease-in-out infinite alternate; }
+.bd-ear { animation: bd-ear .36s ease-in-out infinite alternate; }
+.bd-flap { transform-origin: 64px 32px; animation: bd-ear .3s ease-in-out infinite alternate; }
+@keyframes bd-leg-a { from { transform: rotate(38deg); } to { transform: rotate(-34deg); } }
+@keyframes bd-leg-b { from { transform: rotate(-36deg); } to { transform: rotate(30deg); } }
+@keyframes bd-bob { to { transform: translateY(-3px); } }
+@keyframes bd-tail { from { transform: rotate(-18deg); } to { transform: rotate(16deg); } }
+@keyframes bd-ear { from { transform: rotate(-8deg); } to { transform: rotate(22deg); } }
+
+.bd-chase { position: absolute; left: 28px; bottom: 0; }
+.bd-chase.air { bottom: 40px; }
+.bd-chase-art { display: block; position: relative; }
+.bd-thing { display: block; }
+.bd-trail { position: absolute; left: -42px; top: 0; }
+.mv-hop { animation: bd-c-hop .6s infinite; }
+.mv-flutter, .mv-tumble { animation: bd-c-float 1.5s ease-in-out infinite alternate; }
+.mv-glide { animation: bd-c-float 2.4s ease-in-out infinite alternate; }
+.mv-scuttle { animation: bd-c-scuttle .14s ease-in-out infinite alternate; }
+.mv-roll .bd-thing, .mv-tumble .bd-thing { animation: bd-spin .8s linear infinite; }
+.mv-tumble .bd-thing { animation-duration: 2s; }
+.bd-wings { transform-box: fill-box; transform-origin: center; animation: bd-wings .14s ease-in-out infinite alternate; }
+.bd-glow { animation: bd-glow .9s ease-in-out infinite alternate; }
+@keyframes bd-c-hop { 0%, 100% { transform: translateY(0); animation-timing-function: ease-out; } 50% { transform: translateY(-24px); animation-timing-function: ease-in; } }
+@keyframes bd-c-float { from { transform: translateY(4px); } to { transform: translateY(-12px); } }
+@keyframes bd-c-scuttle { to { transform: translateY(-2px) rotate(4deg); } }
+@keyframes bd-spin { to { transform: rotate(360deg); } }
+@keyframes bd-wings { to { transform: scaleX(.3); } }
+@keyframes bd-glow { from { opacity: .15; } to { opacity: .6; } }
+
+/* Reduced motion: a still picture. Micah stands on the path, her playmate just ahead. */
+@media (prefers-reduced-motion: reduce) {
+  .backdrop, .backdrop * { animation: none !important; }
+  .bd-track { transform: translateX(14%); }
+  .bd-lead { transform: translateX(calc(14% + 70px)); }
+  .bd-cloud.c0 { transform: translateX(30%); }
+  .bd-cloud.c1 { transform: translateX(78%); }
+  .bd-cloud.c2 { transform: translateX(55%); }
+  .bd-weather { top: 0; left: 0; }
+}
 /* ───── Combo celebrations (src/juice.ts) ─────
    Callouts, confetti, shockwave rings, a glowing board frame and Micah's hearts.
    Only transform and opacity animate, and every piece removes itself. */
