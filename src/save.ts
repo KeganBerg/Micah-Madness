@@ -1,7 +1,7 @@
 // Player progress, kept in the browser's localStorage.
 // The save is versioned so future updates can migrate old saves instead of wiping them.
 
-export type BoosterId = 'treat' | 'squirrel' | 'leash' | 'zoomies' | 'micah';
+export type BoosterId = 'treat' | 'squirrel' | 'leash' | 'dust' | 'bed' | 'zoomies' | 'micah';
 
 export interface SaveData {
   version: number;
@@ -30,10 +30,12 @@ export const SAVE_VERSION = 4;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 
-export const BOOSTERS: Record<BoosterId, { name: string; desc: string; price: number; when: 'in-level' | 'pre-level' }> = {
+export const BOOSTERS: Record<BoosterId, { name: string; short?: string; desc: string; price: number; when: 'in-level' | 'pre-level' }> = {
   treat: { name: 'Treat', desc: 'Micah eats any one piece.', price: 30, when: 'in-level' },
   squirrel: { name: 'Squirrel!', desc: 'Shuffles every piece on the board.', price: 20, when: 'in-level' },
-  leash: { name: 'Long Leash', desc: 'Adds 5 moves to this level.', price: 50, when: 'in-level' },
+  leash: { name: 'Long Leash', short: 'Leash', desc: 'Adds 5 moves to this level.', price: 50, when: 'in-level' },
+  dust: { name: 'Magic Dust', short: 'Dust', desc: 'Tap a piece and every piece like it changes into the kind you need.', price: 45, when: 'in-level' },
+  bed: { name: 'Orthopedic Bed', short: 'Bed', desc: 'Memory foam remembers the board. Undoes your last move and gives it back.', price: 35, when: 'in-level' },
   zoomies: { name: 'Zoomies Start', desc: 'Starts the level with 2 Zoomies pieces.', price: 40, when: 'pre-level' },
   micah: { name: 'Micah Start', desc: 'Starts the level with a Micah piece.', price: 60, when: 'pre-level' },
 };
@@ -44,7 +46,7 @@ export function freshSave(): SaveData {
     stars: {},
     best: {},
     biscuits: 100,
-    inventory: { treat: 2, squirrel: 2, leash: 1, zoomies: 1, micah: 1 },
+    inventory: { treat: 2, squirrel: 2, leash: 1, dust: 1, bed: 1, zoomies: 1, micah: 1 },
     sound: true,
     music: true,
     spentStars: 0,
