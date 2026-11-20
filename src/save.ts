@@ -32,6 +32,8 @@ export interface SaveData {
   haptics: boolean;
   /** One-time notes already shown, such as the add-to-home-screen nudge. */
   seen: string[];
+  /** Weekly Walk: the week (its Monday) last won, and paw stamps collected. */
+  weekly: { won: string; stamps: number };
 }
 
 export const SAVE_VERSION = 6;
@@ -69,6 +71,7 @@ export function freshSave(): SaveData {
     wardrobe: [],
     haptics: true,
     seen: [],
+    weekly: { won: '', stamps: 0 },
   };
 }
 
@@ -128,6 +131,10 @@ export function migrate(raw: unknown): SaveData {
     wardrobe: Array.isArray(d.wardrobe) ? [...new Set(d.wardrobe.filter((x): x is string => typeof x === 'string'))] : [],
     haptics: typeof d.haptics === 'boolean' ? d.haptics : base.haptics,
     seen: Array.isArray(d.seen) ? [...new Set(d.seen.filter((x): x is string => typeof x === 'string'))] : [],
+    weekly: (() => {
+      const w = (d.weekly && typeof d.weekly === 'object' ? d.weekly : {}) as Record<string, unknown>;
+      return { won: typeof w.won === 'string' ? w.won : '', stamps: num(w.stamps, 0, 9999) ?? 0 };
+    })(),
   };
 }
 
