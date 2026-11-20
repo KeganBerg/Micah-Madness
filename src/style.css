@@ -518,3 +518,51 @@ html { touch-action: manipulation; }
 .tag-toast { width: max-content; max-width: min(340px, calc(100% - var(--s6))); display: flex; align-items: center; gap: var(--s3); }
 .tag-toast .tag-icon { width: 32px; height: 32px; flex: none; }
 .tag-toast b { display: block; }
+
+/* ───── Tap feedback (src/tap.ts) ─────
+   Squash while held, spring on release, pop on purchase, shake when you can't.
+   Uses the `scale`/`rotate` properties so they stack on existing transforms. */
+button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.btn, .setting-row, .pre-booster, .tool { --tap-scale: .95; }
+.node, .dock-btn, .close, .round-btn, .wallet .add { --tap-scale: .85; }
+.tap-down { animation: tap-down .07s ease-out forwards; }
+.tap-up { animation: tap-up .34s ease-out; }
+.tap-pop { animation: tap-pop .5s ease-out; }
+.tap-nope { animation: tap-nope .32s ease-in-out; }
+@keyframes tap-down { to { scale: var(--tap-scale); } }
+@keyframes tap-up {
+  0% { scale: var(--tap-scale); }
+  45% { scale: 1.08; }
+  75% { scale: .97; }
+  100% { scale: 1; }
+}
+@keyframes tap-pop {
+  0% { scale: 1; }
+  30% { scale: 1.3; rotate: -8deg; }
+  60% { scale: .94; rotate: 4deg; }
+  100% { scale: 1; rotate: 0deg; }
+}
+@keyframes tap-nope {
+  20% { translate: -5px 0; }
+  40% { translate: 5px 0; }
+  60% { translate: -3px 0; }
+  80% { translate: 2px 0; }
+}
+/* Board pieces squish under your finger. */
+.tile .piece.tap-down { animation: piece-down .07s ease-out forwards; }
+.tile .piece.tap-up { animation: piece-up .3s ease-out; }
+@keyframes piece-down { to { scale: .82; } }
+@keyframes piece-up { 0% { scale: .82; } 50% { scale: 1.1; } 100% { scale: 1; } }
+.tap-float {
+  position: fixed; z-index: 90; pointer-events: none; transform: translate(-50%, -50%);
+  font-family: var(--font-display); font-size: var(--fs-lg); color: var(--good); text-shadow: 0 2px 0 #fff, 0 0 6px #fff;
+  animation: tap-float .8s ease-out forwards;
+}
+@keyframes tap-float { 0% { scale: .6; opacity: 0; } 20% { scale: 1.15; opacity: 1; } to { translate: 0 -48px; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  /* No movement: a quick dim says "pressed" instead. */
+  .tap-down, .tap-up, .tap-pop, .tap-nope, .tile .piece.tap-down, .tile .piece.tap-up, .tap-float { animation: none !important; }
+  .tap-down { filter: brightness(.88); }
+  .tap-float { display: none; }
+}
+.shop-info small.tap-pop { align-self: flex-start; transform-origin: left center; }
