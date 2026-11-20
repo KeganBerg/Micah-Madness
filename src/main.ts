@@ -25,6 +25,7 @@ import {
   type Tile,
 } from './board';
 import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, micahUrl, svg } from './art';
+import { sceneryHTML, wireScenery } from './scenery';
 import { LEVELS, ZONES, mudCount, yarnCount, type Goal, type Level } from './levels';
 import {
   BOOSTERS,
@@ -125,32 +126,11 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     return { x, y };
   };
 
-  // Zone backgrounds, bottom to top.
-  const zoneBands = ZONES.map((z, zi) => {
-    const yTop = zi === ZONES.length - 1 ? 0 : nodePos(zi * 5 + 4).y - spacing / 2;
-    const yBot = zi === 0 ? height : nodePos(zi * 5).y + spacing / 2;
-    return `<rect x="0" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${z.ground}"/>`;
-  }).join('');
-
-  const decorKinds = [[0, 1, 2], [1, 1, 3], [4, 4, 5], [2, 3, 0], [5, 4, 1], [3, 2, 0], [1, 0, 1], [5, 1, 2]];
-  const decor = LEVELS.map((_, i) => {
-    const { y } = nodePos(i);
-    const z = Math.floor(i / 5);
-    const kind = decorKinds[z][i % 3];
-    const side = Math.sin(i * 0.95) > 0 ? 40 : width - 70;
-    return `<g transform="translate(${side - 10} ${y - 30}) scale(.42)" opacity=".55">${KINDS[kind].svg}</g>`;
-  }).join('');
-
-  let path = '';
-  LEVELS.forEach((_, i) => {
-    const p = nodePos(i);
-    if (i === 0) path += `M ${p.x} ${p.y}`;
-    else {
-      const prev = nodePos(i - 1);
-      const my = (prev.y + p.y) / 2;
-      path += ` C ${prev.x} ${my}, ${p.x} ${my}, ${p.x} ${p.y}`;
-    }
-  });
+  // Area bands, bottom to top (Area 1 at the bottom of the map).
+  const bands = ZONES.map((_, zi) => ({
+    top: zi === ZONES.length - 1 ? 0 : nodePos(zi * 5 + 4).y - spacing / 2,
+    bottom: zi === 0 ? height : nodePos(zi * 5).y + spacing / 2,
+  }));
 
   const screen = h(`
     <div class="screen map-screen">
@@ -161,12 +141,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       </header>
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
-          <svg class="map-bg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="height:${height}px">
-            ${zoneBands}
-            ${decor}
-            <path d="${path}" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" opacity=".55"/>
-            
-          </svg>
+          <div class="scenery" aria-hidden="true"></div>
           ${ZONES.map((z, zi) => {
             const first = nodePos(zi * 5);
             const side = first.x < width / 2 ? 'right:16px' : 'left:16px';
@@ -212,7 +187,33 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
   );
 
-  mount(screen);
+  // Scenery is drawn at the map's real pixel width so props keep their shape on any phone,
+  // and redrawn if that width changes.
+  const mapEl = screen.querySelector<HTMLElement>('.map')!;
+  const sceneEl = screen.querySelector<HTMLElement>('.scenery')!;
+  let unwire = () => {};
+  let drawnWidth = 0;
+  const paintScenery = () => {
+    const w = Math.round(mapEl.clientWidth);
+    if (!w || w === drawnWidth) return;
+    drawnWidth = w;
+    unwire();
+    const sx = w / width;
+    const banners = ZONES.map((_, zi) => {
+      const first = nodePos(zi * 5);
+      const bw = 150;
+      return { x: first.x < width / 2 ? w - 16 - bw : 16, y: first.y + 8, w: bw, h: 60 };
+    });
+    sceneEl.innerHTML = sceneryHTML({
+      width: w, height, bands, banners,
+      nodes: LEVELS.map((_, i) => { const p = nodePos(i); return { x: p.x * sx, y: p.y }; }),
+    });
+    unwire = wireScenery(sceneEl, playScenerySound);
+  };
+  const resizeWatch = new ResizeObserver(paintScenery);
+  mount(screen, () => (resizeWatch.disconnect(), unwire()));
+  paintScenery();
+  resizeWatch.observe(mapEl);
 
   // Micah stands just beside the node she is on, on the side away from the path's next bend.
   const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
@@ -251,6 +252,24 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   const target = nodePos((walkFrom ?? scrollTo ?? unlocked) - 1).y;
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
 }
+
+const SCENERY_SOUNDS: Record<string, () => void> = {
+  boing: () => sfx.pop(2),
+  pop: () => sfx.pop(6),
+  rustle: () => sfx.whoosh(),
+  whoosh: () => sfx.whoosh(),
+  flutter: () => sfx.select(),
+  tweet: () => sfx.squirrel(),
+  bark: () => sfx.bark(),
+  woof: () => sfx.bark(),
+  knock: () => sfx.step(),
+  dig: () => sfx.step(),
+  scuttle: () => sfx.step(),
+  splash: () => sfx.splash(),
+  chime: () => sfx.coin(),
+  tap: () => sfx.tap(),
+};
+const playScenerySound = (name: string) => SCENERY_SOUNDS[name]?.();
 
 // ───────────────────────────── Micah's Yard ─────────────────────────────
 
