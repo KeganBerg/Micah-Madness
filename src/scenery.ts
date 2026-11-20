@@ -33,6 +33,7 @@ const shadow = (rx: number, o = 0.18) => `<ellipse cx="0" cy="0" rx="${rx}" ry="
 /** An invisible disc that makes small props easy to tap. */
 const hit = (r: number, cy = -r * 0.6) => `<circle cx="0" cy="${f(cy)}" r="${r}" fill="transparent"/>`;
 
+interface Box { x: number; y: number; w: number; h: number; }
 interface Prop { svg: string; r: number; poke?: string; fx?: string; sfx?: string; }
 
 // ───────────────────────────── props ─────────────────────────────
@@ -503,19 +504,39 @@ const mownStripes = (w: number, b: Band): string => {
   return s;
 };
 
-/** The finish line at the very top of the map: a big birthday banner for Micah. */
-const birthdayBanner = (w: number): string => {
+/**
+ * "HAPPY / BIRTHDAY / MICAH!" bunting strung between two poles at the top of the birthday area.
+ * It hangs on whichever side of the area's top level has more room, so it never covers the
+ * path or a level node, and it is drawn relative to the area (not the whole map), so it stays
+ * in the birthday area however many areas come after it.
+ */
+const birthdayBanner = (w: number, b: Band, nodes: Pt[]): { back: string; keepOut: Box } => {
+  const inBand = nodes.filter((n) => n.y >= b.top && n.y <= b.bottom);
+  const topNode = inBand.reduce((a, n) => (n.y < a.y ? n : a), inBand[0] ?? { x: 0, y: b.bottom });
+  const right = topNode.x < w / 2;
+  const x0 = right ? Math.max(topNode.x + 62, w * 0.42) : 10;
+  const x1 = right ? w - 10 : Math.min(topNode.x - 62, w * 0.58);
   const colors = ['#e8352f', '#ffc12e', '#2f8fe0', '#8e5bd6', '#23925a'];
-  const letters = 'HAPPY BIRTHDAY MICAH!';
-  const n = letters.length, x0 = 16, step = (w - 32) / n;
-  let flags = '';
-  for (let i = 0; i < n; i++) {
-    const x = x0 + i * step, sag = Math.sin(((i + 0.5) / n) * Math.PI) * 22;
-    if (letters[i] === ' ') continue;
-    flags += `<g transform="translate(${f(x + step / 2)} ${f(26 + sag)})"><path d="M${f(-step / 2 + 1)} 0 H${f(step / 2 - 1)} L0 ${f(step * 1.25)} Z" fill="${colors[i % colors.length]}"/>
-      <text y="${f(step * 0.55)}" text-anchor="middle" font-size="${f(step * 0.62)}" font-weight="900" fill="#fff" font-family="sans-serif">${letters[i]}</text></g>`;
-  }
-  return `<g class="sway" style="animation-duration:6s"><path d="M8 24 Q${w / 2} 70 ${w - 8} 24" stroke="#7a5233" stroke-width="1.5" fill="none"/>${flags}</g>`;
+  const rows = ['HAPPY', 'BIRTHDAY', 'MICAH!'];
+  const step = Math.min(26, (x1 - x0 - 12) / 8);
+  const rowGap = step * 1.25 + 14;
+  const y0 = b.top + 34;
+  let flags = '', ropes = '', k = 0;
+  rows.forEach((word, ri) => {
+    const y = y0 + ri * rowGap, mid = (x0 + x1) / 2, sx = mid - (word.length * step) / 2;
+    ropes += `<path d="M${f(x0 + 4)} ${f(y)} Q${f(mid)} ${f(y + 16)} ${f(x1 - 4)} ${f(y)}" stroke="#7a5233" stroke-width="1.5" fill="none"/>`;
+    for (let i = 0; i < word.length; i++) {
+      const cx = sx + (i + 0.5) * step, u = (cx - x0) / (x1 - x0), sag = 4 * u * (1 - u) * 8;
+      flags += `<g transform="translate(${f(cx)} ${f(y + sag)})"><path d="M${f(-step / 2 + 1)} 0 H${f(step / 2 - 1)} L0 ${f(step * 1.25)} Z" fill="${colors[k++ % colors.length]}"/>
+        <text y="${f(step * 0.55)}" text-anchor="middle" font-size="${f(step * 0.62)}" font-weight="900" fill="#fff" font-family="sans-serif">${word[i]}</text></g>`;
+    }
+  });
+  const bottom = y0 + 2 * rowGap + step * 1.25 + 12;
+  const pole = (x: number) => `<rect x="${f(x - 2)}" y="${f(y0 - 10)}" width="4" height="${f(bottom - y0 + 10)}" rx="2" fill="#7a5233"/><circle cx="${f(x)}" cy="${f(y0 - 10)}" r="4" fill="#ffc12e"/>`;
+  return {
+    back: `${pole(x0 + 4)}${pole(x1 - 4)}<g class="sway" style="animation-duration:6s">${ropes}${flags}</g>`,
+    keepOut: { x: x0 - 6, y: y0 - 20, w: x1 - x0 + 12, h: bottom - y0 + 20 },
+  };
 };
 
 // ───────────────────────────── ground textures ─────────────────────────────
@@ -526,7 +547,7 @@ interface Theme {
   texture: (r: R, x: number, y: number) => string;
   props: (r: R) => [() => Prop, number][];
   sparse?: boolean; // lighter texture for busy ones like confetti
-  extras?: (w: number, b: Band, r: R) => { back: string; keepLeftOf?: number; keepBelow?: number };
+  extras?: (w: number, b: Band, r: R, nodes: Pt[]) => { back: string; keepLeftOf?: number; keepOut?: Box };
 }
 
 const tuft = (c: string) => (_r: R, x: number, y: number) =>
@@ -616,7 +637,7 @@ export const THEMES: Theme[] = [
   {
     ground: '#e7a3b8', dark: '#dc93aa', light: '#f1b6c8', path: '#fff3c4', edge: '#e2b84f', dots: '#fff',
     texture: confettiBit(['#fff', '#ffc12e', '#2f8fe0', '#8e5bd6', '#e8352f']), sparse: true,
-    extras: (w) => ({ back: birthdayBanner(w), keepBelow: 110 }),
+    extras: (w, b, _r, nodes) => birthdayBanner(w, b, nodes),
     props: (r) => [
       [() => cake(true), 1], [() => cake(), 1], [() => balloon(pick(r, PARTY.slice(0, 5))), 7], [() => gift(pick(r, ['#2f8fe0', '#8e5bd6', '#e8352f', '#23925a']), pick(r, ['#ffc12e', '#fff'])), 4],
       [() => cupcake(pick(r, ['#fff', '#f6b8c8', '#b38df0'])), 3], [() => partyHat(pick(r, ['#2f8fe0', '#8e5bd6', '#ffc12e']), '#fff'), 2],
@@ -712,9 +733,9 @@ export function sceneryHTML(s: SceneInput): string {
     const t = THEMES[zi % THEMES.length];
     const r = rng(1009 * (zi + 1) + Math.round(w));
     const top = b.top - 16;
-    const extra = t.extras?.(w, b, r);
+    const extra = t.extras?.(w, b, r, nodes);
     const keep = extra?.keepLeftOf ?? w;
-    const minY = extra?.keepBelow ?? 0;
+    const out = extra?.keepOut;
 
     // Ground with a soft wavy top edge, plus a few lighter and darker patches.
     let ground = `M0 ${b.bottom} V${b.top}`;
@@ -745,7 +766,7 @@ export function sceneryHTML(s: SceneInput): string {
         for (let tries = 0; tries < 60; tries++) {
           const x = r() * w;
           const y = b.top + 16 + p.r * 1.2 + r() * (b.bottom - b.top - 32 - p.r * 1.2);
-          if (y - p.r * 1.6 < minY || !clearOf(x, y, p.r, placed, keep)) continue;
+          if ((out && x + p.r > out.x && x - p.r < out.x + out.w && y > out.y && y - p.r * 1.6 < out.y + out.h) || !clearOf(x, y, p.r, placed, keep)) continue;
           placed.push({ x, y, r: p.r });
           items.push({ x, y, html: wrap(x, y, p) });
           break;
