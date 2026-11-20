@@ -2,7 +2,7 @@
 // is drawn over a hand-drawn Micah (a black dog with a grey muzzle) in a 100x100 box.
 import micahPhoto from './assets/micah.png';
 
-export type Unlock = { free: true } | { level: number } | { biscuits: number };
+export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number };
 
 export interface Costume {
   id: string;
@@ -110,6 +110,16 @@ const pumpkinSuit = `
   <path d="M40 64 L44 61 L46 66 Z M60 64 L56 61 L54 66 Z M42 70 L46 73 L50 70 L54 73 L58 70 L54 76 L50 74 L46 76 Z" fill="#1a1a1a"/>`;
 const pumpkinHat = `<path d="M47 18 Q46 10 52 6" stroke="#3f8a3a" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M52 10 Q60 6 64 12 Q58 14 52 10 Z" fill="#5fae57"/>`;
 
+// Earned by winning Weekly Walks: a yellow raincoat with a hood, for walks in any weather.
+const raincoatSuit = `
+  <rect x="0" y="0" width="100" height="100" fill="#ffc12e"/>
+  <path d="M50 58 V98" stroke="#d99a1a" stroke-width="2"/>
+  <circle cx="46" cy="70" r="1.8" fill="#d99a1a"/><circle cx="46" cy="80" r="1.8" fill="#d99a1a"/><circle cx="46" cy="90" r="1.8" fill="#d99a1a"/>
+  <path d="M28 96 H72" stroke="#d99a1a" stroke-width="3"/>`;
+const raincoatHood = `
+  <path d="M24 40 C22 14 78 14 76 40 L72 30 C66 18 34 18 28 30 Z" fill="#ffc12e" stroke="#b58a00" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M30 22 Q36 16 44 15" stroke="#fff3c8" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+
 // Earned by clearing the very last level: a gold medal on a red ribbon, and a sash.
 const championSash = `
   <path d="M30 56 L74 100 L62 100 L26 64 Z" fill="#e8352f"/>
@@ -131,6 +141,7 @@ export const COSTUMES: Costume[] = [
   { id: 'pumpkin', name: 'Pumpkin', desc: 'Round, orange and very huggable.', unlock: { biscuits: 160 }, suit: pumpkinSuit, front: pumpkinHat },
   { id: 'pirate', name: 'Pirate Captain', desc: 'Arr. Mostly hunts for biscuits.', unlock: { level: 25 }, front: pirate },
   { id: 'crown', name: 'Royal Crown', desc: 'Queen of the yard.', unlock: { level: 40 }, front: crown },
+  { id: 'raincoat', name: 'Rain Slicker', desc: 'For the walker who goes out every week, rain or shine.', unlock: { weekly: 4 }, suit: raincoatSuit, front: raincoatHood },
   { id: 'champion', name: 'Champion', desc: 'For finishing every last level. The goodest girl.', unlock: { level: 60 }, suit: championSash, front: championMedal },
 ];
 
@@ -168,5 +179,6 @@ export function isUnlocked(c: Costume, cleared: number, bought: string[]): boole
 export function unlockText(c: Costume): string {
   if ('free' in c.unlock) return 'Free';
   if ('level' in c.unlock) return `Clear level ${c.unlock.level}`;
+  if ('weekly' in c.unlock) return `Win ${c.unlock.weekly} Weekly Walks`;
   return `${c.unlock.biscuits} biscuits`;
 }

@@ -1084,3 +1084,25 @@ h2.center { margin: 2px 0 6px; }
 @keyframes snack-saved { to { opacity: 0; transform: translateY(-40px) scale(1.6); } }
 .snack.eaten .snack-fall { animation: snack-eaten .45s ease-in forwards; transform-box: fill-box; transform-origin: 50% 50%; }
 @keyframes snack-eaten { to { transform: scale(0) rotate(90deg); opacity: 0; } }
+
+/* Weekly Walk: a chip floating over the map, and paw stamps */
+.weekly-chip {
+  position: absolute; left: var(--s3); bottom: calc(94px + env(safe-area-inset-bottom)); z-index: 3;
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
+  background: #ffd23f; color: #173a52; box-shadow: 0 4px 0 #b58a00, 0 8px 20px #0004; text-align: left;
+}
+.weekly-chip .paw-icon { width: 26px; height: 26px; color: #e8352f; }
+.weekly-chip span { display: grid; line-height: 1.1; }
+.weekly-chip b { font-family: var(--font-display); font-weight: 400; font-size: 16px; }
+.weekly-chip small { font-size: 11px; font-weight: 800; opacity: .8; }
+.weekly-chip:not(.done) .paw-icon { animation: wiggle 1.6s ease-in-out infinite; }
+.weekly-chip.done { background: #fff; box-shadow: 0 4px 0 #9fb4c4, 0 8px 20px #0003; }
+.weekly-chip.done .paw-icon { color: #5c9f5a; }
+.stamp-row { display: flex; justify-content: center; gap: 10px; }
+.stamp { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; border: 3px dashed #c4d2dc; color: #dbe4ea; }
+.stamp .paw-icon { width: 30px; height: 30px; }
+.stamp.on { border: 3px solid #e8352f; background: #fdeceb; color: #e8352f; transform: rotate(-8deg); }
+.stamp.fresh { animation: stamp-thump .6s cubic-bezier(.3, 1.6, .5, 1) .5s both; }
+@keyframes stamp-thump { 0% { transform: scale(2.2) rotate(-30deg); opacity: 0; } 100% { transform: scale(1) rotate(-8deg); opacity: 1; } }
+.stat .paw-icon { width: 22px; height: 22px; color: var(--brand); }
+@media (prefers-reduced-motion: reduce) { .weekly-chip .paw-icon, .stamp.fresh { animation: none; } }

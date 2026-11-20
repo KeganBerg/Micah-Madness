@@ -56,6 +56,7 @@ import { playMusic, setMusic, setSound, sfx } from './sound';
 import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
 import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
+import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -213,6 +214,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
             <button class="btn" data-act="start">Start level 1</button>
           </div>`
         : ''}
+      ${weeklyOpen(save) && Object.keys(save.stars).length > 0
+        ? `<button class="weekly-chip ${weeklyWonThisWeek(save) ? 'done' : ''}" data-act="weekly">${UI.paw}<span><b>Weekly Walk</b><small>${weeklyWonThisWeek(save) ? 'Done. New one Monday' : 'New this week'}</small></span></button>`
+        : ''}
       <nav class="dock" aria-label="Main">
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
@@ -224,6 +228,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
 
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
   screen.querySelector('[data-act="finale"]')?.addEventListener('click', () => showFinale());
+  screen.querySelector('[data-act="weekly"]')?.addEventListener('click', () => showWeekly());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
@@ -645,7 +650,7 @@ function showLevelIntro(level: Level): void {
     `
     <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id}</h2></div>
+      <div><p class="eyebrow">${zone.name}</p><h2>${level.id === WEEKLY_ID ? 'Weekly Walk' : `Level ${level.id}`}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <section>
@@ -668,7 +673,7 @@ function showLevelIntro(level: Level): void {
         .join('')}
       </div>
     </section>
-    <button class="btn play">Start level ${level.id}</button>`,
+    <button class="btn play">${level.id === WEEKLY_ID ? 'Start the walk' : `Start level ${level.id}`}</button>`,
     () => {},
   );
   m.querySelector('.close')!.addEventListener('click', () => m.remove());
@@ -940,6 +945,36 @@ function toast(html: string, cls = ''): void {
   window.setTimeout(() => t.remove(), 3200);
 }
 
+// ───────────────────────────── Weekly Walk ─────────────────────────────
+
+/** Paw stamps toward the Rain Slicker; the newest one thumps down when just earned. */
+function stampRow(stamps: number, fresh = false): string {
+  const shown = Math.min(stamps, STAMPS_FOR_COAT);
+  return Array.from({ length: STAMPS_FOR_COAT }, (_, i) => `<i class="stamp ${i < shown ? 'on' : ''} ${fresh && i === shown - 1 ? 'fresh' : ''}">${UI.paw}</i>`).join('');
+}
+
+function showWeekly(): void {
+  const lv = weeklyLevel(save);
+  const won = weeklyWonThisWeek(save);
+  const coat = save.wardrobe.includes('raincoat');
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">New every Monday</p><h2>Weekly Walk</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <p class="body">A remix of level ${lv.baseId}: the board is flipped and Micah wants different toys. Win it once this week for <b>${WEEKLY_BISCUITS} biscuits</b> and a paw stamp.</p>
+    <section>
+      <h3>Paw stamps</h3>
+      <div class="stamp-row">${stampRow(save.weekly.stamps)}</div>
+      <p class="body setting-hint">${coat ? 'You\u2019ve earned the Rain Slicker. Stamps keep counting for bragging rights.' : `Collect ${STAMPS_FOR_COAT} to win the <b>Rain Slicker</b> outfit.`}</p>
+    </section>
+    ${won ? '<p class="notice">This week\u2019s prize is claimed. You can still walk it again for fun.</p>' : ''}
+    <button class="btn" data-act="go">${won ? 'Walk it again' : 'Let\u2019s go'}</button>`, () => {});
+  m.querySelector('.close')!.addEventListener('click', () => m.remove());
+  m.querySelector('[data-act="go"]')!.addEventListener('click', () => (m.remove(), showLevelIntro(lv)));
+}
+
 // ───────────────────────────── Sharing and the finale ─────────────────────────────
 
 async function shareWin(card: { title: string; subtitle: string; stars: number; lines: [string, string][] }): Promise<void> {
@@ -1066,7 +1101,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       ${backdropHTML(level.zone)}
       <header class="hud">
         <button class="round-btn back" aria-label="Back to map">${UI.back}</button>
-        <div class="stat"><small>Level</small><b>${level.id}</b></div>
+        <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : level.id}</b></div>
         <div class="stat moves"><small>Moves</small><b class="moves-val">${moves}</b></div>
         <div class="stat score"><div class="score-line"><small>Score</small><b class="score-val">0</b></div>
           <div class="star-bar"><div class="star-fill"></div>${level.stars
@@ -1784,6 +1819,41 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   function finish(won: boolean) {
     clearHint();
+    if (won && level.id === WEEKLY_ID) {
+      const stars = level.stars.filter((s) => score >= s).length || 1;
+      save.winStreak = streakAtStart + 1;
+      bump(save, 'wins');
+      save.tally.bestStreak = Math.max(save.tally.bestStreak ?? 0, save.winStreak);
+      const prize = claimWeekly(save);
+      const tags = awardBadges(save);
+      persist(save);
+      setTimeout(() => celebrate(tags), 1400);
+      for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
+      const m = modal(`
+        <div class="modal-head">
+          ${micahImg('modal-avatar cheer')}
+          <div><p class="eyebrow">Weekly Walk</p><h2>Walk complete!</h2></div>
+          <button class="round-btn share-btn" aria-label="Share this win">${UI.share}</button>
+        </div>
+        <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
+        ${prize ? `<div class="stamp-row" aria-label="${Math.min(prize.stamps, STAMPS_FOR_COAT)} of ${STAMPS_FOR_COAT} paw stamps">${stampRow(prize.stamps, true)}</div>` : ''}
+        <dl class="stat-rows">
+          <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          ${prize ? `<dt>Weekly prize</dt><dd>${icon('biscuit', 'biscuit-icon')}${prize.biscuits}</dd>` : ''}
+          <dt>Win streak</dt><dd>${save.winStreak}</dd>
+        </dl>
+        <p class="notice">${prize?.coat ? 'Four paw stamps! The <b>Rain Slicker</b> is waiting in Micah\u2019s Closet.' : prize ? 'Paw stamp collected. A new walk starts every Monday.' : 'You\u2019ve already won this week\u2019s prize. A new walk starts on Monday.'}</p>
+        <div class="actions">
+          <button class="btn to-map">Back to map</button>
+          <button class="btn secondary replay">Walk it again</button>
+        </div>`);
+      m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
+      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap()));
+      m.querySelector('.share-btn')!.addEventListener('click', () =>
+        shareWin({ title: 'Weekly Walk done', subtitle: ZONES[level.zone].name, stars, lines: [['Score', score.toLocaleString()], ['Paw stamps', String(save.weekly.stamps)], ['Win streak', String(save.winStreak)]] }),
+      );
+      return;
+    }
     if (won) {
       const stars = level.stars.filter((s) => score >= s).length || 1;
       const firstClear = !(save.stars[level.id] > 0);
@@ -1851,7 +1921,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const m = modal(`
         <div class="modal-head">
           ${micahImg('modal-avatar sad')}
-          <div><p class="eyebrow">Level ${level.id}</p><h2>Out of moves</h2></div>
+          <div><p class="eyebrow">${level.id === WEEKLY_ID ? 'Weekly Walk' : `Level ${level.id}`}</p><h2>Out of moves</h2></div>
           <span></span>
         </div>
         <section>
@@ -1889,7 +1959,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         save.winStreak = 0;
         persist(save);
       };
-      m.querySelector('.quit')!.addEventListener('click', () => (endStreak(), m.remove(), showMap(level.id)));
+      m.querySelector('.quit')!.addEventListener('click', () => (endStreak(), m.remove(), showMap(level.id === WEEKLY_ID ? undefined : level.id)));
       m.querySelector('.retry')!.addEventListener('click', () => (endStreak(), m.remove(), showLevelIntro(level)));
     }
   }
@@ -2021,7 +2091,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   });
 
-  screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id));
+  screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id === WEEKLY_ID ? undefined : level.id));
 
   renderAll();
   renderHud();
