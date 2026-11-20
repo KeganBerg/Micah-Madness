@@ -593,41 +593,6 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
   .tap-float { display: none; }
 }
 .shop-info small.tap-pop { align-self: flex-start; transform-origin: left center; }
-/* ───── Micah wanders around her yard, and naps on her orthopedic bed once she has it ───── */
-.yard-micah { animation: yard-wander 18s ease-in-out infinite; }
-.yard-micah.nap { animation-name: yard-wander-nap; animation-duration: 24s; }
-.yard-micah-img { animation: yard-hop .5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
-.yard-micah.nap .yard-micah-img { animation-name: yard-hop-nap; animation-duration: 24s; animation-direction: normal; animation-timing-function: linear; }
-.yard-zzz { opacity: 0; animation: yard-zzz 24s infinite; }
-@keyframes yard-wander {
-  0%, 12% { transform: translate(192px, 96px); }
-  30%, 40% { transform: translate(60px, 130px); }
-  58%, 68% { transform: translate(140px, 196px); }
-  84%, 92% { transform: translate(236px, 150px); }
-  100% { transform: translate(192px, 96px); }
-}
-@keyframes yard-wander-nap {
-  0%, 8% { transform: translate(192px, 96px); }
-  20%, 26% { transform: translate(60px, 130px); }
-  38%, 42% { transform: translate(140px, 196px); }
-  54%, 92% { transform: translate(274px, 196px); }
-  100% { transform: translate(192px, 96px); }
-}
-@keyframes yard-hop { to { transform: translateY(-4px); } }
-/* Bounces while walking, lies still (a little squashed, breathing) while napping. */
-@keyframes yard-hop-nap {
-  0%, 4%, 8%, 12%, 16%, 20%, 24%, 28%, 32%, 36%, 40%, 44%, 48%, 52% { transform: none; }
-  2%, 6%, 10%, 14%, 18%, 22%, 26%, 30%, 34%, 38%, 42%, 46%, 50% { transform: translateY(-4px); }
-  58%, 70%, 82% { transform: scale(1.04, .9); }
-  64%, 76%, 88% { transform: scale(1.02, .95); }
-  94%, 100% { transform: none; }
-}
-@keyframes yard-zzz { 0%, 56% { opacity: 0; transform: translateY(0); } 62%, 88% { opacity: .95; } 92%, 100% { opacity: 0; transform: translateY(-10px); } }
-@media (prefers-reduced-motion: reduce) {
-  .yard-micah, .yard-micah-img { animation: none; }
-  .yard-zzz { animation: none; opacity: .9; }
-}
-
 /* ───── Five in-level items: icon above label so they fit side by side ───── */
 .tools { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s2); }
 .tool { grid-template-columns: 1fr; justify-items: center; align-content: center; gap: 2px; padding: 0 var(--s1); text-align: center; height: 60px; }
@@ -707,6 +672,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 }
 @media (prefers-reduced-motion: reduce) {
   .zone-layer * { animation: none !important; }
+}
 /* ───── Short screens: phones in landscape, small phones with browser bars showing ───── */
 @media (max-height: 740px) {
   .modal { --pad: var(--s4); gap: var(--s3); }
@@ -734,3 +700,61 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
   .actions .pair, .actions { gap: var(--s2); }
   .modal .btn { min-height: 44px; }
 }
+/* ───── Micah's Yard: she roams, naps and plays ───── */
+.yard-scene { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.yard-item, .ym { cursor: pointer; }
+.yard-item-art { transform-box: fill-box; transform-origin: 50% 100%; }
+.yard-item-art.wiggle { animation: wiggle .5s ease-in-out 2; }
+.ym { transition: opacity .35s ease; }
+.ym.inside { opacity: 0; }
+.ym-pose { transform-box: fill-box; transform-origin: 50% 100%; }
+.ym-pose.walk { animation: micah-hop .32s ease-in-out infinite; }
+.ym-pose.run { animation: ym-run .2s ease-in-out infinite; }
+.ym-pose.sniff { animation: ym-sniff .5s ease-in-out 3; }
+.ym-pose.sit { animation: micah-breathe 2.6s ease-in-out infinite; }
+.ym-pose.nap { animation: ym-nap 3s ease-in-out infinite; }
+.ym-pose.eat { animation: ym-eat .3s ease-in-out infinite; }
+.ym-pose.dig { animation: ym-dig .18s linear infinite; }
+.ym-pose.jump { animation: micah-cheer .8s ease-in-out; }
+.ym-pose.scratch { animation: ym-scratch .14s linear 6; }
+@keyframes ym-run { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+@keyframes ym-sniff { 50% { transform: rotate(14deg) translateY(4px) scale(1, .94); } }
+@keyframes ym-nap { 0%, 100% { transform: rotate(80deg) translate(-6px, 10px) scale(.92, .82); } 50% { transform: rotate(80deg) translate(-6px, 10px) scale(.94, .86); } }
+@keyframes ym-eat { 50% { transform: rotate(18deg) translateY(6px); } }
+@keyframes ym-dig { 0%, 100% { transform: rotate(16deg) translateY(4px); } 50% { transform: rotate(10deg) translate(3px, 6px); } }
+@keyframes ym-scratch { 50% { transform: rotate(-6deg) translateX(-2px); } }
+.ym-emote { font: 900 18px var(--font-display); fill: #fff; stroke: #173a52; stroke-width: 4px; paint-order: stroke; opacity: 0; pointer-events: none; }
+.ym-emote.show { animation: ym-emote 2.4s ease-out forwards; }
+@keyframes ym-emote { 0% { opacity: 0; transform: translateY(6px); } 15%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-14px); } }
+.ym-flip { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ym-pose, .yard-item-art, .ym-emote.show { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
+
+/* Map: Micah sniffs about beside her level while you decide. */
+.map-micah.sniff img { animation: ym-sniff .5s ease-in-out 3; }
+.map-micah.scratch img { animation: ym-scratch .14s linear 6; }
+.map-micah.pace { transition: left 1.2s ease-in-out, top 1.2s ease-in-out; }
+.map-micah.pace img { animation: micah-hop .3s ease-in-out 4; }
+
+/* ───── Wardrobe ───── */
+.yard-actions { display: flex; gap: var(--s2); }
+.yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
+.yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
+.yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
+.wardrobe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.wardrobe li { display: contents; }
+.wardrobe button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); border: 3px solid transparent; font: inherit; text-align: center; min-width: 0; }
+.wardrobe button img { width: 72px; height: 72px; }
+.wardrobe button b { font-size: var(--fs-sm); line-height: 1.15; }
+.wardrobe button small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 2px; }
+.wardrobe button small .biscuit-icon { width: 16px; height: 16px; }
+.wardrobe button.wearing { border-color: var(--brand); background: #fff; }
+.wardrobe button.wearing small { color: var(--brand); }
+.wardrobe button.locked img { filter: grayscale(1) brightness(.6); opacity: .55; }
+.wardrobe button.locked { color: var(--muted); }
+.wardrobe button.affordable small { color: var(--good); }
+.modal .wardrobe-preview { display: block; width: 120px; height: 120px; margin: 0 auto; }
+
+.dock { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.dock-btn .tally { right: calc(50% - 36px); }

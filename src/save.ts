@@ -24,9 +24,13 @@ export interface SaveData {
   tally: Record<string, number>;
   /** Collar tags already earned (and paid out). */
   badges: string[];
+  /** The outfit Micah wears everywhere (see costumes.ts). */
+  costume: string;
+  /** Outfits bought with biscuits. */
+  wardrobe: string[];
 }
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 
@@ -55,6 +59,8 @@ export function freshSave(): SaveData {
     winStreak: 0,
     tally: {},
     badges: [],
+    costume: 'lobster',
+    wardrobe: [],
   };
 }
 
@@ -107,6 +113,8 @@ export function migrate(raw: unknown): SaveData {
       return out;
     })(),
     badges: Array.isArray(d.badges) ? [...new Set(d.badges.filter((x): x is string => typeof x === 'string'))] : [],
+    costume: typeof d.costume === 'string' ? d.costume : base.costume,
+    wardrobe: Array.isArray(d.wardrobe) ? [...new Set(d.wardrobe.filter((x): x is string => typeof x === 'string'))] : [],
   };
 }
 
