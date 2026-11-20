@@ -142,10 +142,37 @@ h2, h3, p { margin: 0; }
 .welcome .btn { grid-column: 1 / -1; }
 
 /* ───── Modals ───── */
-.modal-wrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--s4); background: #0f2a3dcc; animation: fade .15s; }
+/*
+  Pop-ups must always fit on screen, including iPhone Safari with its toolbar showing.
+  The wrap covers the screen for the dim backdrop, but the pop-up is centred in a single
+  grid row sized to the visible area (--vvh is set from visualViewport in main.ts; svh
+  is the height with browser toolbars shown). The pop-up scrolls inside itself when its
+  content is taller, and its main button sticks to its bottom edge so it is always tappable.
+*/
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 50; display: grid; background: #0f2a3dcc; animation: fade .15s;
+  grid-template-rows: 100%;
+  grid-template-rows: min(100%, 100svh, var(--vvh, 100svh));
+  grid-template-columns: 100%;
+  --mt: max(var(--s4), env(safe-area-inset-top));
+  --mb: max(var(--s4), env(safe-area-inset-bottom));
+  --mx: max(var(--s4), env(safe-area-inset-left), env(safe-area-inset-right));
+}
 .modal {
-  width: min(400px, 100%); max-height: calc(100% - var(--s6)); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s5);
-  padding: var(--s5); border-radius: var(--radius-lg); background: var(--panel); text-align: left; box-shadow: 0 12px 40px #0008; animation: popin .2s;
+  --pad: var(--s5);
+  align-self: center; justify-self: center; margin: var(--mt) var(--mx) var(--mb);
+  width: min(400px, calc(100% - 2 * var(--mx))); max-height: calc(100% - var(--mt) - var(--mb));
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: var(--s5);
+  padding: var(--pad); border-radius: var(--radius-lg); background: var(--panel); text-align: left; box-shadow: 0 12px 40px #0008; animation: popin .2s;
+}
+.modal > * { flex: none; }
+/* Main action pinned to the bottom of the pop-up while the rest scrolls. */
+.modal > .actions:last-child {
+  position: sticky; bottom: calc(-1 * var(--pad)); z-index: 1;
+  margin: calc(-1 * var(--s3)) calc(-1 * var(--pad)) calc(-1 * var(--pad));
+  padding: var(--s3) var(--pad) var(--pad); background: var(--panel);
+  box-shadow: 0 -10px 12px -8px #0f2a3d33; border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .modal-head { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--s4); align-items: center; }
 .modal-avatar { width: 64px; height: 64px; }
@@ -607,3 +634,30 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .tool .tool-icon { width: 30px; height: 30px; }
 .tool .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tile.dusted .piece { filter: drop-shadow(0 0 6px #ffd23f); }
+/* ───── Short screens: phones in landscape, small phones with browser bars showing ───── */
+@media (max-height: 740px) {
+  .modal { --pad: var(--s4); gap: var(--s3); }
+  .modal-head { grid-template-columns: 48px 1fr auto; gap: var(--s3); }
+  .modal-avatar { width: 48px; height: 48px; }
+  .modal h2 { font-size: 24px; }
+  .goal-list li { min-height: 44px; padding: var(--s1) var(--s3); }
+  .goal-list li .goal-icon, .goal-list li .goal-score { width: 32px; height: 32px; }
+  .goal-list { gap: var(--s1); }
+  .tip, .streak, .notice { padding: var(--s2) var(--s3); }
+  .streak { grid-template-columns: 28px 1fr; gap: var(--s2); }
+  .streak .booster-icon { width: 28px; height: 28px; }
+  .pre-booster { padding: var(--s2) var(--s3); }
+  .result-stars i { width: 44px; height: 44px; }
+  .shop-list li, .tag-list li { padding: var(--s2) var(--s3); }
+  .daily-grid .booster-icon { width: 28px; height: 28px; }
+}
+@media (max-height: 480px) {
+  .modal { width: min(560px, calc(100% - 2 * var(--mx))); }
+  .modal h2 { font-size: 22px; }
+  .modal-avatar { width: 40px; height: 40px; }
+  .modal-head { grid-template-columns: 40px 1fr auto; }
+  .daily-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .daily-grid li:last-child { grid-column: auto; }
+  .actions .pair, .actions { gap: var(--s2); }
+  .modal .btn { min-height: 44px; }
+}
