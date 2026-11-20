@@ -46,12 +46,75 @@ function preferPlayback(): void {
 
 let unlocked = false;
 let gestured = false;
-/** Runs on every tap until audio is running: create/resume the context and play a silent blip. */
-function unlock(): void {
+/** Set when iOS may have quietly broken the context (app backgrounded, call, audio route change). */
+let stale = false;
+
+// iOS before 17 has no audioSession: a looping silent <audio> element started in a tap
+// moves the page onto the media channel so the silent switch doesn't mute Web Audio.
+let silentEl: HTMLAudioElement | null = null;
+function silentWav(): string {
+  const n = 800; // 0.1 s of silence at 8 kHz, 8-bit mono
+  const b = new Uint8Array(44 + n);
+  const v = new DataView(b.buffer);
+  const w = (o: number, t: string) => [...t].forEach((c, i) => (b[o + i] = c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  b.fill(128, 44);
+  let bin = '';
+  b.forEach((x) => (bin += String.fromCharCode(x)));
+  return 'data:audio/wav;base64,' + btoa(bin);
+}
+function mediaChannelFallback(): void {
+  if ((navigator as unknown as { audioSession?: unknown }).audioSession) return;
+  if (!/iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
+  try {
+    if (!silentEl) {
+      silentEl = document.createElement('audio');
+      silentEl.setAttribute('playsinline', '');
+      silentEl.setAttribute('x-webkit-airplay', 'deny');
+      silentEl.loop = true;
+      silentEl.preload = 'auto';
+      silentEl.src = silentWav();
+    }
+    if (silentEl.paused) void silentEl.play().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Throw away a context iOS may have broken and build a fresh one (inside a tap, so it can start). */
+function rebuild(): void {
+  stopScheduler();
+  const old = ctx;
+  ctx = null;
+  sfxBus = null;
+  musicBus = null;
+  delay = null;
+  playing = null;
+  unlocked = false;
+  stale = false;
+  if (old) void old.close().catch(() => {});
+}
+
+/** Runs on taps until audio is running: create/resume the context and play a silent blip. */
+function unlock(inGesture = false): void {
   if (!gestured || (!sfxOn && !musicOn)) return;
   preferPlayback();
+  if (inGesture) {
+    mediaChannelFallback();
+    if (stale && !document.hidden) rebuild();
+  }
+  const fresh = !ctx;
   const a = graph();
   if (!a) return;
+  if (fresh) {
+    a.addEventListener('statechange', () => {
+      if (a !== ctx) return;
+      if (a.state === 'running') onRunning();
+      else if ((a.state as string) === 'interrupted') stale = true;
+    });
+  }
   if (a.state !== 'running') void a.resume().then(onRunning, () => {});
   else onRunning();
   if (!unlocked) {
@@ -63,33 +126,59 @@ function unlock(): void {
   }
 }
 function onRunning(): void {
+  flushPending();
   if (unlocked) return;
   unlocked = true;
   if (musicOn && wantMood) startMusic(wantMood);
 }
 
+const TOUCH = typeof document !== 'undefined' && 'ontouchend' in document;
+
 if (typeof window !== 'undefined') {
-  for (const ev of ['pointerdown', 'touchend', 'click', 'keydown'] as const) {
+  // Every kind of tap counts: iOS only lets audio start on touchend/click, and dragging a piece
+  // on the board never produces a click, so touchend is what wakes audio during a level.
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'mousedown', 'click', 'keydown'] as const) {
     window.addEventListener(ev, () => {
       gestured = true;
-      if (!ctx || ctx.state !== 'running') {
+      if (!ctx || ctx.state !== 'running' || stale) {
         unlocked = false;
-        unlock();
+        unlock(true);
       }
     }, { capture: true, passive: true });
   }
-  // Pause the music when the tab is hidden; it comes back on return (or on the next tap on iOS).
-  document.addEventListener('visibilitychange', () => {
+  // Pause the music when the app is hidden. iOS can leave the context "running" but silent after
+  // that, so the next tap rebuilds it from scratch.
+  const away = () => {
     if (!ctx) return;
-    if (document.hidden) {
-      stopScheduler();
-      void ctx.suspend().catch(() => {});
-    } else {
+    if (TOUCH) stale = true;
+    stopScheduler();
+    void ctx.suspend().catch(() => {});
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) away();
+    else if (ctx) {
       void ctx.resume().then(() => {
         if (musicOn && wantMood) startMusic(wantMood);
       }, () => {});
     }
   });
+  window.addEventListener('pagehide', away);
+}
+
+// Effects asked for while audio is still waking up wait a moment instead of being dropped.
+const pending: { run: () => void; at: number }[] = [];
+function flushPending(): void {
+  const now = performance.now();
+  const due = pending.splice(0);
+  for (const p of due) if (now - p.at < 600) p.run();
+}
+function whenLive(run: () => void): void {
+  if (!sfxOn) return;
+  if (ctx && ctx.state === 'running') return run();
+  if (!gestured) return;
+  pending.push({ run, at: performance.now() });
+  if (pending.length > 24) pending.shift();
+  unlock();
 }
 
 export function setSound(on: boolean): void {
@@ -186,7 +275,7 @@ function woof(pitch: number, gain = 0.16): void {
   noise(0.07, gain * 0.35, 'bandpass', 1500);
 }
 
-export const sfx = {
+const effects = {
   /** Any menu button. */
   tap() {
     tone(660, 0.05, 'sine', 0.07, 520);
@@ -287,6 +376,12 @@ export const sfx = {
     [392, 330, 262].forEach((f, i) => later(i * 160, () => tone(f, 0.28, 'triangle', 0.1)));
   },
 };
+
+type Effects = typeof effects;
+/** Every effect goes through whenLive, so nothing is lost while iOS is waking the audio up. */
+export const sfx = Object.fromEntries(
+  Object.entries(effects).map(([k, fn]) => [k, (...args: unknown[]) => whenLive(() => (fn as (...a: unknown[]) => void)(...args))]),
+) as Effects;
 
 // ───────────────────────────── Music ─────────────────────────────
 // A tiny step sequencer. Each mood is a chord loop plus a melody that is generated once from a seed,
