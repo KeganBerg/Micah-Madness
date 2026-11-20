@@ -53,6 +53,7 @@ import { floatLabel, installTapFx, pop, pressDown, pressUp } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { playMusic, setMusic, setSound, sfx } from './sound';
 import { canVibrate, haptic, setHaptics } from './haptics';
+import { shareCard } from './share';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -124,6 +125,8 @@ function goalText(goal: Goal): string {
   return `Score ${goal.target.toLocaleString()} points`;
 }
 
+const PAW_POINTER = `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="62" rx="20" ry="17" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="24" cy="40" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="40" cy="25" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="60" cy="25" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="76" cy="40" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/></svg>`;
+
 /** One tip the first time a mechanic appears, so the difficulty ramps with the teaching. */
 const TIPS: Record<number, string> = {
   1: 'Drag a piece onto a neighbour to swap them. Three or more in a line clears them.',
@@ -141,6 +144,12 @@ const TIPS: Record<number, string> = {
   56: 'The last stretch. Look for five in a row: some goals need a Micah piece.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
+
+/** In-level tools arrive one at a time, so level 1 is just the board. */
+const TOOL_UNLOCK: Record<'treat' | 'squirrel' | 'leash' | 'dust' | 'bed', number> = { treat: 3, squirrel: 5, leash: 7, dust: 9, bed: 11 };
+const TOOL_ORDER = ['treat', 'squirrel', 'leash', 'dust', 'bed'] as const;
+/** A tool is available from its level on, or anywhere once the player has got that far. */
+const toolOpen = (id: keyof typeof TOOL_UNLOCK, levelId: number) => Math.max(levelId, unlockedUpTo(save)) >= TOOL_UNLOCK[id];
 
 // ───────────────────────────── Map screen ─────────────────────────────
 
@@ -187,6 +196,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
                 ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
           }).join('')}
+          <div class="map-end" style="top:${nodePos(LEVELS.length - 1).y - 196}px">
+            ${save.stars[LEVELS.length] ? `<button class="map-end-sign done" data-act="finale"><b>You finished!</b><small>Tap to see Micah\u2019s big finish</small></button>` : `<div class="map-end-sign"><b>More adventures</b><small>coming soon</small></div>`}
+          </div>
           <button class="map-micah" aria-label="Micah">${micahImg('micah-idle')}</button>
         </div>
       </div>
@@ -209,6 +221,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     </div>`);
 
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
+  screen.querySelector('[data-act="finale"]')?.addEventListener('click', () => showFinale());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
@@ -902,6 +915,66 @@ function toast(html: string, cls = ''): void {
   window.setTimeout(() => t.remove(), 3200);
 }
 
+// ───────────────────────────── Sharing and the finale ─────────────────────────────
+
+async function shareWin(card: { title: string; subtitle: string; stars: number; lines: [string, string][] }): Promise<void> {
+  toast('Drawing your card\u2026');
+  const result = await shareCard({ ...card, micah: costumeUrl(save.costume) });
+  if (result === 'saved') toast('Saved your card. Send it to a friend!');
+  else if (result === 'failed') toast('Couldn\u2019t make the card on this browser.');
+}
+
+const FINALE_BISCUITS = 300;
+
+/** The end of the road (for now): every level done. */
+function showFinale(): void {
+  const firstTime = !save.seen.includes('finale');
+  if (firstTime) {
+    save.seen.push('finale');
+    save.biscuits += FINALE_BISCUITS;
+    persist(save);
+  }
+  sfx.win();
+  haptic.win();
+  playMusic('map');
+  const stars = totalStars(save);
+  const confetti = Array.from({ length: 40 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 7) * 0.35}s;--c:${['#e8352f', '#ffd23f', '#5fc7f0', '#7ed36f', '#ff9cc8'][i % 5]}"></i>`).join('');
+  const m = modal(`
+    <div class="finale-top">
+      <div class="finale-confetti" aria-hidden="true">${confetti}</div>
+      <div class="finale-hero">
+        <img class="finale-micah cheer" src="${costumeUrl('champion')}" alt="Micah wearing her champion medal" />
+      </div>
+    </div>
+    <p class="eyebrow center">All ${ZONES.length} adventures done</p>
+    <h2 class="center">Micah\u2019s big finish!</h2>
+    <p class="body center">From the backyard to the starry sleepover, you helped Micah fetch every toy, wash every muddy paw and untangle every bit of yarn. She\u2019s had the best day ever, and now she\u2019s off for the comfiest nap.</p>
+    <dl class="stat-rows">
+      <dt>Levels cleared</dt><dd>${LEVELS.length} of ${LEVELS.length}</dd>
+      <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${stars} of ${LEVELS.length * 3}</dd>
+      ${firstTime ? `<dt>Champion prize</dt><dd>${icon('biscuit', 'biscuit-icon')}${FINALE_BISCUITS}</dd>` : ''}
+    </dl>
+    <p class="notice">New outfit unlocked in the Closet: <b>Champion</b>. More adventures are on their way, and you can replay any level for three stars.</p>
+    <div class="actions">
+      <button class="btn" data-act="map">Back to the map</button>
+      <button class="btn secondary" data-act="share">${UI.share}Share Micah\u2019s big finish</button>
+    </div>`, () => showMap(LEVELS.length));
+  m.classList.add('finale-wrap');
+  m.querySelector('[data-act="map"]')!.addEventListener('click', () => (m.remove(), showMap(LEVELS.length)));
+  m.querySelector('[data-act="share"]')!.addEventListener('click', () =>
+    shareWin({
+      title: 'Every level cleared!',
+      subtitle: 'Micah\u2019s big finish',
+      stars: 3,
+      lines: [
+        ['Levels', `${LEVELS.length} of ${LEVELS.length}`],
+        ['Stars', `${stars} of ${LEVELS.length * 3}`],
+        ['Outfit earned', 'Champion'],
+      ],
+    }),
+  );
+}
+
 // ───────────────────────────── Game screen ─────────────────────────────
 
 const CHEERS = ['Good match!', 'Woof!', 'Treat time!', 'Wag wag!', 'Nice!', 'Bork!'];
@@ -1085,6 +1158,37 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     mascot.classList.add(mood === 'sad' ? 'shake' : mood === 'big' ? 'cheer' : 'bounce');
   }
 
+  // The tool that first appears on this level gets a "New" badge and a word from Micah.
+  const newTool = TOOL_ORDER.find((id) => TOOL_UNLOCK[id] === level.id && !save.seen.includes(`tool-${id}`));
+  if (newTool) {
+    save.seen.push(`tool-${newTool}`);
+    persist(save);
+  }
+
+  // Level 1, first visit: a paw shows the very first swap until the player makes it.
+  let guideEl: HTMLElement | null = null;
+  function showGuide() {
+    if (over || busy || guideEl) return;
+    const mv = findMove(grid, locked);
+    if (!mv) return;
+    const [a, b] = mv;
+    guideEl = h(`<div class="guide-paw" aria-hidden="true"><span>${PAW_POINTER}</span></div>`);
+    guideEl.style.setProperty('--dx', String(b[1] - a[1]));
+    guideEl.style.setProperty('--dy', String(b[0] - a[0]));
+    placeEl(guideEl, a[0], a[1]);
+    boardEl.append(guideEl);
+    for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('guided');
+    say('Drag the wiggly piece the way the paw goes to make three in a row.');
+  }
+  function endGuide() {
+    if (!guideEl) return;
+    guideEl.remove();
+    guideEl = null;
+    boardEl.querySelectorAll('.guided').forEach((e) => e.classList.remove('guided'));
+    save.seen.push('guide');
+    persist(save);
+  }
+
   function renderHud() {
     screen.querySelector('.moves-val')!.textContent = String(moves);
     screen.querySelector('.moves')!.classList.toggle('low', moves <= 5);
@@ -1099,10 +1203,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
-    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash', 'dust', 'bed'] as const)
-      .map(
-        (id) => `<button class="tool ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
-          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
+    screen.querySelector('.tools')!.innerHTML = TOOL_ORDER
+      .map((id) =>
+        !toolOpen(id, level.id)
+          ? `<div class="tool locked" aria-label="${BOOSTERS[id].name} unlocks at level ${TOOL_UNLOCK[id]}">${UI.lock}<span class="label">Level ${TOOL_UNLOCK[id]}</span></div>`
+          : `<button class="tool ${newTool === id ? 'spotlight' : ''} ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
+          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span>${newTool === id ? '<em class="new-badge">New</em>' : ''}</button>`,
       )
       .join('');
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
@@ -1365,12 +1471,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         swap(grid, a, b);
         renderAll();
         sfx.bad();
-      haptic.bad();
+        haptic.bad();
         say('That swap doesn\u2019t make a match.', 'sad');
         await wait(170);
         return;
       }
       undoSnap = before;
+      endGuide();
       moves--;
       if (moves === 5) sfx.warn();
       renderHud();
@@ -1602,7 +1709,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         <div class="modal-head">
           ${micahImg('modal-avatar cheer')}
           <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id} cleared</h2></div>
-          <span></span>
+          <button class="round-btn share-btn" aria-label="Share this win">${UI.share}</button>
         </div>
         <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
         <dl class="stat-rows">
@@ -1613,7 +1720,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           <dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${earned}</dd>
         </dl>
         <div class="actions">
-          ${level.id < LEVELS.length ? `<button class="btn next">Play level ${level.id + 1}</button>` : ''}
+          ${level.id < LEVELS.length ? `<button class="btn next">Play level ${level.id + 1}</button>` : `<button class="btn finale">See Micah\u2019s big finish</button>`}
           <div class="pair">
             <button class="btn secondary to-map">Back to map</button>
             <button class="btn secondary replay">Play again</button>
@@ -1624,6 +1731,19 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       // Only a first clear unlocks a new level, so replays don't send her walking.
       const walkFrom = firstClear ? level.id : undefined;
       m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap(level.id, walkFrom)));
+      m.querySelector('.finale')?.addEventListener('click', () => (m.remove(), showFinale()));
+      m.querySelector('.share-btn')!.addEventListener('click', () =>
+        shareWin({
+          title: `Level ${level.id} cleared`,
+          subtitle: zone.name,
+          stars,
+          lines: [
+            ['Score', score.toLocaleString()],
+            ['Win streak', String(save.winStreak)],
+            ['Stars so far', String(totalStars(save))],
+          ],
+        }),
+      );
       m.querySelector('.next')?.addEventListener('click', () => {
         m.remove();
         showMap(level.id + 1, walkFrom, () => showLevelIntro(LEVELS[level.id]));
@@ -1808,6 +1928,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   renderHud();
   say(level.goals.map(goalText).join(', then ') + '.');
   armHint();
+  if (level.id === 1 && !save.seen.includes('guide')) window.setTimeout(showGuide, 700);
+  else if (newTool) {
+    window.setTimeout(() => {
+      if (over) return;
+      say(`New tool: ${BOOSTERS[newTool].name}! ${BOOSTERS[newTool].desc}`, 'big');
+    }, 2200);
+  }
   // Safety: a fresh board never starts with a match, but boosters could create none anyway.
   if (findRuns(grid).length) void runLocked(() => cascade([]));
 }
