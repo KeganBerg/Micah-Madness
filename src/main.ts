@@ -38,6 +38,7 @@ import {
   freshSave,
   importCode,
   load,
+  onSavedElsewhere,
   persist,
   requestDurableStorage,
   starsToSpend,
@@ -64,6 +65,16 @@ document.addEventListener('click', (e) => {
 const canSave = persist(save);
 requestDurableStorage();
 window.addEventListener('pagehide', () => persist(save));
+// Phones often close a backgrounded app without a pagehide, so save whenever the game is hidden.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persist(save);
+});
+// Another tab saved: adopt its save so this tab never writes stale progress back over it.
+onSavedElsewhere((data) => {
+  save = data;
+  setSound(save.sound);
+  setMusic(save.music);
+});
 setSound(save.sound);
 setMusic(save.music);
 installTapFx();
