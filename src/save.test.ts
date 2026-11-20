@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SAVE_VERSION, claimDaily, dailyClaimable, exportCode, freshSave, importCode, load, migrate, persist, starsToSpend, unlockedUpTo } from './save';
+import { BACKUP_KEY, SAVE_VERSION, claimDaily, dailyClaimable, exportCode, freshSave, importCode, load, migrate, persist, starsToSpend, unlockedUpTo } from './save';
 
 class MemoryStorage {
   store = new Map<string, string>();
@@ -56,6 +56,48 @@ describe('saving progress', () => {
     mem.setItem('micah-madness-save', '{not json');
     expect(load()).toEqual(freshSave());
     expect(migrate({ stars: { 1: 9, x: 2 }, biscuits: -5 })).toMatchObject({ stars: { 1: 3 }, biscuits: 0 });
+  });
+
+  it('keeps a backup of a damaged save instead of silently replacing it', () => {
+    mem.setItem('micah-madness-save', '{"stars":{"1":3},"biscu');
+    load();
+    expect(mem.getItem(BACKUP_KEY)).toBe('{"stars":{"1":3},"biscu');
+  });
+
+  it('backs up an older save before upgrading it, but not a current one', () => {
+    const old = JSON.stringify({ version: 3, stars: { 1: 2 }, biscuits: 90 });
+    mem.setItem('micah-madness-save', old);
+    load();
+    expect(mem.getItem(BACKUP_KEY)).toBe(old);
+    mem.store.delete(BACKUP_KEY);
+    load();
+    expect(mem.getItem(BACKUP_KEY)).toBeNull();
+  });
+
+  it('keeps fields from a newer version, so an older open tab cannot erase them', () => {
+    const newer = { ...freshSave(), version: SAVE_VERSION + 1, pets: ['cat'], biscuits: 321 };
+    const s = migrate(newer);
+    expect(s.version).toBe(SAVE_VERSION + 1);
+    expect((s as unknown as { pets: string[] }).pets).toEqual(['cat']);
+    expect(s.biscuits).toBe(321);
+  });
+
+  it('keeps coins, costumes, Magic Dust, beds, yard and collar through a save and load', () => {
+    const s = load();
+    s.biscuits = 999;
+    s.costume = 'cap';
+    s.wardrobe = ['cap', 'raincoat'];
+    s.inventory.dust = 4;
+    s.inventory.bed = 3;
+    s.decor = ['bowl'];
+    s.spentStars = 5;
+    s.badges = ['first-win'];
+    s.tally = { mud: 40, wins: 6 };
+    s.daily = { last: '2026-11-19', day: 3 };
+    s.winStreak = 2;
+    persist(s);
+    expect(load()).toEqual(s);
+    expect(importCode(exportCode(s))).toEqual(s);
   });
 
   it('still runs when the browser blocks storage', () => {

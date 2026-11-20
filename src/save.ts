@@ -37,6 +37,8 @@ export interface SaveData {
 export const SAVE_VERSION = 6;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
+/** A copy of the stored save from before it was upgraded or found damaged, so nothing is ever lost outright. */
+export const BACKUP_KEY = 'micah-madness-save-backup';
 
 export const BOOSTERS: Record<BoosterId, { name: string; short?: string; desc: string; price: number; when: 'in-level' | 'pre-level' }> = {
   treat: { name: 'Treat', desc: 'Micah eats any one piece.', price: 30, when: 'in-level' },
@@ -94,7 +96,10 @@ export function migrate(raw: unknown): SaveData {
   const inventory = { ...base.inventory };
   for (const id of Object.keys(inventory) as BoosterId[]) inventory[id] = num(inv[id]) ?? inventory[id];
   return {
-    version: SAVE_VERSION,
+    // Fields this version doesn't know about are kept, so a tab still running an older
+    // build (open across an update) can't erase progress that only the newer build tracks.
+    ...d,
+    version: Math.max(SAVE_VERSION, num(d.version) ?? 0),
     stars: numMap(d.stars, 3),
     best: numMap(d.best, Number.MAX_SAFE_INTEGER),
     biscuits: num(d.biscuits) ?? base.biscuits,
@@ -140,11 +145,49 @@ export function load(): SaveData {
   try {
     let raw = ls.getItem(KEY);
     if (!raw) raw = LEGACY_KEYS.map((k) => ls.getItem(k)).find(Boolean) ?? null;
-    const data = migrate(raw ? JSON.parse(raw) : null);
+    if (!raw) return freshSave();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      backup(ls, raw); // damaged: keep the original text before a fresh save replaces it
+      return freshSave();
+    }
+    const old = parsed && typeof parsed === 'object' ? num((parsed as Record<string, unknown>).version) ?? 0 : 0;
+    if (old < SAVE_VERSION) backup(ls, raw); // about to upgrade an older save
+    const data = migrate(parsed);
     persist(data); // writes the migrated save under the current key
     return data;
   } catch {
     return freshSave();
+  }
+}
+
+function backup(ls: Storage, raw: string): void {
+  try {
+    ls.setItem(BACKUP_KEY, raw);
+  } catch {
+    /* storage full: the backup is best effort */
+  }
+}
+
+/**
+ * Calls back with the newer save when another tab or window of the game saves.
+ * Without this, a tab left open in the background would later write its stale copy over
+ * progress made elsewhere (the last tab to save wins).
+ */
+export function onSavedElsewhere(cb: (data: SaveData) => void): void {
+  try {
+    window.addEventListener('storage', (e) => {
+      if (e.key !== KEY || !e.newValue) return;
+      try {
+        cb(migrate(JSON.parse(e.newValue)));
+      } catch {
+        /* ignore a damaged write */
+      }
+    });
+  } catch {
+    /* no window (tests) */
   }
 }
 

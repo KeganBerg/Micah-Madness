@@ -1,72 +1,33 @@
-// Greedy-player win-rate simulator for tuning levels. Run with: SIM=1 npx vitest run scripts/sim.test.ts
-// Optional: SIM_FROM=41 starts at that level, SIM_N=200 sets runs per level.
-// Results go to <tmpdir>/micah-sim.txt. A greedy bot with no boosters is much weaker than a person.
+// Level-balance simulator. Run with: SIM=1 npx vitest run scripts/sim.test.ts
+// Optional: SIM_FROM=41 / SIM_TO=45 pick levels, SIM_N=200 sets runs per level, SIM_BOT=greedy uses the old weaker bot.
+// Results go to <tmpdir>/micah-sim.txt: win rate, spare moves on a win, median winning score (victory lap included),
+// how often each star threshold is reached by a win, and how often each goal was left unfinished.
+// The bot looks one step ahead and never uses boosters or streak Zoomies, so a person does noticeably better.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'vitest';
-import { LEVELS, mudCount, mudDepth, yarnCount, type Power } from '../src/levels';
-import { applyClear, applyGravity, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, shuffle, swap, unkey, type Grid, type Pos } from '../src/board';
-
-function play(levelIdx: number): boolean {
-  const lv = LEVELS[levelIdx];
-  let grid: Grid = createGrid(8, 8, Math.random, lv.kinds);
-  const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => mudDepth(lv, r, c)));
-  const yarn = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.yarn?.[r]?.[c] === 'y'));
-  const locked = (r: number, c: number) => yarn[r][c];
-  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.target));
-  const powerOf = (sp: string): Power => (sp === 'bark' ? 'bark' : sp === 'micah' ? 'micah' : 'zoomies');
-  let score = 0;
-  const done = () => lv.goals.every((g, i) => (g.type === 'score' ? score >= g.target : rem[i] <= 0));
-  for (let m = 0; m < lv.moves; m++) {
-    // greedy: pick the legal move with the most goal progress in its first clear
-    let best: [Pos, Pos] | null = null; let bestV = -1;
-    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) for (const [dr, dc] of [[0, 1], [1, 0]]) {
-      const b: Pos = [r + dr, c + dc]; const a: Pos = [r, c];
-      if (b[0] > 7 || b[1] > 7 || locked(r, c) || locked(b[0], b[1]) || !isLegalSwap(grid, a, b)) continue;
-      swap(grid, a, b);
-      const res = computeClear(grid, [b, a], []);
-      swap(grid, a, b);
-      let v = res.cleared.size + res.created.length * 3 + Math.random();
-      for (const k of res.cleared) { const [rr, cc] = unkey(k); if (mud[rr][cc] || yarn[rr][cc]) v += 3; }
-      for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += 4; });
-      lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
-      if (v > bestV) { bestV = v; best = [a, b]; }
-    }
-    if (!best) { shuffle(grid); continue; }
-    const [a, b] = best;
-    const forced0 = comboClears(grid, a, b) ?? [];
-    swap(grid, a, b);
-    let pref: Pos[] = [b, a]; let forced: number[] = forced0; let chain = 1;
-    for (;;) {
-      const res = computeClear(grid, pref, forced);
-      if (res.cleared.size === 0) break;
-      score += res.cleared.size * 20 * chain + res.created.length * 100;
-      lv.goals.forEach((g, i) => { if (g.type === 'collect') rem[i] -= res.collected[g.kind]; });
-      for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && g.power === powerOf(cr.tile.special)) rem[i]--; });
-      for (const k of res.cleared) {
-        const [r, c] = unkey(k);
-        if (mud[r][c]) { mud[r][c]--; lv.goals.forEach((g, i) => g.type === 'mud' && rem[i]--); }
-        if (yarn[r][c]) { yarn[r][c] = false; lv.goals.forEach((g, i) => g.type === 'yarn' && rem[i]--); }
-      }
-      applyClear(grid, res); applyGravity(grid, Math.random, lv.kinds);
-      chain++; pref = []; forced = [];
-    }
-    if (done()) return true;
-    let n = 0; while (!hasMove(grid, locked) && n++ < 20) shuffle(grid);
-  }
-  void key;
-  return done();
-}
+import { LEVELS } from '../src/levels';
+import { play, summarize } from './sim';
 
 test.skipIf(!process.env.SIM)('simulate win rates', () => {
   const out: string[] = [];
   const from = Number(process.env.SIM_FROM ?? 1) - 1;
-  const N = Number(process.env.SIM_N ?? 60);
-  for (let i = from; i < LEVELS.length; i++) {
-    let w = 0;
-    for (let t = 0; t < N; t++) if (play(i)) w++;
-    out.push(`L${i + 1}: ${Math.round((w / N) * 100)}%`);
+  const to = Number(process.env.SIM_TO ?? LEVELS.length);
+  const N = Number(process.env.SIM_N ?? 100);
+  const smart = process.env.SIM_BOT !== 'greedy';
+  for (let i = from; i < to; i++) {
+    const s = summarize(LEVELS[i], N, smart);
+    out.push(`L${i + 1}\twin ${s.win}%\tspare ${s.spare}\tmedian ${s.p50}\tp85 ${s.p85}\tstars ${s.stars.join('/')}%\tstuck ${s.stuck.join('/')}%`);
   }
-  writeFileSync(join(tmpdir(), 'micah-sim.txt'), out.join('\n'));
-}, 600000);
+  writeFileSync(join(tmpdir(), 'micah-sim.txt'), out.join('\n') + '\n');
+}, 3600000);
+
+// Catches a level change that makes a level unwinnable: even the bot wins every level well over a third of the time.
+test('the bot can win every level', () => {
+  for (const lv of LEVELS) {
+    let won = false;
+    for (let t = 0; t < 25 && !won; t++) won = play(lv).won;
+    if (!won) throw new Error(`L${lv.id} was not won in 25 bot runs`);
+  }
+}, 120000);

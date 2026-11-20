@@ -38,6 +38,7 @@ import {
   freshSave,
   importCode,
   load,
+  onSavedElsewhere,
   persist,
   requestDurableStorage,
   starsToSpend,
@@ -67,6 +68,16 @@ const canSave = persist(save);
 requestDurableStorage();
 setupInstall();
 window.addEventListener('pagehide', () => persist(save));
+// Phones often close a backgrounded app without a pagehide, so save whenever the game is hidden.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persist(save);
+});
+// Another tab saved: adopt its save so this tab never writes stale progress back over it.
+onSavedElsewhere((data) => {
+  save = data;
+  setSound(save.sound);
+  setMusic(save.music);
+});
 setSound(save.sound);
 setMusic(save.music);
 setHaptics(save.haptics);
@@ -248,8 +259,8 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     micahEl.style.left = `${((p.x + side * 52) / width) * 100}%`;
     micahEl.style.top = `${p.y - 56}px`;
     micahEl.classList.toggle('facing-left', side > 0);
+    micahEl.style.translate = '';
   };
-  let homeLeft = '';
   const fidget = () => {
     idleTimer = window.setTimeout(() => {
       if (!micahEl.isConnected) return;
@@ -260,13 +271,13 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         if (r < 0.4) micahEl.classList.add('sniff');
         else if (r < 0.6) micahEl.classList.add('scratch');
         else {
-          // Trot a few steps away and back.
-          homeLeft ||= micahEl.style.left;
-          const away = micahEl.style.left === homeLeft;
+          // Trot a few steps away and back. She moves with `translate`, not `left`, so the
+          // phone slides her on the GPU without re-laying-out the whole map every frame.
+          const away = !micahEl.style.translate;
           const dx = (Math.random() < 0.5 ? -1 : 1) * 18;
           micahEl.classList.add('pace');
           micahEl.classList.toggle('facing-left', away ? dx < 0 : !micahEl.classList.contains('facing-left'));
-          micahEl.style.left = away ? `calc(${homeLeft} + ${dx}px)` : homeLeft;
+          micahEl.style.translate = away ? `${dx}px 0` : '';
           setTimeout(() => micahEl.classList.remove('pace'), 1250);
         }
       }
@@ -438,11 +449,11 @@ function showWardrobe(onClose: () => void): void {
   const render = () => {
     const c = costumeById(save.costume);
     return `
-    <header class="modal-head">
+    <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
       <div><p class="eyebrow">Micah\u2019s closet</p><h2>${c.name}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <p class="body">${c.desc} Clear levels to unlock more outfits, or buy some with biscuits. You have ${save.biscuits}.</p>
     <ul class="wardrobe">${COSTUMES.map(card).join('')}</ul>`;
   };
@@ -487,11 +498,11 @@ function showDaily(): void {
   const day = dailyClaimable(save);
   const current = day || save.daily.day;
   const m = modal(`
-    <header class="modal-head">
+    <div class="modal-head">
       ${icon('treat', 'modal-avatar')}
       <div><p class="eyebrow">Come back every day</p><h2>Daily treat</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <p class="body">Claim a treat once a day. Come back on consecutive days for bigger rewards. Missing a day starts you back at day 1.</p>
     <ol class="daily-grid">
       ${DAILY_REWARDS.map((r, i) => {
@@ -529,6 +540,7 @@ syncViewportHeight();
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
 window.addEventListener('resize', syncViewportHeight);
 
+let dialogCount = 0;
 function modal(inner: string, onClose?: () => void): HTMLElement {
   const m = h(`<div class="modal-wrap"><div class="modal">${inner}</div></div>`);
   if (onClose) {
@@ -547,11 +559,36 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
     last.replaceWith(foot);
     foot.append(last);
   }
+  const box = m.querySelector<HTMLElement>('.modal')!;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  // Screen readers announce the pop-up by its heading.
+  const title = box.querySelector('h2');
+  if (title) {
+    title.id ||= `dlg-${++dialogCount}`;
+    box.setAttribute('aria-labelledby', title.id);
+  }
+  // Everything behind the pop-up is out of reach (tab, screen reader) until it closes,
+  // then focus goes back to whatever opened it.
+  const opener = document.activeElement as HTMLElement | null;
+  // The screen behind may be redrawn while the pop-up is open, so remember how to find the opener again.
+  const openerSel = opener?.dataset.act ? `[data-act="${opener.dataset.act}"]` : opener?.dataset.level ? `[data-level="${opener.dataset.level}"]` : '';
+  const behind = [...document.body.children].filter((el): el is HTMLElement => el instanceof HTMLElement && !el.inert);
+  behind.forEach((el) => (el.inert = true));
+  new MutationObserver((_, obs) => {
+    if (m.isConnected) return;
+    obs.disconnect();
+    behind.forEach((el) => (el.inert = false));
+    if (document.activeElement && document.activeElement !== document.body) return;
+    const back = opener?.isConnected ? opener : openerSel ? document.querySelector<HTMLElement>(`#app ${openerSel}`) : null;
+    back?.focus({ preventScroll: true });
+  }).observe(document.body, { childList: true });
   document.body.append(m);
-  m.querySelector<HTMLElement>('.modal')!.setAttribute('role', 'dialog');
-  m.querySelector<HTMLElement>('.modal')!.setAttribute('aria-modal', 'true');
   // Keyboard: focus starts inside the pop-up, Escape closes it the same way the close button does.
-  requestAnimationFrame(() => m.querySelector<HTMLElement>('.btn, .close, button')?.focus({ preventScroll: true }));
+  // Focus starts on the main action when there is one (Enter plays), otherwise on Close.
+  requestAnimationFrame(() =>
+    (box.querySelector<HTMLElement>('.modal > .actions:last-child .btn:not(.danger)') ?? box.querySelector<HTMLElement>('.close, button'))?.focus({ preventScroll: true }),
+  );
   const onKey = (e: KeyboardEvent) => {
     if (!m.isConnected) return document.removeEventListener('keydown', onKey);
     if (e.key !== 'Escape' || document.querySelector('.modal-wrap:last-of-type') !== m) return;
@@ -568,11 +605,11 @@ function showLevelIntro(level: Level): void {
   const zone = ZONES[level.zone];
   const m = modal(
     `
-    <header class="modal-head">
+    <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
       <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <section>
       <h3>Goal</h3>
       <ul class="goal-list">${level.goals.map((g) => `<li>${goalIcon(g)}<span>${goalText(g)}</span></li>`).join('')}</ul>
@@ -616,11 +653,11 @@ function showLevelIntro(level: Level): void {
 
 function showShop(onClose: () => void): void {
   const render = () => `
-    <header class="modal-head">
+    <div class="modal-head">
       ${icon('biscuit', 'modal-avatar')}
       <div><p class="eyebrow">Spend biscuits</p><h2>Treat Shop</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <p class="wallet-row">${icon('biscuit', 'biscuit-icon')}${save.biscuits} biscuits</p>
     ${save.biscuits < Math.min(...Object.values(BOOSTERS).map((b) => b.price))
       ? '<p class="notice">You need more biscuits for anything here. Win a level to earn them: 10 per star, plus 20 the first time you clear it.</p>'
@@ -674,11 +711,11 @@ const tagSvg = (b: Badge, on: boolean) => `<svg viewBox="0 0 48 48" class="tag-i
 function showCollar(): void {
   const owned = save.badges.length;
   const m = modal(`
-    <header class="modal-head">
+    <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
       <div><p class="eyebrow">${owned} of ${BADGES.length} earned</p><h2>Micah\u2019s Collar</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <p class="body">Every tag on Micah\u2019s collar pays out biscuits the moment you earn it.</p>
     <ul class="tag-list">
       ${BADGES.map((b) => {
@@ -688,7 +725,7 @@ function showCollar(): void {
         return `<li class="${on ? 'on' : ''}">
           ${tagSvg(b, on)}
           <div class="tag-info"><b>${b.name}</b><span>${b.desc}</span>
-            ${on ? '' : `<span class="tag-bar" role="progressbar" aria-valuenow="${Math.min(cur, target)}" aria-valuemax="${target}"><i style="width:${pct}%"></i></span><small>${Math.min(cur, target)} / ${target}</small>`}
+            ${on ? '' : `<span class="tag-bar" role="progressbar" aria-label="${b.name} progress" aria-valuenow="${Math.min(cur, target)}" aria-valuemax="${target}"><i style="width:${pct}%"></i></span><small>${Math.min(cur, target)} / ${target}</small>`}
           </div>
           <span class="tag-reward">${on ? UI.check : `${icon('biscuit', 'biscuit-icon')}${b.reward}`}</span>
         </li>`;
@@ -724,11 +761,11 @@ const HOW_TO: [string, string][] = [
 function showSettings(): void {
   const cleared = Object.keys(save.stars).length;
   const m = modal(`
-    <header class="modal-head">
+    <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
       <div><p class="eyebrow">Micah Madness</p><h2>Settings</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
-    </header>
+    </div>
     <section>
       <button class="setting-row" data-act="sound" role="switch" aria-checked="${save.sound}">
         <span>${save.sound ? UI.soundOn : UI.soundOff}</span><b>Sound effects</b><i class="switch"></i>
@@ -781,7 +818,7 @@ function showSettings(): void {
     persist(save);
     soundBtn.setAttribute('aria-checked', String(save.sound));
     soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
-    if (save.sound) sfx.tap();
+    // The page-wide button listener plays the tap that confirms sound is back on.
   });
   const hapticBtn = m.querySelector<HTMLButtonElement>('[data-act="haptics"]');
   hapticBtn?.addEventListener('click', () => {
@@ -937,11 +974,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       <div class="info-row">
         <div class="mascot">
           <div class="mascot-face">${micahImg('mascot-img micah-idle')}</div>
-          <div class="bubble"></div>
+          <div class="bubble" aria-live="polite"></div>
         </div>
         <div class="goals"></div>
       </div>
       <div class="board-wrap"><div class="board"></div></div>
+      <p class="sr-only board-status" aria-live="polite"></p>
       <div class="tools"></div>
     </div>`);
   // Leaving the level (back arrow, map, replay) stops its timers and resize watching.
@@ -1057,7 +1095,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        return `<div class="goal ${done ? 'done' : ''}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? 'mud patches left' : g.type === 'yarn' ? 'yarn balls left' : `${POWER_NAMES[g.power][1]} to make`;
+        return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
     screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash', 'dust', 'bed'] as const)
@@ -1560,12 +1599,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       setTimeout(() => celebrate(tags), 1400);
       for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
       const m = modal(`
-        <header class="modal-head">
+        <div class="modal-head">
           ${micahImg('modal-avatar cheer')}
           <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id} cleared</h2></div>
           <span></span>
-        </header>
-        <div class="result-stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
+        </div>
+        <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
         <dl class="stat-rows">
           <dt>Score</dt><dd>${score.toLocaleString()}</dd>
           ${bonusPts ? `<dt>Victory lap</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
@@ -1591,11 +1630,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       });
     } else {
       const m = modal(`
-        <header class="modal-head">
+        <div class="modal-head">
           ${micahImg('modal-avatar sad')}
           <div><p class="eyebrow">Level ${level.id}</p><h2>Out of moves</h2></div>
           <span></span>
-        </header>
+        </div>
         <section>
           <h3>Still to do</h3>
           <ul class="goal-list">${level.goals
@@ -1686,6 +1725,82 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   });
 
   boardEl.addEventListener('pointercancel', () => (releasePiece(), (dragStart = null)));
+
+  // ── Keyboard and screen reader play ──
+  // Arrow keys move a cursor. Enter or Space picks up the piece (or uses the chosen item on it),
+  // then an arrow key swaps it with that neighbour. Escape puts it back down.
+  const status = screen.querySelector<HTMLParagraphElement>('.board-status')!;
+  const cursorEl = document.createElement('div');
+  cursorEl.className = 'kb-cursor';
+  cursorEl.hidden = true;
+  boardEl.append(cursorEl);
+  boardEl.tabIndex = 0;
+  boardEl.setAttribute('role', 'application');
+  boardEl.setAttribute('aria-roledescription', 'game board');
+  boardEl.setAttribute('aria-label', `Game board, ${ROWS} by ${COLS}. Arrow keys move. Enter picks up a piece, then an arrow key swaps it.`);
+  let cursor: Pos = [Math.floor(ROWS / 2) - 1, Math.floor(COLS / 2) - 1];
+  const SPECIAL_NAMES: Record<Special, string> = { none: '', zoomRow: ' Zoomies, clears its row', zoomCol: ' Zoomies, clears its column', bark: ' Big Bark', micah: '' };
+  const describe = ([r, c]: Pos) => {
+    const t = grid[r][c];
+    const what = !t ? 'empty' : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
+    const extra = [mud[r][c] > 1 ? 'deep mud' : mud[r][c] ? 'mud' : '', yarn[r][c] ? 'tangled in yarn' : ''].filter(Boolean).join(', ');
+    return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
+  };
+  const announce = (text: string) => {
+    status.textContent = '';
+    requestAnimationFrame(() => (status.textContent = text));
+  };
+  const showCursor = () => {
+    cursorEl.hidden = false;
+    placeEl(cursorEl, cursor[0], cursor[1]);
+  };
+  boardEl.addEventListener('focus', () => {
+    if (!boardEl.matches(':focus-visible')) return;
+    showCursor();
+    announce(describe(cursor));
+  });
+  boardEl.addEventListener('blur', () => (cursorEl.hidden = true));
+  boardEl.addEventListener('pointerdown', () => (cursorEl.hidden = true));
+  const STEPS: Record<string, Pos> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  boardEl.addEventListener('keydown', (e) => {
+    const step = STEPS[e.key];
+    if (step) {
+      e.preventDefault();
+      const to: Pos = [Math.min(ROWS - 1, Math.max(0, cursor[0] + step[0])), Math.min(COLS - 1, Math.max(0, cursor[1] + step[1]))];
+      const from = selected;
+      cursor = to;
+      showCursor();
+      if (from && !busy && !over && isAdjacent(from, to)) {
+        void trySwap(from, to).then(() => {
+          if (!over) announce(`${moves} moves left. ${describe(cursor)}`);
+        });
+      } else {
+        if (from) selectCell(null);
+        announce(describe(cursor));
+      }
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (busy || over) return;
+      showCursor();
+      if (treatMode) return void eatTile(cursor);
+      if (dustMode) return void dustTile(cursor);
+      if (selected && selected[0] === cursor[0] && selected[1] === cursor[1]) {
+        selectCell(null);
+        announce('Put down.');
+      } else {
+        selectCell(cursor);
+        announce(`Picked up. ${describe(cursor)}. Press an arrow key to swap.`);
+      }
+      return;
+    }
+    if (e.key === 'Escape' && selected) {
+      e.stopPropagation();
+      selectCell(null);
+      announce('Put down.');
+    }
+  });
 
   screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id));
 

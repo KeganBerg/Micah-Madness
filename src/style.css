@@ -5,7 +5,7 @@
 */
 :root {
   /* colour */
-  --brand: #e8352f;        /* lobster red: primary actions, highlights */
+  --brand: #e0302a;        /* lobster red: primary actions, highlights (a hair deeper than the lobster piece so white text on it passes 4.5:1) */
   --brand-deep: #a3201c;   /* pressed edge of brand buttons */
   --sea: #173a52;          /* flat app background */
   --sea-deep: #0f2a3d;     /* top bar, board frame */
@@ -20,7 +20,7 @@
   /* type */
   --font-display: 'Lilita One', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
   --font-body: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --fs-xs: 12px;   /* labels */
+  --fs-xs: 13px;   /* labels (smallest text in the game) */
   --fs-sm: 14px;   /* secondary body */
   --fs-md: 16px;   /* body */
   --fs-lg: 20px;   /* sub-headings, HUD numbers */
@@ -52,7 +52,10 @@ body { display: flex; justify-content: center; }
 #app { width: 100%; max-width: 520px; height: 100%; position: relative; overflow: hidden; background: var(--sea); }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
 button:disabled { cursor: default; opacity: .45; }
-button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+/* Focus ring: gold on the dark sea, deep blue on white panels, so it always stands out at 3:1 or more. */
+button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+:is(.modal, .hud, .tools, .welcome, .wallet) :focus-visible, .modal :is(button, textarea):focus-visible { outline-color: var(--sea); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 svg { display: block; }
 h2, h3, p { margin: 0; }
 .ui-icon { width: 20px; height: 20px; }
@@ -394,7 +397,7 @@ h2, h3, p { margin: 0; }
 
 /* ───── Micah animations ───── */
 /* Idle: a slow breathe from her feet, so she never looks like a sticker. */
-.micah-idle { transform-origin: 50% 92%; animation: micah-breathe 2.6s ease-in-out infinite; }
+.micah-idle { transform-origin: 50% 92%; will-change: transform; animation: micah-breathe 2.6s ease-in-out infinite; }
 @keyframes micah-breathe {
   0%, 100% { transform: scale(1, 1) rotate(0deg); }
   30% { transform: scale(1.02, .97) rotate(-2deg); }
@@ -404,9 +407,16 @@ h2, h3, p { margin: 0; }
 /* Map: Micah stands beside her level, tilts her head when tapped, hops along the path. */
 .map-micah {
   position: absolute; width: 64px; height: 64px; margin: 0 0 0 -32px; z-index: 2; padding: 0;
-  transition: left 1s ease-in-out, top 1s ease-in-out; filter: drop-shadow(0 4px 3px #0005);
+  transition: left 1s ease-in-out, top 1s ease-in-out, translate 1.2s ease-in-out;
 }
-.map-micah img { width: 100%; height: 100%; display: block; }
+/* Performance: a filter on this button forced the phone to redraw Micah and her shadow on the
+   main thread every frame of her breathing. A plain ground shadow plus her own GPU layer lets
+   the compositor run her idle animations without repainting the map. */
+.map-micah::before {
+  content: ''; position: absolute; left: 18%; right: 18%; bottom: 2px; height: 9px; border-radius: 50%;
+  background: #0000003d; pointer-events: none;
+}
+.map-micah img { width: 100%; height: 100%; display: block; position: relative; will-change: transform; }
 .map-micah.facing-left img { scale: -1 1; }
 .map-micah.tilt img { animation: micah-tilt .6s ease-in-out; }
 .map-micah.walking img { animation: micah-hop .25s ease-in-out 4; }
@@ -735,7 +745,6 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 /* Map: Micah sniffs about beside her level while you decide. */
 .map-micah.sniff img { animation: ym-sniff .5s ease-in-out 3; }
 .map-micah.scratch img { animation: ym-scratch .14s linear 6; }
-.map-micah.pace { transition: left 1.2s ease-in-out, top 1.2s ease-in-out; }
 .map-micah.pace img { animation: micah-hop .3s ease-in-out 4; }
 
 /* ───── Wardrobe ───── */
@@ -763,3 +772,23 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 /* Add-to-Home-Screen steps */
 .install-steps { margin: 8px 0 12px; padding-left: 1.4em; display: grid; gap: 6px; font-size: 0.95rem; line-height: 1.4; }
 .install-steps .ui-icon.inline { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em; margin: 0 2px; }
+
+/* ───── Accessibility ───── */
+/* Tap targets: every button is at least 44px, the size Apple and Google recommend for fingers. */
+.round-btn, .close { width: 44px; height: 44px; }
+.wallet { height: 44px; }
+.hud { grid-template-columns: 44px 64px 72px 1fr; }
+.dock-btn .tally { font-size: 11px; }
+/* Keyboard cursor on the board. */
+.kb-cursor { position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%; z-index: 6; pointer-events: none; border-radius: 10px; box-shadow: inset 0 0 0 3px var(--sea-deep), inset 0 0 0 6px var(--gold); }
+.kb-cursor[hidden] { display: none; }
+.board:focus-visible { outline: 6px solid var(--gold); }
+/* Reduced motion: the hint can't wiggle, so it gets a dashed ring instead. */
+@media (prefers-reduced-motion: reduce) {
+  .tile.hint:not(.selected)::after { content: ''; position: absolute; inset: 4%; border-radius: 10px; border: 3px dashed var(--sea); z-index: 1; }
+  .launch-micah, .launch-shadow, .splash .dots i { animation: none !important; }
+}
+.buy { height: 44px; }
+/* Item labels sit under their icon in a five-across row: 12px keeps "Squirrel!" whole on small phones (the button also has a full spoken label). */
+.tool .label { font-size: 12px; letter-spacing: -.01em; }
+@media (max-width: 360px) { .tools { gap: var(--s1); } .tool { padding: 0; } }

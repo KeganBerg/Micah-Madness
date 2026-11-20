@@ -25,6 +25,14 @@ describe('levels', () => {
     }
   });
 
+  test('move limits stay in a playable range', () => {
+    // Tuned with scripts/sim.test.ts. Over 45 moves a level drags; under 18 there is no room to plan.
+    for (const lv of LEVELS) {
+      expect(lv.moves).toBeGreaterThanOrEqual(18);
+      expect(lv.moves).toBeLessThanOrEqual(45);
+    }
+  });
+
   test('deep mud counts as two washes', () => {
     const lv = LEVELS.find((l) => l.mud?.some((r) => r.includes('M')))!;
     const m = lv.mud!.join('');
