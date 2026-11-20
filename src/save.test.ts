@@ -25,7 +25,7 @@ describe('saving progress', () => {
     expect(load()).toEqual(freshSave());
   });
 
-  it('keeps stars, scores, biscuits, boosters and sound across reloads', () => {
+  it('keeps stars, scores, biscuits, boosters, sound and music across reloads', () => {
     const s = load();
     s.stars[1] = 3;
     s.stars[2] = 1;
@@ -33,6 +33,7 @@ describe('saving progress', () => {
     s.biscuits = 175;
     s.inventory.treat = 7;
     s.sound = false;
+    s.music = false;
     persist(s);
     const again = load();
     expect(again).toEqual(s);
@@ -43,6 +44,7 @@ describe('saving progress', () => {
     mem.setItem('micah-madness-save-v1', JSON.stringify({ stars: { 1: 2 }, best: { 1: 3000 }, biscuits: 140, inventory: { treat: 4 }, sound: true }));
     const s = load();
     expect(s.version).toBe(SAVE_VERSION);
+    expect(s.music).toBe(true);
     expect(s.stars[1]).toBe(2);
     expect(s.biscuits).toBe(140);
     expect(s.inventory.treat).toBe(4);

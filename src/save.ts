@@ -10,6 +10,8 @@ export interface SaveData {
   biscuits: number;
   inventory: Record<BoosterId, number>;
   sound: boolean;
+  /** Background music on or off (separate from sound effects). */
+  music: boolean;
   /** Stars spent on yard decorations. */
   spentStars: number;
   /** Decorations bought for Micah's yard. */
@@ -44,6 +46,7 @@ export function freshSave(): SaveData {
     biscuits: 100,
     inventory: { treat: 2, squirrel: 2, leash: 1, zoomies: 1, micah: 1 },
     sound: true,
+    music: true,
     spentStars: 0,
     decor: [],
     daily: { last: '', day: 0 },
@@ -83,6 +86,7 @@ export function migrate(raw: unknown): SaveData {
     biscuits: num(d.biscuits) ?? base.biscuits,
     inventory,
     sound: typeof d.sound === 'boolean' ? d.sound : base.sound,
+    music: typeof d.music === 'boolean' ? d.music : base.music,
     spentStars: num(d.spentStars) ?? 0,
     decor: Array.isArray(d.decor) ? d.decor.filter((x): x is string => typeof x === 'string') : [],
     daily: (() => {
