@@ -24,7 +24,9 @@ import {
   type Special,
   type Tile,
 } from './board';
-import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, micahUrl, svg } from './art';
+import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, svg } from './art';
+import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
+import { startYard } from './roam';
 import { LEVELS, ZONES, mudCount, yarnCount, type Goal, type Level } from './levels';
 import {
   BOOSTERS,
@@ -79,7 +81,10 @@ function mount(screen: HTMLElement, onLeave?: () => void): void {
   app.replaceChildren(screen);
 }
 const icon = (id: string, cls = 'icon') => svg(BOOSTER_ICONS[id], cls);
-const micahImg = (cls: string, alt = '') => `<img src="${micahUrl}" class="${cls}" alt="${alt}" draggable="false">`;
+/** Micah, in whatever she's wearing today. */
+const micahImg = (cls: string, alt = '') =>
+  `<img src="${costumeUrl(save.costume)}" class="${cls}" alt="${alt}" draggable="false">`;
+const micahAlt = () => `Micah in her ${costumeById(save.costume).name.toLowerCase()}`;
 const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : ''}">${UI.star}</i>`).join('');
 
 function goalIcon(goal: Goal): string {
@@ -187,7 +192,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${canSave ? '' : '<p class="save-warning">This browser isn\u2019t saving progress, so it resets when you close the page. Private browsing usually causes this.</p>'}
       ${Object.keys(save.stars).length === 0
         ? `<div class="welcome">
-            ${micahImg('micah-idle', 'Micah in her lobster costume')}
+            ${micahImg('micah-idle', micahAlt())}
             <div><h2>Help Micah fetch her toys</h2>
             <p>Swap two neighbouring pieces to line up three of a kind. Each level has a goal and a move limit.</p></div>
             <button class="btn" data-act="start">Start level 1</button>
@@ -197,6 +202,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
         <button class="dock-btn" data-act="collar">${UI.award}<span>Collar</span><em class="tally">${save.badges.length}/${BADGES.length}</em></button>
+        <button class="dock-btn" data-act="closet">${UI.shirt}<span>Closet</span></button>
         <button class="dock-btn" data-act="shop2">${UI.bag}<span>Shop</span></button>
       </nav>
     </div>`);
@@ -204,6 +210,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
+  screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
   screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
@@ -212,7 +219,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     n.addEventListener('click', () => showLevelIntro(LEVELS[Number(n.dataset.level) - 1])),
   );
 
-  mount(screen);
+  // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
+  let idleTimer = 0;
+  mount(screen, () => clearTimeout(idleTimer));
 
   // Micah stands just beside the node she is on, on the side away from the path's next bend.
   const micahEl = screen.querySelector<HTMLButtonElement>('.map-micah')!;
@@ -224,6 +233,31 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     micahEl.style.top = `${p.y - 56}px`;
     micahEl.classList.toggle('facing-left', side > 0);
   };
+  let homeLeft = '';
+  const fidget = () => {
+    idleTimer = window.setTimeout(() => {
+      if (!micahEl.isConnected) return;
+      if (!micahEl.matches('.walking, .pace')) {
+        micahEl.classList.remove('sniff', 'scratch', 'tilt');
+        void micahEl.offsetWidth;
+        const r = Math.random();
+        if (r < 0.4) micahEl.classList.add('sniff');
+        else if (r < 0.6) micahEl.classList.add('scratch');
+        else {
+          // Trot a few steps away and back.
+          homeLeft ||= micahEl.style.left;
+          const away = micahEl.style.left === homeLeft;
+          const dx = (Math.random() < 0.5 ? -1 : 1) * 18;
+          micahEl.classList.add('pace');
+          micahEl.classList.toggle('facing-left', away ? dx < 0 : !micahEl.classList.contains('facing-left'));
+          micahEl.style.left = away ? `calc(${homeLeft} + ${dx}px)` : homeLeft;
+          setTimeout(() => micahEl.classList.remove('pace'), 1250);
+        }
+      }
+      fidget();
+    }, 2500 + Math.random() * 3500);
+  };
+  if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) fidget();
   micahEl.addEventListener('click', () => {
     sfx.bark();
     micahEl.classList.remove('tilt');
@@ -267,7 +301,11 @@ function showYard(): void {
         <div class="wallet star-wallet" aria-label="${left} stars to spend"><span class="star-pill">${UI.star}</span><b>${left}</b></div>
       </header>
       <div class="yard-body">
-        <div class="yard-frame">${yardScene(owned, micahUrl)}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume))}</div>
+        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'}</p>
+        <div class="yard-actions">
+          <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
+        </div>
         <div class="yard-progress">
           <p><b>${owned.length} of ${DECOR.length}</b> built</p>
           <div class="bar"><i style="width:${(owned.length / DECOR.length) * 100}%"></i></div>
@@ -294,6 +332,7 @@ function showYard(): void {
       </div>
     </div>`);
   screen.querySelector('[data-act="back"]')!.addEventListener('click', () => showMap());
+  screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showYard()));
   screen.querySelectorAll<HTMLButtonElement>('.buy').forEach((b) =>
     b.addEventListener('click', () => {
       const d = DECOR.find((x) => x.id === b.dataset.id)!;
@@ -310,7 +349,76 @@ function showYard(): void {
       celebrate(tags);
     }),
   );
-  mount(screen);
+  let stopRoam: (() => void) | null = null;
+  mount(screen, () => stopRoam?.());
+  stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx);
+}
+
+// ───────────────────────────── Wardrobe ─────────────────────────────
+
+/** Highest level cleared so far (costumes unlock as you go). */
+const clearedUpTo = () => unlockedUpTo(save) - 1;
+
+function showWardrobe(onClose: () => void): void {
+  const card = (c: Costume) => {
+    const open = isUnlocked(c, clearedUpTo(), save.wardrobe);
+    const wearing = save.costume === c.id;
+    const price = 'biscuits' in c.unlock ? c.unlock.biscuits : 0;
+    const state = wearing ? 'wearing' : open ? 'open' : price && save.biscuits >= price ? 'locked affordable' : 'locked';
+    const label = wearing
+      ? 'Wearing'
+      : open
+        ? 'Wear'
+        : price
+          ? `${icon('biscuit', 'biscuit-icon')}${price}`
+          : `${UI.lock}${unlockText(c)}`;
+    return `<li><button class="${state}" data-id="${c.id}" aria-pressed="${wearing}" aria-label="${c.name}: ${open ? (wearing ? 'wearing' : 'wear') : unlockText(c)}">
+      <img src="${costumeUrl(c.id)}" alt="" draggable="false"><b>${c.name}</b><small>${label}</small></button></li>`;
+  };
+  const render = () => {
+    const c = costumeById(save.costume);
+    return `
+    <header class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">Micah\u2019s closet</p><h2>${c.name}</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </header>
+    <p class="body">${c.desc} Clear levels to unlock more outfits, or buy some with biscuits. You have ${save.biscuits}.</p>
+    <ul class="wardrobe">${COSTUMES.map(card).join('')}</ul>`;
+  };
+  const m = modal(render(), onClose);
+  const close = () => (m.remove(), onClose());
+  const wire = () => {
+    m.querySelector('.close')!.addEventListener('click', close);
+    m.querySelectorAll<HTMLButtonElement>('.wardrobe button').forEach((b) =>
+      b.addEventListener('click', () => {
+        const c = costumeById(b.dataset.id!);
+        if (!isUnlocked(c, clearedUpTo(), save.wardrobe)) {
+          if (!('biscuits' in c.unlock)) {
+            sfx.warn();
+            toast(`<span><b>${c.name}</b> unlocks when you clear level ${'level' in c.unlock ? c.unlock.level : ''}.</span>`);
+            return;
+          }
+          if (save.biscuits < c.unlock.biscuits) {
+            sfx.warn();
+            toast(`<span>You need ${c.unlock.biscuits - save.biscuits} more biscuits for <b>${c.name}</b>.</span>`);
+            return;
+          }
+          save.biscuits -= c.unlock.biscuits;
+          save.wardrobe.push(c.id);
+          sfx.coin();
+        } else {
+          sfx.select();
+        }
+        save.costume = c.id;
+        persist(save);
+        m.querySelector('.modal')!.innerHTML = render();
+        wire();
+        pop(m.querySelector('.modal-head .modal-avatar'));
+      }),
+    );
+  };
+  wire();
 }
 
 // ───────────────────────────── Daily treat ─────────────────────────────
@@ -1465,6 +1573,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 }
 
 async function boot() {
+  app.querySelector('.launch-micah')?.setAttribute('src', costumeUrl(save.costume));
   await runLaunch(app);
   // Tags earned before they existed (or on another device) pay out now.
   const tags = awardBadges(save);
