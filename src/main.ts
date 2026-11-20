@@ -255,8 +255,8 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     micahEl.style.left = `${((p.x + side * 52) / width) * 100}%`;
     micahEl.style.top = `${p.y - 56}px`;
     micahEl.classList.toggle('facing-left', side > 0);
+    micahEl.style.translate = '';
   };
-  let homeLeft = '';
   const fidget = () => {
     idleTimer = window.setTimeout(() => {
       if (!micahEl.isConnected) return;
@@ -267,13 +267,13 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         if (r < 0.4) micahEl.classList.add('sniff');
         else if (r < 0.6) micahEl.classList.add('scratch');
         else {
-          // Trot a few steps away and back.
-          homeLeft ||= micahEl.style.left;
-          const away = micahEl.style.left === homeLeft;
+          // Trot a few steps away and back. She moves with `translate`, not `left`, so the
+          // phone slides her on the GPU without re-laying-out the whole map every frame.
+          const away = !micahEl.style.translate;
           const dx = (Math.random() < 0.5 ? -1 : 1) * 18;
           micahEl.classList.add('pace');
           micahEl.classList.toggle('facing-left', away ? dx < 0 : !micahEl.classList.contains('facing-left'));
-          micahEl.style.left = away ? `calc(${homeLeft} + ${dx}px)` : homeLeft;
+          micahEl.style.translate = away ? `${dx}px 0` : '';
           setTimeout(() => micahEl.classList.remove('pace'), 1250);
         }
       }
