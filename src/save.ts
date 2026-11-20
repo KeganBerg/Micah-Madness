@@ -34,6 +34,10 @@ export interface SaveData {
   seen: string[];
   /** Weekly Walk: the week (its Monday) last won, and paw stamps collected. */
   weekly: { won: string; stamps: number };
+  /** Cloud save: the secret code this save syncs under ('' when off). */
+  cloud: string;
+  /** When this save was last written (ms), to tell which copy is newer. */
+  savedAt: number;
 }
 
 export const SAVE_VERSION = 6;
@@ -72,6 +76,8 @@ export function freshSave(): SaveData {
     haptics: true,
     seen: [],
     weekly: { won: '', stamps: 0 },
+    cloud: '',
+    savedAt: 0,
   };
 }
 
@@ -135,6 +141,8 @@ export function migrate(raw: unknown): SaveData {
       const w = (d.weekly && typeof d.weekly === 'object' ? d.weekly : {}) as Record<string, unknown>;
       return { won: typeof w.won === 'string' ? w.won : '', stamps: num(w.stamps, 0, 9999) ?? 0 };
     })(),
+    cloud: typeof d.cloud === 'string' && /^[A-HJ-NP-Z2-9]{10}$/.test(d.cloud) ? d.cloud : '',
+    savedAt: num(d.savedAt) ?? 0,
   };
 }
 
@@ -163,7 +171,7 @@ export function load(): SaveData {
     const old = parsed && typeof parsed === 'object' ? num((parsed as Record<string, unknown>).version) ?? 0 : 0;
     if (old < SAVE_VERSION) backup(ls, raw); // about to upgrade an older save
     const data = migrate(parsed);
-    persist(data); // writes the migrated save under the current key
+    persist(data, false); // writes the migrated save under the current key
     return data;
   } catch {
     return freshSave();
@@ -199,10 +207,11 @@ export function onSavedElsewhere(cb: (data: SaveData) => void): void {
 }
 
 /** Returns false when the browser refuses to store (private mode, storage full). */
-export function persist(data: SaveData): boolean {
+export function persist(data: SaveData, touch = true): boolean {
   const ls = storage();
   if (!ls) return false;
   try {
+    if (touch) data.savedAt = Date.now();
     ls.setItem(KEY, JSON.stringify(data));
     return true;
   } catch {

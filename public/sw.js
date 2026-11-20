@@ -1,7 +1,7 @@
 // Micah Madness offline support.
 // Pages: network first (so updates arrive), falling back to the cached copy offline.
 // Everything else (hashed game files, icons, fonts): cache first, filled as it's used.
-const CACHE = 'micah-v1';
+const CACHE = 'micah-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './icons/icon-192.png'])).then(() => self.skipWaiting()));
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (e) => {
   const sameOrigin = url.origin === self.location.origin;
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (!sameOrigin && !isFont) return;
-  if (url.pathname.startsWith('/.netlify/')) return; // cloud save calls always go to the network
+  if (url.pathname.startsWith('/.netlify/') || url.pathname.startsWith('/api/')) return; // cloud save calls always go to the network
 
   if (req.mode === 'navigate') {
     e.respondWith(

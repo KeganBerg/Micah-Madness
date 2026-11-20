@@ -33,6 +33,12 @@ npm run dev      # open the printed URL (works on phones on the same Wi-Fi with 
 - **Victory lap:** spare moves turn into Zoomies that go off when you clear a level.
 - **Tips:** levels 1 to 6 each introduce one mechanic with a short tip.
 
+- **Weekly Walk:** after level 10, a remixed level each week. First win pays biscuits and a paw stamp; four stamps win the Rain Slicker.
+- **Yard snacks:** things fall into Micah's Yard. Tap them before she eats them.
+- **Noah's Arc:** a falling-down house full of squirrels and raccoons on the Rainy Walk.
+- **Install and offline:** a web app manifest and service worker (`public/`), so the game can be added to the Home Screen and played offline.
+- **Cloud save:** Settings can turn on cloud save, which stores the save under a secret 10-letter code via a Netlify Function (`netlify/functions/cloud.mts`, Netlify Blobs).
+
 Progress (stars, scores, biscuits, boosters, yard, streaks, sound) saves automatically in the browser's localStorage. Each browser/device keeps its own save; Settings has a copy-and-paste transfer code to move it to another device, plus a reset. Saves are versioned and migrate forward on updates.
 
 ## Why these mechanics
