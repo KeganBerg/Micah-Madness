@@ -1,4 +1,4 @@
-// Level map scenery: a themed, hand-drawn landscape for each of the 8 areas.
+// Level map scenery: a themed, hand-drawn landscape for each area.
 // Everything is flat SVG drawn at real pixel size (so props never stretch on wide phones),
 // placed with a seeded random so the map looks the same on every visit, and kept clear of
 // the path and level nodes so they stay easy to read and tap.
@@ -454,6 +454,48 @@ const sparkleStar = (): Prop => ({
   svg: `${hit(12, -6)}<path class="twinkle" d="M0 -14 L2 -8 L8 -6 L2 -4 L0 2 L-2 -4 L-8 -6 L-2 -8 Z" fill="#fff"/>`,
 });
 
+const wellies = (c: string): Prop => ({
+  r: 13, poke: 'hop', fx: 'drop', sfx: 'splash',
+  svg: `${shadow(12, 0.15)}<path d="M-11 0 V-16 H-4 V-6 Q-4 -3 -1 -3 V0 Z" fill="${c}"/><path d="M2 0 V-16 H9 V-6 Q9 -3 12 -3 V0 Z" fill="${c}"/>
+    <rect x="-12" y="-18" width="9" height="3" rx="1" fill="#fff" opacity=".5"/><rect x="1" y="-18" width="9" height="3" rx="1" fill="#fff" opacity=".5"/>`,
+});
+
+const tent = (a: string, b: string): Prop => ({
+  r: 26, poke: 'wobble', sfx: 'rustle',
+  svg: `${shadow(26, 0.18)}<path d="M-26 0 L0 -36 L26 0 Z" fill="${a}"/><path d="M0 -36 L-8 0 H8 Z" fill="${b}"/>
+    <path d="M0 -36 L0 -42" stroke="#7a5233" stroke-width="2"/><path d="M0 -42 L8 -39 L0 -37 Z" fill="#e8352f"/>`,
+});
+
+const campfire = (): Prop => ({
+  r: 15, poke: 'bounce', fx: 'sparkle', sfx: 'pop',
+  svg: `${shadow(14, 0.2)}<g fill="#8f9aa0"><circle cx="-11" cy="-2" r="3"/><circle cx="-4" cy="0" r="3"/><circle cx="4" cy="0" r="3"/><circle cx="11" cy="-2" r="3"/></g>
+    <path d="M-10 -3 L10 -8 M-10 -8 L10 -3" stroke="#7a5233" stroke-width="3.5" stroke-linecap="round"/>
+    <g class="flicker"><path d="M0 -26 Q9 -14 5 -6 H-5 Q-9 -14 0 -26Z" fill="#ff8a1f"/><path d="M0 -18 Q5 -11 3 -6 H-3 Q-5 -11 0 -18Z" fill="#ffd23f"/></g>`,
+});
+
+const pumpkin = (s = 1): Prop => ({
+  r: 15 * s, poke: 'wobble', fx: 'leaf', sfx: 'knock',
+  svg: `${shadow(15 * s, 0.18)}<g transform="scale(${s})"><ellipse cx="-7" cy="-10" rx="8" ry="10" fill="#e07a1f"/><ellipse cx="7" cy="-10" rx="8" ry="10" fill="#e07a1f"/>
+    <ellipse cx="0" cy="-10" rx="8" ry="11" fill="#f08a24"/><path d="M0 -20 Q2 -26 5 -27" stroke="#4f7a2a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M5 -22 Q11 -26 13 -21 Q8 -19 5 -22Z" fill="#5c9f3a"/></g>`,
+});
+
+const hay = (): Prop => ({
+  r: 20, poke: 'wobble', fx: 'dirt', sfx: 'rustle',
+  svg: `${shadow(20, 0.16)}<rect x="-20" y="-20" width="40" height="20" rx="4" fill="#e3bf5c"/><path d="M-20 -13 H20 M-20 -6 H20" stroke="#c39c3a" stroke-width="1.4"/>
+    <path d="M-8 -20 V0 M8 -20 V0" stroke="#a8322a" stroke-width="2"/>`,
+});
+
+const pillow = (c: string): Prop => ({
+  r: 16, poke: 'bounce', fx: 'heart', sfx: 'boing',
+  svg: `${shadow(15, 0.14)}<path d="M-16 -2 Q-18 -10 -14 -18 Q0 -14 14 -18 Q18 -10 16 -2 Q0 2 -16 -2Z" fill="${c}"/><path d="M-10 -9 Q0 -7 10 -9" stroke="#fff" stroke-width="1.4" fill="none" opacity=".5"/>`,
+});
+
+const moon = (): Prop => ({
+  r: 16, poke: 'spin', fx: 'sparkle', sfx: 'chime',
+  svg: `${hit(16, -24)}<g class="bob"><circle cx="0" cy="-26" r="13" fill="#fff3c4"/><circle cx="6" cy="-30" r="11" fill="#5b5a9e"/></g>`,
+});
+
 /** Mown show-ring stripes for the Big Dog Show. */
 const mownStripes = (w: number, b: Band): string => {
   let s = '';
@@ -581,6 +623,43 @@ export const THEMES: Theme[] = [
       [() => bunting(64, PARTY), 2], [() => sparkleStar(), 4], [() => dog('#c9893f', '#8a5a26', true), 1],
     ],
   },
+  // 9 · Rainy Walk: wet grass, puddles galore, wellies and a muddy paw trail.
+  {
+    ground: '#6f8a7a', dark: '#627d6d', light: '#7f9a8a', path: '#b9a888', edge: '#7d6a4f', dots: '#9fc3d6',
+    texture: mix(tuft('#55705f'), dot('#9fc3d6', 1.3), dot('#5b4330', 1.6)),
+    props: (r) => [
+      [() => puddle(), 7], [() => wellies(pick(r, ['#e8352f', '#ffc12e', '#2f8fe0'])), 3], [() => umbrella('#2f8fe0', '#ffc12e'), 1],
+      [() => tree('#4f8f5a', '#3e7a49'), 3], [() => mushroom(), 3], [() => pawTrail(r), 3], [() => bird('#5d6f7c'), 2], [() => rock('#7d8a90'), 2],
+    ],
+  },
+  // 10 · Camping Trip: tents, a crackling campfire, pines and logs to sit on.
+  {
+    ground: '#4f8a4b', dark: '#457d42', light: '#5e9a59', path: '#d2b98a', edge: '#8f7449', dots: '#3a6e37',
+    texture: mix(tuft('#3a6e37'), tuft('#44803f'), dot('#7a5233', 1.2)),
+    props: () => [
+      [() => tent('#e8352f', '#a3201c'), 1], [() => tent('#2f8fe0', '#1f5f9e'), 1], [() => campfire(), 1], [() => pine('#2f6a3c', '#245a31', false, 1.15), 6],
+      [() => log(), 3], [() => rock('#8f9aa0'), 2], [() => fern('#5e9a45'), 3], [() => signpost('CAMP'), 1], [() => bird('#8a5a26'), 2],
+      [() => dog('#c9893f', '#8a5a26', true), 1],
+    ],
+  },
+  // 11 · Pumpkin Patch: pumpkins of every size, hay bales and orange autumn trees.
+  {
+    ground: '#c9884a', dark: '#bd7b3f', light: '#d69a5c', path: '#f1d9a8', edge: '#a8743a', dots: '#e8a23a',
+    texture: mix(dot('#e07a1f', 1.6), dot('#a8322a', 1.4), dot('#ffc12e', 1.2)),
+    props: () => [
+      [() => pumpkin(1.3), 2], [() => pumpkin(), 6], [() => pumpkin(0.7), 4], [() => hay(), 3], [() => tree('#e8892f', '#c96a1f'), 3],
+      [() => tree('#d9541f', '#b8401a', 0.9), 2], [() => bush('#c9733a', '#a85a2a'), 2], [() => bird('#2b2b2b'), 2], [() => signpost('PATCH'), 1],
+    ],
+  },
+  // 12 · Starry Sleepover: a twilight meadow with pillows, a tent and a sleepy moon.
+  {
+    ground: '#5b5a9e', dark: '#514f91', light: '#6866ab', path: '#c7c3f0', edge: '#8e8acb', dots: '#fff',
+    texture: dot('#ffffff', 0.9), sparse: true,
+    props: (r) => [
+      [() => moon(), 1], [() => tent('#8e5bd6', '#5a3392'), 1], [() => pillow(pick(r, ['#f6b8c8', '#fff3c4', '#b38df0'])), 4], [() => lamp(), 2],
+      [() => sparkleStar(), 8], [() => pine('#3d4a7a', '#30395f', false), 3], [() => dog('#2b2b2b', '#151515', true), 1],
+    ],
+  },
 ];
 
 // ───────────────────────────── layout ─────────────────────────────
@@ -630,7 +709,7 @@ export function sceneryHTML(s: SceneInput): string {
 
   const layers: string[] = [];
   bands.forEach((b, zi) => {
-    const t = THEMES[zi];
+    const t = THEMES[zi % THEMES.length];
     const r = rng(1009 * (zi + 1) + Math.round(w));
     const top = b.top - 16;
     const extra = t.extras?.(w, b, r);
@@ -679,14 +758,15 @@ export function sceneryHTML(s: SceneInput): string {
 
     // Ambient extras: falling snow on Snow Day, drifting confetti and sparkles for the parties.
     if (zi === 5) for (let i = 0; i < 22; i++) svg += `<circle class="flake" style="animation-delay:-${f(r() * 7)}s;animation-duration:${f(6 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" r="${f(1.4 + r() * 1.8)}" fill="#fff"/>`;
-    if (zi === 4 || zi === 7) for (let i = 0; i < 8; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="1.6" fill="#fff"/>`;
+    if (zi === 8) for (let i = 0; i < 26; i++) svg += `<ellipse class="flake" style="animation-delay:-${f(r() * 7)}s;animation-duration:${f(3 + r() * 2)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" rx="1" ry="3" fill="#cfe6f5" opacity=".8"/>`;
+    if (zi === 4 || zi === 7 || zi === 11) for (let i = 0; i < 8; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="1.6" fill="#fff"/>`;
 
     layers.unshift(`<svg class="zone-layer" data-zone="${zi}" viewBox="0 ${top} ${w} ${b.bottom - top}" style="top:${top}px;height:${b.bottom - top}px" preserveAspectRatio="none">${svg}</svg>`);
   });
 
   // The walking path: a trail coloured to match each area, with a dotted centre line.
   const stops = bands.flatMap((b, zi) => {
-    const t = THEMES[zi];
+    const t = THEMES[zi % THEMES.length];
     const a = f(b.bottom / s.height), z = f(b.top / s.height);
     return [[a, t], [z, t]] as const;
   });

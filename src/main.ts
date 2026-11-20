@@ -28,7 +28,7 @@ import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, svg } from './art';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, mudCount, yarnCount, type Goal, type Level } from './levels';
+import { LEVELS, ZONES, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -92,12 +92,20 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'collect') return svg(KINDS[goal.kind].svg, 'goal-icon');
   if (goal.type === 'mud') return svg(BOOSTER_ICONS.mud, 'goal-icon');
   if (goal.type === 'yarn') return svg(BOOSTER_ICONS.yarn, 'goal-icon');
+  if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
+const POWER_NAMES: Record<Power, [string, string]> = {
+  zoomies: ['Zoomies', 'Zoomies'],
+  bark: ['Big Bark', 'Big Barks'],
+  micah: ['Micah piece', 'Micah pieces'],
+};
+const powerOf = (s: Special): Power => (s === 'bark' ? 'bark' : s === 'micah' ? 'micah' : 'zoomies');
 function goalText(goal: Goal): string {
   if (goal.type === 'collect') return `Collect ${goal.count} ${KINDS[goal.kind].plural.toLowerCase()}`;
   if (goal.type === 'mud') return 'Wash away every mud patch';
   if (goal.type === 'yarn') return 'Untangle every ball of yarn';
+  if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
 
@@ -113,6 +121,9 @@ const TIPS: Record<number, string> = {
   26: 'Big score goals: chain power-ups together and let the cascades do the work.',
   31: 'Fewer moves from here on. Save your power-ups for the hardest corner.',
   36: 'Micah\u2019s birthday! Every trick you\u2019ve learned comes together.',
+  41: 'Dark mud is deep mud. Wash it once to make it ordinary mud, then once more to clean it.',
+  46: 'New goal: make power-ups! Four in a row makes Zoomies, an L or T makes a Big Bark, five makes Micah.',
+  56: 'The last stretch. Look for five in a row: some goals need a Micah piece.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
 
@@ -674,6 +685,8 @@ const HOW_TO: [string, string][] = [
   ['Big Bark', 'An L or T shape. Clears the 3×3 area around it.'],
   ['Micah', 'Five in a row. Swap her with any piece to clear every one of that kind.'],
   ['Mud', 'Make a match on a muddy square to wash it.'],
+  ['Deep mud', 'Darker mud takes two washes: the first turns it into ordinary mud.'],
+  ['Power-up goals', 'Some levels ask you to make Zoomies, Big Barks or Micah pieces.'],
   ['Yarn', 'A tangled piece can\u2019t be swapped. Match through it to untangle it.'],
   ['Stars', 'Spend them in Micah\u2019s Yard. Biscuits buy treats in the shop.'],
 ];
@@ -810,9 +823,8 @@ const BIG_CHEERS = ['ZOOMIES!', 'Micah Madness!', 'Who\u2019s a good player?', '
 function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): void {
   const kinds = level.kinds;
   let grid: Grid = createGrid(ROWS, COLS, Math.random, kinds);
-  const mud: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
-    Array.from({ length: COLS }, (_, c) => (level.mud?.[r]?.[c] ?? '.') === 'm'),
-  );
+  // Washes left at each cell: 0 clean, 1 mud, 2 deep mud.
+  const mud: number[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => mudDepth(level, r, c)));
   const yarn: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) => (level.yarn?.[r]?.[c] ?? '.') === 'y'),
   );
@@ -824,7 +836,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let treatMode = false;
   let dustMode = false;
   /** The board just before the last swap, for the Orthopedic Bed's undo. */
-  type Snap = { grid: Grid; mud: boolean[][]; yarn: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
+  type Snap = { grid: Grid; mud: number[][]; yarn: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
   let undoSnap: Snap | null = null;
   let selected: Pos | null = null;
   let bonusPts = 0;
@@ -838,7 +850,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.target,
+    g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.target,
   );
 
   // Pre-level boosters: drop specials onto random cells.
@@ -917,7 +929,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     cellEls.push([]);
     for (let c = 0; c < COLS; c++) {
       const cell = document.createElement('div');
-      cell.className = `cell ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''}`;
+      cell.className = `cell ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''} ${mud[r][c] > 1 ? 'deep' : ''}`;
       cell.style.left = `${(c / COLS) * 100}%`;
       cell.style.top = `${(r / ROWS) * 100}%`;
       boardEl.append(cell);
@@ -1104,13 +1116,17 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       let untangled = false;
       level.goals.forEach((g, i) => {
         if (g.type === 'collect') remaining[i] -= res.collected[g.kind];
+        if (g.type === 'power') remaining[i] -= res.created.filter((cr) => powerOf(cr.tile.special) === g.power).length;
       });
       for (const k of res.cleared) {
         const [r, c] = unkey(k);
         if (mud[r][c]) {
-          mud[r][c] = false;
-          cellEls[r][c].classList.remove('mud');
-          cellEls[r][c].classList.add('cleaned');
+          mud[r][c]--;
+          cellEls[r][c].classList.remove('deep');
+          if (!mud[r][c]) {
+            cellEls[r][c].classList.remove('mud');
+            cellEls[r][c].classList.add('cleaned');
+          }
           washed = true;
           bump(save, 'mud');
           level.goals.forEach((g, i) => g.type === 'mud' && remaining[i]--);
@@ -1327,7 +1343,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         mud[r][c] = snap.mud[r][c];
-        cellEls[r][c].classList.toggle('mud', mud[r][c]);
+        cellEls[r][c].classList.toggle('mud', mud[r][c] > 0);
+        cellEls[r][c].classList.toggle('deep', mud[r][c] > 1);
         cellEls[r][c].classList.remove('cleaned');
         yarn[r][c] = snap.yarn[r][c];
         if (yarn[r][c] && !yarnEls[r][c]?.isConnected) yarnEls[r][c] = makeYarnEl(r, c);

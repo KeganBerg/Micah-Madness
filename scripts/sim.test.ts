@@ -1,19 +1,21 @@
 // Greedy-player win-rate simulator for tuning levels. Run with: SIM=1 npx vitest run scripts/sim.test.ts
+// Optional: SIM_FROM=41 starts at that level, SIM_N=200 sets runs per level.
 // Results go to <tmpdir>/micah-sim.txt. A greedy bot with no boosters is much weaker than a person.
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'vitest';
-import { LEVELS, mudCount, yarnCount } from '../src/levels';
+import { LEVELS, mudCount, mudDepth, yarnCount, type Power } from '../src/levels';
 import { applyClear, applyGravity, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, shuffle, swap, unkey, type Grid, type Pos } from '../src/board';
 
 function play(levelIdx: number): boolean {
   const lv = LEVELS[levelIdx];
   let grid: Grid = createGrid(8, 8, Math.random, lv.kinds);
-  const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.mud?.[r]?.[c] === 'm'));
+  const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => mudDepth(lv, r, c)));
   const yarn = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.yarn?.[r]?.[c] === 'y'));
   const locked = (r: number, c: number) => yarn[r][c];
-  const rem = lv.goals.map((g) => (g.type === 'collect' ? g.count : g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.target));
+  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.target));
+  const powerOf = (sp: string): Power => (sp === 'bark' ? 'bark' : sp === 'micah' ? 'micah' : 'zoomies');
   let score = 0;
   const done = () => lv.goals.every((g, i) => (g.type === 'score' ? score >= g.target : rem[i] <= 0));
   for (let m = 0; m < lv.moves; m++) {
@@ -27,6 +29,7 @@ function play(levelIdx: number): boolean {
       swap(grid, a, b);
       let v = res.cleared.size + res.created.length * 3 + Math.random();
       for (const k of res.cleared) { const [rr, cc] = unkey(k); if (mud[rr][cc] || yarn[rr][cc]) v += 3; }
+      for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += 4; });
       lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
       if (v > bestV) { bestV = v; best = [a, b]; }
     }
@@ -40,9 +43,10 @@ function play(levelIdx: number): boolean {
       if (res.cleared.size === 0) break;
       score += res.cleared.size * 20 * chain + res.created.length * 100;
       lv.goals.forEach((g, i) => { if (g.type === 'collect') rem[i] -= res.collected[g.kind]; });
+      for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && g.power === powerOf(cr.tile.special)) rem[i]--; });
       for (const k of res.cleared) {
         const [r, c] = unkey(k);
-        if (mud[r][c]) { mud[r][c] = false; lv.goals.forEach((g, i) => g.type === 'mud' && rem[i]--); }
+        if (mud[r][c]) { mud[r][c]--; lv.goals.forEach((g, i) => g.type === 'mud' && rem[i]--); }
         if (yarn[r][c]) { yarn[r][c] = false; lv.goals.forEach((g, i) => g.type === 'yarn' && rem[i]--); }
       }
       applyClear(grid, res); applyGravity(grid, Math.random, lv.kinds);
@@ -57,8 +61,10 @@ function play(levelIdx: number): boolean {
 
 test.skipIf(!process.env.SIM)('simulate win rates', () => {
   const out: string[] = [];
-  for (let i = 0; i < LEVELS.length; i++) {
-    let w = 0; const N = 60;
+  const from = Number(process.env.SIM_FROM ?? 1) - 1;
+  const N = Number(process.env.SIM_N ?? 60);
+  for (let i = from; i < LEVELS.length; i++) {
+    let w = 0;
     for (let t = 0; t < N; t++) if (play(i)) w++;
     out.push(`L${i + 1}: ${Math.round((w / N) * 100)}%`);
   }
