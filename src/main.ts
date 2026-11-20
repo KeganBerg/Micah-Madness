@@ -2,9 +2,11 @@ import './style.css';
 import {
   applyClear,
   applyGravity,
+  cloneGrid,
   comboClears,
   computeClear,
   createGrid,
+  dustTarget,
   findMove,
   findRuns,
   hasMove,
@@ -14,6 +16,7 @@ import {
   newTile,
   shuffle,
   swap,
+  transformKind,
   unkey,
   type ClearResult,
   type Grid,
@@ -677,6 +680,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let busy = false;
   let over = false;
   let treatMode = false;
+  let dustMode = false;
+  /** The board just before the last swap, for the Orthopedic Bed's undo. */
+  type Snap = { grid: Grid; mud: boolean[][]; yarn: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
+  let undoSnap: Snap | null = null;
   let selected: Pos | null = null;
   let bonusPts = 0;
   let goalsDone = 0;
@@ -776,18 +783,16 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
   // Yarn sits above the pieces, so it gets its own layer.
-  const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) =>
-    row.map((on, c) => {
-      if (!on) return null;
-      const el = document.createElement('div');
-      el.className = 'yarn';
-      el.style.left = `${(c / COLS) * 100}%`;
-      el.style.top = `${(r / ROWS) * 100}%`;
-      el.innerHTML = YARN_OVERLAY;
-      boardEl.append(el);
-      return el;
-    }),
-  );
+  const makeYarnEl = (r: number, c: number) => {
+    const el = document.createElement('div');
+    el.className = 'yarn';
+    el.style.left = `${(c / COLS) * 100}%`;
+    el.style.top = `${(r / ROWS) * 100}%`;
+    el.innerHTML = YARN_OVERLAY;
+    boardEl.append(el);
+    return el;
+  };
+  const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) => row.map((on, c) => (on ? makeYarnEl(r, c) : null)));
 
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
@@ -799,6 +804,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     el.className = `tile ${specialClass(t.special)}`;
     el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
     el.dataset.special = t.special;
+    el.dataset.kind = String(t.kind);
     boardEl.append(el);
     tileEls.set(t.id, el);
     return el;
@@ -808,7 +814,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   }
   function syncTileEl(t: Tile, r: number, c: number) {
     let el = tileEls.get(t.id);
-    if (!el || el.dataset.special !== t.special) {
+    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind)) {
       el?.remove();
       el = makeTileEl(t);
     }
@@ -849,10 +855,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         return `<div class="goal ${done ? 'done' : ''}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
-    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash'] as const)
+    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash', 'dust', 'bed'] as const)
       .map(
-        (id) => `<button class="tool ${id === 'treat' && treatMode ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
-          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
+        (id) => `<button class="tool ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
+          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
       )
       .join('');
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
@@ -1063,6 +1069,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     selectCell(null);
     sfx.swap();
     const legal = isLegalSwap(grid, a, b);
+    const before: Snap = {
+      grid: cloneGrid(grid),
+      mud: mud.map((row) => [...row]),
+      yarn: yarn.map((row) => [...row]),
+      remaining: [...remaining],
+      moves,
+      score,
+      goalsDone,
+    };
     swap(grid, a, b);
     renderAll();
     await wait(170);
@@ -1076,6 +1091,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       armHint();
       return;
     }
+    undoSnap = before;
     moves--;
     if (moves === 5) sfx.warn();
     renderHud();
@@ -1104,10 +1120,37 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
     if (id === 'treat') {
       treatMode = !treatMode;
+      dustMode = false;
       say(treatMode ? 'Tap any piece and Micah will eat it.' : 'Treat put away.');
       renderHud();
       return;
     }
+    if (id === 'dust') {
+      dustMode = !dustMode;
+      treatMode = false;
+      say(dustMode ? 'Tap a piece. Every piece like it turns into the kind you need.' : 'Magic Dust put away.');
+      renderHud();
+      return;
+    }
+    if (id === 'bed') {
+      if (!undoSnap) {
+        say('Make a move first. The bed remembers your last one.', 'sad');
+        return;
+      }
+      save.inventory.bed--;
+      persist(save);
+      busy = true;
+      treatMode = dustMode = false;
+      restore(undoSnap);
+      undoSnap = null;
+      sfx.whoosh();
+      say('Micah had a nap on her memory foam. Last move undone!', 'big');
+      await wait(350);
+      busy = false;
+      armHint();
+      return;
+    }
+    undoSnap = null;
     save.inventory[id]--;
     persist(save);
     if (id === 'leash') {
@@ -1130,7 +1173,71 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
 
+  /** Put the board back exactly as it was in a snapshot (Orthopedic Bed). */
+  function restore(snap: Snap) {
+    clearHint();
+    selectCell(null);
+    grid = cloneGrid(snap.grid);
+    moves = snap.moves;
+    score = snap.score;
+    goalsDone = snap.goalsDone;
+    snap.remaining.forEach((v, i) => (remaining[i] = v));
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        mud[r][c] = snap.mud[r][c];
+        cellEls[r][c].classList.toggle('mud', mud[r][c]);
+        cellEls[r][c].classList.remove('cleaned');
+        yarn[r][c] = snap.yarn[r][c];
+        if (yarn[r][c] && !yarnEls[r][c]?.isConnected) yarnEls[r][c] = makeYarnEl(r, c);
+        else if (!yarn[r][c] && yarnEls[r][c]) {
+          yarnEls[r][c]!.remove();
+          yarnEls[r][c] = null;
+        }
+      }
+    }
+    for (const el of tileEls.values()) el.remove();
+    tileEls.clear();
+    renderAll();
+    for (const el of tileEls.values()) el.classList.add('born');
+    renderHud();
+  }
+
+  async function dustTile(p: Pos) {
+    const t = grid[p[0]][p[1]];
+    if (!t || t.kind < 0) {
+      say('Sprinkle the dust on a regular piece, not Micah.', 'sad');
+      return;
+    }
+    dustMode = false;
+    undoSnap = null;
+    save.inventory.dust--;
+    persist(save);
+    busy = true;
+    clearHint();
+    selectCell(null);
+    const from = t.kind;
+    const wanted = level.goals.flatMap((g, i) => (g.type === 'collect' ? [{ kind: g.kind, left: remaining[i] }] : []));
+    const to = dustTarget(grid, from, kinds, wanted);
+    const changed = transformKind(grid, from, to);
+    sfx.powerUp();
+    say(`Sparkle! Every ${KINDS[from].name.toLowerCase()} became a ${KINDS[to].name.toLowerCase()}.`, 'big');
+    renderAll();
+    for (const k of changed) {
+      const [r, c] = unkey(k);
+      tileEls.get(grid[r][c]!.id)?.classList.add('born', 'dusted');
+    }
+    renderHud();
+    await wait(450);
+    boardEl.querySelectorAll('.dusted').forEach((e) => e.classList.remove('dusted'));
+    await cascade([]);
+    busy = false;
+    renderHud();
+    await checkEnd();
+    armHint();
+  }
+
   async function eatTile(p: Pos) {
+    undoSnap = null;
     treatMode = false;
     save.inventory.treat--;
     bump(save, 'treats');
@@ -1297,6 +1404,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (!p) return;
     if (treatMode) {
       void eatTile(p);
+      return;
+    }
+    if (dustMode) {
+      void dustTile(p);
       return;
     }
     dragStart = { p, x: e.clientX, y: e.clientY };

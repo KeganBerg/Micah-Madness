@@ -348,3 +348,33 @@ export function shuffle(grid: Grid, rng: Rng = Math.random): void {
     if (findRuns(grid).length === 0 && hasMove(grid)) return;
   }
 }
+
+/**
+ * Magic Dust: which kind the tapped kind should turn into.
+ * A kind the level still asks you to collect wins (most still needed first),
+ * otherwise the most common other kind on the board, so the new pieces line up into matches.
+ */
+export function dustTarget(grid: Grid, from: number, kinds = KIND_COUNT, wanted: { kind: number; left: number }[] = []): number {
+  const need = wanted.filter((w) => w.kind !== from && w.kind >= 0 && w.kind < kinds && w.left > 0).sort((a, b) => b.left - a.left);
+  if (need.length) return need[0].kind;
+  const counts = new Array(kinds).fill(0);
+  for (const row of grid) for (const t of row) if (t && t.kind >= 0 && t.kind < kinds) counts[t.kind]++;
+  let best = from === 0 ? 1 : 0;
+  for (let k = 0; k < kinds; k++) if (k !== from && counts[k] > counts[best]) best = k;
+  return best;
+}
+
+/** Turn every piece of one kind into another (specials keep their power). Returns the cells changed. */
+export function transformKind(grid: Grid, from: number, to: number): number[] {
+  const changed: number[] = [];
+  if (from < 0 || from === to) return changed;
+  grid.forEach((row, r) =>
+    row.forEach((t, c) => {
+      if (t && t.kind === from && t.special !== 'micah') {
+        t.kind = to;
+        changed.push(key(r, c));
+      }
+    }),
+  );
+  return changed;
+}
