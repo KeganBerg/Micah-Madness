@@ -43,7 +43,7 @@ import {
 import { DECOR, yardScene } from './yard';
 import { runLaunch } from './launch';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
-import { setSound, sfx } from './sound';
+import { playMusic, setMusic, setSound, sfx } from './sound';
 
 const ROWS = 8;
 const COLS = 8;
@@ -58,6 +58,7 @@ const canSave = persist(save);
 requestDurableStorage();
 window.addEventListener('pagehide', () => persist(save));
 setSound(save.sound);
+setMusic(save.music);
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 const h = (html: string): HTMLElement => {
@@ -107,6 +108,7 @@ const streakZoomies = () => Math.min(3, save.winStreak);
 // ───────────────────────────── Map screen ─────────────────────────────
 
 function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void {
+  playMusic('map');
   const unlocked = Math.min(unlockedUpTo(save), LEVELS.length);
   const spacing = 112;
   const width = 360;
@@ -248,6 +250,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
 // ───────────────────────────── Micah's Yard ─────────────────────────────
 
 function showYard(): void {
+  playMusic('map');
   const owned = save.decor;
   const left = starsToSpend(save);
   const done = owned.length === DECOR.length;
@@ -529,6 +532,10 @@ function showSettings(): void {
       <button class="setting-row" data-act="sound" role="switch" aria-checked="${save.sound}">
         <span>${save.sound ? UI.soundOn : UI.soundOff}</span><b>Sound effects</b><i class="switch"></i>
       </button>
+      <button class="setting-row" data-act="music" role="switch" aria-checked="${save.music}">
+        <span>${save.music ? UI.musicOn : UI.musicOff}</span><b>Music</b><i class="switch"></i>
+      </button>
+      <p class="body setting-hint">No sound on iPhone? Check the volume and that the side switch isn\u2019t on silent.</p>
     </section>
     <section>
       <h3>Your progress</h3>
@@ -565,6 +572,15 @@ function showSettings(): void {
     persist(save);
     soundBtn.setAttribute('aria-checked', String(save.sound));
     soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
+    if (save.sound) sfx.tap();
+  });
+  const musicBtn = m.querySelector<HTMLButtonElement>('[data-act="music"]')!;
+  musicBtn.addEventListener('click', () => {
+    save.music = !save.music;
+    setMusic(save.music);
+    persist(save);
+    musicBtn.setAttribute('aria-checked', String(save.music));
+    musicBtn.querySelector('span')!.innerHTML = save.music ? UI.musicOn : UI.musicOff;
   });
 
   m.querySelector('[data-act="copy"]')!.addEventListener('click', async () => {
@@ -589,6 +605,7 @@ function showSettings(): void {
     const n = Object.keys(incoming.stars).length;
     save = incoming;
     setSound(save.sound);
+    setMusic(save.music);
     persist(save);
     sfx.coin();
     m.remove();
@@ -611,6 +628,8 @@ function showSettings(): void {
       return;
     }
     save = freshSave();
+    setSound(save.sound);
+    setMusic(save.music);
     persist(save);
     m.remove();
     showMap();
@@ -677,6 +696,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     grid[r][c] = newTile(-1, 'micah');
   }
 
+  playMusic('level', level.zone);
   const zone = ZONES[level.zone];
   const screen = h(`
     <div class="screen game-screen">
