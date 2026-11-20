@@ -847,3 +847,30 @@ export function wireScenery(root: HTMLElement, play: (sound: string) => void): (
     io.disconnect();
   };
 }
+
+// ───────────────────────────── level backdrop ─────────────────────────────
+
+/**
+ * Props for the animated scene behind a level (src/backdrop.ts): a short row standing
+ * behind Micah's running path, and one low thing on the path for her to jump over.
+ * Same art as the map, so each area looks like the place you just walked through.
+ */
+export function backdropProps(zone: number): { back: string[]; hurdle: string } {
+  const r = rng(zone + 101);
+  const sets: [(() => Prop)[], () => Prop][] = [
+    [[() => tree('#5fae4f', '#4a9440'), () => fence(), () => doghouse(), () => flowers(r, PETALS), () => bush('#5fae4f', '#4a9440', '#e8352f')], () => hole()],
+    [[() => tree('#3f8f47', '#2f7a3a', 1.1), () => bench(), () => lamp(), () => dog('#c9893f', '#8a5a26'), () => bush('#4a9a4a', '#3a823c')], () => hydrant()],
+    [[() => palm(), () => umbrella('#e8352f', '#fff'), () => sandcastle(), () => bucket(), () => umbrella('#2f8fe0', '#fff')], () => starfish()],
+    [[() => pine('#3f7f4a', '#2f6a3c', false, 1.1), () => log(), () => mushroom(), () => pine('#3f7f4a', '#2f6a3c'), () => fern('#5e9a45')], () => puddle()],
+    [[() => balloon('#e8352f'), () => gift('#2f8fe0', '#ffc12e'), () => cupcake('#f6b8c8'), () => partyHat('#8e5bd6', '#ffc12e'), () => balloon('#ffc12e')], () => yarn('#8e5bd6', '#0003')],
+    [[() => pine('#3f7f6a', '#2f6a58', true, 1.1), () => snowman(), () => drift(), () => pine('#3f7f6a', '#2f6a58', true), () => sled()], () => drift()],
+    [[() => weave(), () => trophy(), () => podium(), () => rosette('#2f8fe0'), () => bush('#4a9a4a', '#3a823c')], () => jump()],
+    [[() => cake(true), () => balloon('#2f8fe0'), () => gift('#8e5bd6', '#fff'), () => cupcake('#b38df0'), () => balloon('#e8352f')], () => gift('#e8352f', '#ffc12e')],
+    [[() => tree('#4f8f5a', '#3e7a49'), () => umbrella('#2f8fe0', '#ffc12e'), () => wellies('#e8352f'), () => mushroom(), () => tree('#4f8f5a', '#3e7a49', 0.9)], () => puddle()],
+    [[() => pine('#2f6a3c', '#245a31', false, 1.15), () => tent('#e8352f', '#a3201c'), () => campfire(), () => tent('#2f8fe0', '#1f5f9e'), () => pine('#2f6a3c', '#245a31')], () => log()],
+    [[() => tree('#e8892f', '#c96a1f'), () => pumpkin(1.3), () => hay(), () => pumpkin(), () => tree('#d9541f', '#b8401a', 0.9)], () => pumpkin(0.8)],
+    [[() => tent('#8e5bd6', '#5a3392'), () => pillow('#f6b8c8'), () => lamp(), () => pine('#3d4a7a', '#30395f'), () => pillow('#fff3c4')], () => pillow('#b38df0')],
+  ];
+  const [back, hurdle] = sets[zone % sets.length];
+  return { back: back.map((p) => p().svg), hurdle: hurdle().svg };
+}
