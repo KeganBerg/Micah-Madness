@@ -49,9 +49,10 @@ import {
 } from './save';
 import { DECOR, yardScene } from './yard';
 import { runLaunch } from './launch';
-import { floatLabel, installTapFx, pop, pressDown, pressUp } from './tap';
+import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { playMusic, setMusic, setSound, sfx } from './sound';
+import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
 import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
@@ -1059,6 +1060,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let selected: Pos | null = null;
   let bonusPts = 0;
   let goalsDone = 0;
+  let starsLit = 0;
+  let bestChain = 1;
+  let lastGoalsHtml = '';
+  let lastToolsHtml = '';
   let hintTimer = 0;
   // A level counts as lost until it is won, so quitting or closing the tab ends the streak too.
   const streakAtStart = save.winStreak;
@@ -1250,10 +1255,23 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   function renderHud() {
     screen.querySelector('.moves-val')!.textContent = String(moves);
     screen.querySelector('.moves')!.classList.toggle('low', moves <= 5);
-    screen.querySelector('.score-val')!.textContent = score.toLocaleString();
+    countUp(screen.querySelector<HTMLElement>('.score-val')!, score);
     (screen.querySelector('.star-fill') as HTMLElement).style.width = `${Math.min(100, (score / level.stars[2]) * 100)}%`;
     screen.querySelectorAll<HTMLElement>('.star-bar i').forEach((s, i) => s.classList.toggle('on', score >= level.stars[i]));
-    screen.querySelector('.goals')!.innerHTML = level.goals
+    // A star on the score bar lights up: it pops, chimes, and Micah says so.
+    const starsNow = level.stars.filter((s) => score >= s).length;
+    if (starsNow > starsLit) {
+      for (let i = starsLit; i < starsNow; i++) {
+        const st = screen.querySelectorAll<HTMLElement>('.star-bar i')[i];
+        replay(st, 'star-hit');
+        setTimeout(() => sfx.star(i + 1), 150 + (i - starsLit) * 180);
+      }
+      starsLit = starsNow;
+      if (!over) say(starsNow === 3 ? 'Three stars! Best girl!' : `${starsNow === 1 ? 'First' : 'Second'} star!`, 'big');
+    }
+    // Only rebuild the goal chips and item bar when something on them changed, so their
+    // animations (a goal ticking off) can play out and phones skip needless redraws.
+    const goalsHtml = level.goals
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
@@ -1261,7 +1279,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
-    screen.querySelector('.tools')!.innerHTML = TOOL_ORDER
+    if (goalsHtml !== lastGoalsHtml) {
+      const goalsEl = screen.querySelector('.goals')!;
+      const wasDone = [...goalsEl.children].map((g) => g.classList.contains('done'));
+      goalsEl.innerHTML = lastGoalsHtml = goalsHtml;
+      [...goalsEl.children].forEach((g, i) => {
+        if (g.classList.contains('done') && wasDone.length && !wasDone[i]) replay(g, 'goal-pop');
+      });
+    }
+    const toolsHtml = TOOL_ORDER
       .map((id) =>
         !toolOpen(id, level.id)
           ? `<div class="tool locked" aria-label="${BOOSTERS[id].name} unlocks at level ${TOOL_UNLOCK[id]}">${UI.lock}<span class="label">Level ${TOOL_UNLOCK[id]}</span></div>`
@@ -1269,6 +1295,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span>${newTool === id ? '<em class="new-badge">New</em>' : ''}</button>`,
       )
       .join('');
+    if (toolsHtml === lastToolsHtml) return;
+    screen.querySelector('.tools')!.innerHTML = lastToolsHtml = toolsHtml;
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
   }
 
@@ -1296,10 +1324,17 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }, 6000);
   }
 
-  function shake() {
-    boardEl.classList.remove('shake');
-    void boardEl.offsetWidth;
-    boardEl.classList.add('shake');
+  const shake = (strength = 2) => shakeBoard(boardEl, strength);
+  /** Centre of a set of cells, in % of the board. */
+  function centre(cells: Iterable<number>): [number, number] {
+    let sr = 0, sc = 0, n = 0;
+    for (const k of cells) {
+      const [r, c] = unkey(k);
+      sr += r;
+      sc += c;
+      n++;
+    }
+    return n ? [((sc / n + 0.5) / COLS) * 100, ((sr / n + 0.5) / ROWS) * 100] : [50, 50];
   }
 
   /** A few coloured crumbs burst from every cleared piece. */
@@ -1334,28 +1369,38 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       fx.style.setProperty('--c', String(c));
       boardEl.append(fx);
       setTimeout(() => fx.remove(), 500);
-      if (f.special === 'bark' || f.special === 'micah') shake();
+      const x = ((c + 0.5) / COLS) * 100;
+      const y = ((r + 0.5) / ROWS) * 100;
+      if (f.special === 'micah') {
+        shake(4);
+        ring(boardEl, x, y, '#ffc12e', 3);
+        confetti(boardEl, x, y, 40, 1.2);
+      } else if (f.special === 'bark') {
+        shake(2);
+        ring(boardEl, x, y, '#e8352f', 1.6);
+      } else ring(boardEl, x, y, '#ffffff', 1.2);
       if (f.special === 'bark') sfx.bark();
       else sfx.zoom();
       haptic.blast();
     }
   }
 
-  function floatScore(points: number, cells: Set<number>) {
+  /** The points for a wave float up from where it happened, bigger and golder as the combo grows. */
+  function floatScore(points: number, cells: Set<number>, chain: number) {
     if (!cells.size) return;
-    let sr = 0, sc = 0;
-    for (const k of cells) {
-      const [r, c] = unkey(k);
-      sr += r;
-      sc += c;
-    }
+    const [x, y] = centre(cells);
     const el = document.createElement('div');
-    el.className = 'float-score';
-    el.textContent = `+${points}`;
-    el.style.left = `${((sc / cells.size + 0.5) / COLS) * 100}%`;
-    el.style.top = `${((sr / cells.size + 0.5) / ROWS) * 100}%`;
+    el.className = `float-score ${chain >= 3 || points >= 600 ? 'hot' : chain >= 2 || points >= 300 ? 'warm' : ''}`;
+    el.textContent = `+${points.toLocaleString()}`;
+    if (chain >= 2) {
+      const x2 = document.createElement('small');
+      x2.textContent = ` x${chain}`;
+      el.append(x2);
+    }
+    el.style.left = `${Math.min(86, Math.max(14, x))}%`;
+    el.style.top = `${Math.min(90, Math.max(10, y))}%`;
     boardEl.append(el);
-    setTimeout(() => el.remove(), 900);
+    setTimeout(() => el.remove(), 1000);
   }
 
   async function cascade(preferred: Pos[], forced: number[] = []) {
@@ -1407,7 +1452,22 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         setTimeout(() => sfx.goal(), 200);
       }
       flashEffects(res);
-      floatScore(points, res.cleared);
+      floatScore(points, res.cleared, chain);
+      for (const { pos } of res.created) ring(boardEl, ((pos[1] + 0.5) / COLS) * 100, ((pos[0] + 0.5) / ROWS) * 100, '#ffc12e', 1);
+      // The bigger the moment, the louder the party: words, confetti, a gold flash and Micah's hearts.
+      const hy = hype(chain, res.cleared.size, res.fired.some((f) => f.special === 'micah'), res.fired.length > 0);
+      if (hy.tier > 0) {
+        callout(boardEl, hy.text, hy.tier, chain >= 2 ? `${chain}x combo` : '');
+        setTimeout(() => sfx.combo(hy.tier), 60);
+        glow(boardEl, hy.tier);
+        if (hy.tier >= 2) {
+          const [x, y] = centre(res.cleared);
+          confetti(boardEl, x, y, 8 + hy.tier * 7);
+          shake(hy.tier);
+        }
+        hearts(mascot, hy.tier + 1);
+        bestChain = Math.max(bestChain, chain);
+      }
       if (res.fired.some((f) => f.special === 'micah') || res.cleared.size >= 12) say(BIG_CHEERS[Math.floor(Math.random() * BIG_CHEERS.length)], 'big');
       else if (chain >= 2) say(chain >= 3 ? `${chain}x combo! ${BIG_CHEERS[chain % BIG_CHEERS.length]}` : `Combo! ${CHEERS[Math.floor(Math.random() * CHEERS.length)]}`, 'big');
       else if (Math.random() < 0.3) say(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
@@ -1626,6 +1686,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     moves = snap.moves;
     score = snap.score;
     goalsDone = snap.goalsDone;
+    starsLit = level.stars.filter((st) => score >= st).length;
     snap.remaining.forEach((v, i) => (remaining[i] = v));
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1703,6 +1764,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       over = true;
       sfx.win();
       haptic.win();
+      sfx.popper();
+      callout(boardEl, 'Level clear!', 5, moves > 0 ? 'Victory lap!' : '');
+      confetti(boardEl, 50, 60, 50, 1.3);
+      hearts(mascot, 5);
+      await wait(900);
       if (moves > 0) {
         // Victory lap: each spare move turns a random piece into Zoomies, then they all go off.
         say(`Level cleared. Victory lap with ${moves} spare moves!`, 'big');
@@ -1797,6 +1863,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const tags = awardBadges(save);
       persist(save);
       setTimeout(() => celebrate(tags), 1400);
+      confettiRain(stars * 18 + 10);
+      setTimeout(() => sfx.popper(), 250);
       for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
       const m = modal(`
         <div class="modal-head">
@@ -1807,6 +1875,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
         <dl class="stat-rows">
           <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          ${bestChain >= 2 ? `<dt>Biggest combo</dt><dd>x${bestChain}</dd>` : ''}
           ${bonusPts ? `<dt>Victory lap</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
           ${newStars ? `<dt>New stars for Micah's Yard</dt><dd><span class="star-pill">${UI.star}</span>${newStars}</dd>` : ''}
           <dt>Win streak</dt><dd>${save.winStreak}</dd>
@@ -1819,6 +1888,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
             <button class="btn secondary replay">Play again</button>
           </div>
         </div>`);
+      // Each star bursts with a little confetti as it lands.
+      m.querySelectorAll<HTMLElement>('.result-stars i.on').forEach((st, i) => setTimeout(() => confetti(st, 50, 50, 14, 2.5), 380 + i * 200));
       m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
       // Going back to the map shows Micah walking on to the newly unlocked level.
       // Only a first clear unlocks a new level, so replays don't send her walking.
