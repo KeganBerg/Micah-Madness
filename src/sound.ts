@@ -186,7 +186,22 @@ function woof(pitch: number, gain = 0.16): void {
   noise(0.07, gain * 0.35, 'bandpass', 1500);
 }
 
-export const sfx = {
+/** Sound must never break the game: any Web Audio error is swallowed. */
+function safe<T extends Record<string, (...args: never[]) => void>>(fx: T): T {
+  for (const k of Object.keys(fx) as (keyof T)[]) {
+    const fn = fx[k];
+    fx[k] = ((...args: never[]) => {
+      try {
+        fn(...args);
+      } catch (err) {
+        console.warn('sound failed', err);
+      }
+    }) as T[keyof T];
+  }
+  return fx;
+}
+
+export const sfx = safe({
   /** Any menu button. */
   tap() {
     tone(660, 0.05, 'sine', 0.07, 520);
@@ -286,7 +301,7 @@ export const sfx = {
     duck(2.5);
     [392, 330, 262].forEach((f, i) => later(i * 160, () => tone(f, 0.28, 'triangle', 0.1)));
   },
-};
+});
 
 // ───────────────────────────── Music ─────────────────────────────
 // A tiny step sequencer. Each mood is a chord loop plus a melody that is generated once from a seed,

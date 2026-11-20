@@ -938,8 +938,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
+  // Micah keeps her picture even after a combo spends her power (kind -1 has no regular art).
   const tileInner = (t: Tile) =>
-    t.special === 'micah' ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
+    t.special === 'micah' || !KINDS[t.kind] ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
 
   function makeTileEl(t: Tile): HTMLDivElement {
     const el = document.createElement('div');
@@ -1194,6 +1195,34 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
 
+  /** Put the board back in a playable state: fill any holes and redraw every piece. */
+  function heal() {
+    if (grid.some((row) => row.some((t) => !t))) applyGravity(grid, Math.random, kinds);
+    boardEl.querySelectorAll('.tile.pop, .dusted').forEach((e) => e.classList.remove('pop', 'dusted'));
+    renderAll();
+    renderHud();
+  }
+  /**
+   * Runs a board action with input locked. Whatever happens inside (a bug, a sound
+   * that fails to play), the lock is always released and the board is repaired,
+   * so the game can never freeze with a hole in it.
+   */
+  async function runLocked(fn: () => Promise<void>) {
+    busy = true;
+    try {
+      await fn();
+    } catch (err) {
+      console.error('Board action failed, repairing the board', err);
+      try {
+        heal();
+      } catch (e2) {
+        console.error(e2);
+      }
+    } finally {
+      busy = false;
+    }
+  }
+
   async function trySwap(a: Pos, b: Pos) {
     if (busy || over || !isAdjacent(a, b)) return;
     if (locked(...a) || locked(...b)) {
@@ -1206,42 +1235,41 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       say('That piece is tangled in yarn. Match through it to free it.', 'sad');
       return;
     }
-    busy = true;
     clearHint();
     selectCell(null);
-    sfx.swap();
-    const legal = isLegalSwap(grid, a, b);
-    const before: Snap = {
-      grid: cloneGrid(grid),
-      mud: mud.map((row) => [...row]),
-      yarn: yarn.map((row) => [...row]),
-      remaining: [...remaining],
-      moves,
-      score,
-      goalsDone,
-    };
-    swap(grid, a, b);
-    renderAll();
-    await wait(170);
-    if (!legal) {
+    let legal = false;
+    await runLocked(async () => {
+      sfx.swap();
+      legal = isLegalSwap(grid, a, b);
+      const before: Snap = {
+        grid: cloneGrid(grid),
+        mud: mud.map((row) => [...row]),
+        yarn: yarn.map((row) => [...row]),
+        remaining: [...remaining],
+        moves,
+        score,
+        goalsDone,
+      };
       swap(grid, a, b);
       renderAll();
-      sfx.bad();
-      say('That swap doesn\u2019t make a match.', 'sad');
       await wait(170);
-      busy = false;
-      armHint();
-      return;
-    }
-    undoSnap = before;
-    moves--;
-    if (moves === 5) sfx.warn();
-    renderHud();
-    const forced = comboClears(grid, a, b) ?? [];
-    if (forced.length) renderAll();
-    await cascade([b, a], forced);
-    busy = false;
-    await checkEnd();
+      if (!legal) {
+        swap(grid, a, b);
+        renderAll();
+        sfx.bad();
+        say('That swap doesn\u2019t make a match.', 'sad');
+        await wait(170);
+        return;
+      }
+      undoSnap = before;
+      moves--;
+      if (moves === 5) sfx.warn();
+      renderHud();
+      const forced = comboClears(grid, a, b) ?? [];
+      if (forced.length) renderAll();
+      await cascade([b, a], forced);
+    });
+    if (legal) await checkEnd();
     armHint();
   }
 
@@ -1281,14 +1309,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       }
       save.inventory.bed--;
       persist(save);
-      busy = true;
-      treatMode = dustMode = false;
-      restore(undoSnap);
+      const snap = undoSnap;
       undoSnap = null;
-      sfx.whoosh();
-      say('Micah had a nap on her memory foam. Last move undone!', 'big');
-      await wait(350);
-      busy = false;
+      await runLocked(async () => {
+        treatMode = dustMode = false;
+        restore(snap);
+        sfx.whoosh();
+        say('Micah had a nap on her memory foam. Last move undone!', 'big');
+        await wait(350);
+      });
       armHint();
       return;
     }
@@ -1302,14 +1331,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       renderHud();
     }
     if (id === 'squirrel') {
-      busy = true;
-      sfx.squirrel();
-      say('SQUIRREL!!', 'big');
-      shuffle(grid);
-      renderAll();
-      await wait(350);
-      await cascade([]);
-      busy = false;
+      await runLocked(async () => {
+        sfx.squirrel();
+        say('SQUIRREL!!', 'big');
+        shuffle(grid);
+        renderAll();
+        await wait(350);
+        await cascade([]);
+      });
       renderHud();
       await checkEnd();
     }
@@ -1354,25 +1383,25 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     undoSnap = null;
     save.inventory.dust--;
     persist(save);
-    busy = true;
     clearHint();
     selectCell(null);
-    const from = t.kind;
-    const wanted = level.goals.flatMap((g, i) => (g.type === 'collect' ? [{ kind: g.kind, left: remaining[i] }] : []));
-    const to = dustTarget(grid, from, kinds, wanted);
-    const changed = transformKind(grid, from, to);
-    sfx.powerUp();
-    say(`Sparkle! Every ${KINDS[from].name.toLowerCase()} became a ${KINDS[to].name.toLowerCase()}.`, 'big');
-    renderAll();
-    for (const k of changed) {
-      const [r, c] = unkey(k);
-      tileEls.get(grid[r][c]!.id)?.classList.add('born', 'dusted');
-    }
-    renderHud();
-    await wait(450);
-    boardEl.querySelectorAll('.dusted').forEach((e) => e.classList.remove('dusted'));
-    await cascade([]);
-    busy = false;
+    await runLocked(async () => {
+      const from = t.kind;
+      const wanted = level.goals.flatMap((g, i) => (g.type === 'collect' ? [{ kind: g.kind, left: remaining[i] }] : []));
+      const to = dustTarget(grid, from, kinds, wanted);
+      const changed = transformKind(grid, from, to);
+      sfx.powerUp();
+      say(`Sparkle! Every ${KINDS[from].name.toLowerCase()} became a ${KINDS[to].name.toLowerCase()}.`, 'big');
+      renderAll();
+      for (const k of changed) {
+        const [r, c] = unkey(k);
+        tileEls.get(grid[r][c]!.id)?.classList.add('born', 'dusted');
+      }
+      renderHud();
+      await wait(450);
+      boardEl.querySelectorAll('.dusted').forEach((e) => e.classList.remove('dusted'));
+      await cascade([]);
+    });
     renderHud();
     await checkEnd();
     armHint();
@@ -1384,11 +1413,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     save.inventory.treat--;
     bump(save, 'treats');
     persist(save);
-    busy = true;
-    sfx.crunch();
-    say('Nom nom nom!', 'big');
-    await cascade([], [key(p[0], p[1])]);
-    busy = false;
+    await runLocked(async () => {
+      sfx.crunch();
+      say('Nom nom nom!', 'big');
+      await cascade([], [key(p[0], p[1])]);
+    });
     renderHud();
     await checkEnd();
   }
@@ -1419,7 +1448,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         }
         score += moves * 100; // any moves that couldn't become Zoomies still count
         moves = 0;
-        await cascade([], forced);
+        try {
+          await cascade([], forced);
+        } catch (err) {
+          // The level is already won: never let a hiccup here stop the win screen.
+          console.error(err);
+        }
         bonusPts = score - before;
         renderHud();
       } else {
@@ -1588,7 +1622,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   say(level.goals.map(goalText).join(', then ') + '.');
   armHint();
   // Safety: a fresh board never starts with a match, but boosters could create none anyway.
-  if (findRuns(grid).length) void cascade([]);
+  if (findRuns(grid).length) void runLocked(() => cascade([]));
 }
 
 async function boot() {
