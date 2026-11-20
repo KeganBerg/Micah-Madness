@@ -394,7 +394,7 @@ h2, h3, p { margin: 0; }
 
 /* ───── Micah animations ───── */
 /* Idle: a slow breathe from her feet, so she never looks like a sticker. */
-.micah-idle { transform-origin: 50% 92%; animation: micah-breathe 2.6s ease-in-out infinite; }
+.micah-idle { transform-origin: 50% 92%; will-change: transform; animation: micah-breathe 2.6s ease-in-out infinite; }
 @keyframes micah-breathe {
   0%, 100% { transform: scale(1, 1) rotate(0deg); }
   30% { transform: scale(1.02, .97) rotate(-2deg); }
@@ -404,9 +404,16 @@ h2, h3, p { margin: 0; }
 /* Map: Micah stands beside her level, tilts her head when tapped, hops along the path. */
 .map-micah {
   position: absolute; width: 64px; height: 64px; margin: 0 0 0 -32px; z-index: 2; padding: 0;
-  transition: left 1s ease-in-out, top 1s ease-in-out; filter: drop-shadow(0 4px 3px #0005);
+  transition: left 1s ease-in-out, top 1s ease-in-out, translate 1.2s ease-in-out;
 }
-.map-micah img { width: 100%; height: 100%; display: block; }
+/* Performance: a filter on this button forced the phone to redraw Micah and her shadow on the
+   main thread every frame of her breathing. A plain ground shadow plus her own GPU layer lets
+   the compositor run her idle animations without repainting the map. */
+.map-micah::before {
+  content: ''; position: absolute; left: 18%; right: 18%; bottom: 2px; height: 9px; border-radius: 50%;
+  background: #0000003d; pointer-events: none;
+}
+.map-micah img { width: 100%; height: 100%; display: block; position: relative; will-change: transform; }
 .map-micah.facing-left img { scale: -1 1; }
 .map-micah.tilt img { animation: micah-tilt .6s ease-in-out; }
 .map-micah.walking img { animation: micah-hop .25s ease-in-out 4; }
@@ -735,7 +742,6 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 /* Map: Micah sniffs about beside her level while you decide. */
 .map-micah.sniff img { animation: ym-sniff .5s ease-in-out 3; }
 .map-micah.scratch img { animation: ym-scratch .14s linear 6; }
-.map-micah.pace { transition: left 1.2s ease-in-out, top 1.2s ease-in-out; }
 .map-micah.pace img { animation: micah-hop .3s ease-in-out 4; }
 
 /* ───── Wardrobe ───── */
