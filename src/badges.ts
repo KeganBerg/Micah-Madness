@@ -5,7 +5,7 @@ import { LEVELS } from './levels';
 import { DECOR } from './yard';
 import type { SaveData } from './save';
 
-export type TallyKey = 'mud' | 'yarn' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak';
+export type TallyKey = 'mud' | 'yarn' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps';
 
 export interface Badge {
   id: string;
@@ -37,6 +37,8 @@ export const BADGES: Badge[] = [
   { id: 'streak', name: 'Hot Streak', desc: 'Win 5 levels in a row.', reward: 50, color: '#ff6a3d', progress: (s) => [Math.max(t(s, 'bestStreak'), s.winStreak), 5] },
   { id: 'snack', name: 'Snack Attack', desc: 'Feed Micah 10 treats.', reward: 30, color: '#e3a64e', progress: (s) => [t(s, 'treats'), 10] },
   { id: 'loyal', name: 'Loyal Friend', desc: 'Claim all 7 daily treats in a row.', reward: 50, color: '#5c9f5a', progress: (s) => [s.daily.day, 7] },
+  { id: 'drop', name: 'Drop It!', desc: 'Grab 25 falling things before Micah eats them.', reward: 40, color: '#2f8fe0', progress: (s) => [t(s, 'saves'), 25] },
+  { id: 'gulp', name: 'Bottomless Pit', desc: 'Let Micah eat 10 things she shouldn\u2019t.', reward: 20, color: '#8a5a26', progress: (s) => [t(s, 'gulps'), 10] },
   { id: 'yard', name: 'Dream Yard', desc: 'Build everything in Micah’s Yard.', reward: 75, color: '#86a9d6', progress: (s) => [s.decor.length, DECOR.length] },
 ];
 

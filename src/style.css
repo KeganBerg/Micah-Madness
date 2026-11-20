@@ -839,3 +839,29 @@ h2.center { margin: 2px 0 6px; }
 .finale-confetti i { position: absolute; top: -20px; left: var(--x); width: 10px; height: 14px; background: var(--c); border-radius: 2px; animation: confetti-fall 3.2s linear var(--d) infinite; }
 @keyframes confetti-fall { to { transform: translateY(240px) rotate(720deg); } }
 @media (prefers-reduced-motion: reduce) { .finale-confetti, .finale-micah { animation: none; } .finale-confetti i { display: none; } .map-end-sign.done { animation: none; } }
+
+/* Noah's Arc: tap the house and the tenants pop out to say hello */
+.critter { transform-box: fill-box; transform-origin: 50% 100%; }
+.poke-critters { animation: sc-wobble .55s ease-in-out; }
+.poke-critters .critter > g, .poke-critters .critter > * { animation: critter-pop .9s ease-out; }
+.poke-critters .c-window > g { animation-delay: .1s; }
+.poke-critters .c-roof > g { animation-delay: .2s; }
+.poke-critters .c-porch > g { animation-delay: .3s; }
+@keyframes critter-pop { 0%, 100% { transform: translateY(0) scale(1); } 30% { transform: translateY(-9px) scale(1.15); } 55% { transform: translateY(-4px) scale(1.05); } }
+.live .c-chimney > g { animation: chimney-peek 6s ease-in-out infinite; }
+@keyframes chimney-peek { 0%, 70%, 100% { transform: translateY(6px); } 78%, 92% { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .live .c-chimney > g { animation: none; } }
+
+/* Yard: things falling from the sky */
+.snack { cursor: pointer; }
+.snack-fall { animation: snack-fall .7s cubic-bezier(.5, 0, .7, 1) both; }
+.snack-fall .snack-art { transform-box: fill-box; transform-origin: 50% 100%; animation: snack-land .45s ease-out .7s both; }
+.snack-shadow { transform-box: fill-box; transform-origin: 50% 50%; animation: snack-shadow .7s ease-in both; }
+@keyframes snack-fall { from { transform: translateY(var(--fall, -300px)) rotate(-200deg); } to { transform: translateY(0) rotate(0); } }
+@keyframes snack-land { 0% { transform: scale(1.25, .7); } 50% { transform: translateY(-6px) scale(.95, 1.08); } 100% { transform: none; } }
+@keyframes snack-shadow { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); } }
+.snack.landed-wiggle .snack-art { animation: wiggle .6s ease-in-out infinite; }
+.snack.saved { pointer-events: none; animation: snack-saved .5s ease-out forwards; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes snack-saved { to { opacity: 0; transform: translateY(-40px) scale(1.6); } }
+.snack.eaten .snack-fall { animation: snack-eaten .45s ease-in forwards; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes snack-eaten { to { transform: scale(0) rotate(90deg); opacity: 0; } }

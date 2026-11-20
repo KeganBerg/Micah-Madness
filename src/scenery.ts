@@ -34,7 +34,7 @@ const shadow = (rx: number, o = 0.18) => `<ellipse cx="0" cy="0" rx="${rx}" ry="
 const hit = (r: number, cy = -r * 0.6) => `<circle cx="0" cy="${f(cy)}" r="${r}" fill="transparent"/>`;
 
 interface Box { x: number; y: number; w: number; h: number; }
-interface Prop { svg: string; r: number; poke?: string; fx?: string; sfx?: string; }
+interface Prop { svg: string; r: number; poke?: string; fx?: string; sfx?: string; /** Lines shown when tapped, one picked in turn. */ say?: string[]; }
 
 // ───────────────────────────── props ─────────────────────────────
 
@@ -302,6 +302,74 @@ const fern = (c: string): Prop => {
   for (const a of [-50, -25, 0, 25, 50]) p += `<path d="M0 0 Q${f(a * 0.25)} -12 ${f(a * 0.4)} -20" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
   return { r: 14, poke: 'rustle', fx: 'leaf', sfx: 'rustle', svg: `${shadow(10, 0.12)}<g class="sway">${p}</g>` };
 };
+
+// Noah's Arc: the falling-down house Micah's family laughs at on every walk.
+// Boarded windows, a sagging roof, and a full house of squirrels and raccoons.
+const squirrelBit = (flip = false) => `<g><g transform="scale(${flip ? -1 : 1} 1)">
+    <path d="M4 2 C14 0 15 -12 8 -15 C4 -16 2 -12 5 -10 C9 -8 8 -3 3 -2" fill="#b06a2c" stroke="#6e3e14" stroke-width="1"/>
+    <ellipse cx="-1" cy="0" rx="4.5" ry="5" fill="#c27a38" stroke="#6e3e14" stroke-width="1"/>
+    <circle cx="-2" cy="-6" r="3.6" fill="#c27a38" stroke="#6e3e14" stroke-width="1"/>
+    <path d="M-4 -9 L-4.5 -12 L-2 -9.5 Z" fill="#c27a38" stroke="#6e3e14" stroke-width=".8"/>
+    <circle cx="-3.2" cy="-6.6" r=".9" fill="#111"/><circle cx="-5.4" cy="-5.4" r=".7" fill="#5a2d10"/>
+    <ellipse cx="0" cy="1" rx="2" ry="2.6" fill="#f0c48e"/></g></g>`;
+const raccoonBit = () => `<g>
+    <path d="M7 1 C14 -1 16 -6 13 -9" fill="none" stroke="#6d6d6d" stroke-width="4" stroke-linecap="round"/>
+    <path d="M9.5 0.2 L10.5 -2.4 M12.6 -3.4 L14.2 -5.2" stroke="#2b2b2b" stroke-width="1.6"/>
+    <ellipse cx="0" cy="0" rx="7" ry="5.5" fill="#8a8a8a" stroke="#3d3d3d" stroke-width="1"/>
+    <ellipse cx="0" cy="-8" rx="6.5" ry="5.2" fill="#9a9a9a" stroke="#3d3d3d" stroke-width="1"/>
+    <path d="M-6 -12 L-5 -15.5 L-2.5 -12.5 Z M6 -12 L5 -15.5 L2.5 -12.5 Z" fill="#7a7a7a" stroke="#3d3d3d" stroke-width=".8"/>
+    <path d="M-6 -9 Q0 -11.5 6 -9 Q6 -6.5 0 -6.8 Q-6 -6.5 -6 -9 Z" fill="#2b2b2b"/>
+    <circle cx="-2.6" cy="-8.6" r="1.1" fill="#fff"/><circle cx="2.6" cy="-8.6" r="1.1" fill="#fff"/>
+    <circle cx="-2.6" cy="-8.6" r=".55" fill="#111"/><circle cx="2.6" cy="-8.6" r=".55" fill="#111"/>
+    <ellipse cx="0" cy="-5" rx="2.4" ry="1.6" fill="#e6e6e6"/><circle cx="0" cy="-5.6" r=".8" fill="#111"/></g>`;
+const boards = (x: number, y: number, w: number, h: number) => `
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#1f1a17"/>
+    <path d="M${x - 2} ${y + 2} L${x + w + 2} ${y + h - 2}" stroke="#b08a5a" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M${x - 2} ${y + h - 3} L${x + w + 2} ${y + 3}" stroke="#c49a66" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="${x}" cy="${y + 2}" r=".7" fill="#555"/><circle cx="${x + w}" cy="${y + 3}" r=".7" fill="#555"/>`;
+
+export const noahsArc = (): Prop => ({
+  r: 64, poke: 'critters', fx: 'leaf', sfx: 'tweet',
+  say: [
+    'Noah\u2019s Arc. Still standing. Somehow.',
+    'The squirrels have signed a long lease.',
+    'A raccoon waves from the chimney. Rent is due Tuesday.',
+    'Micah sniffs the porch. Verdict: very interesting.',
+    'Two of every critter, as promised.',
+  ],
+  svg: `${shadow(56, 0.22)}
+    <path d="M-52 0 q2 -9 5 -1 q2 -11 4 0 M44 0 q2 -10 5 -1 q2 -8 4 0 M-30 0 q1 -7 3 -1" stroke="#55705f" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-3)">
+      <rect x="-40" y="-56" width="72" height="56" fill="#8c7b66" stroke="#4f4237" stroke-width="2"/>
+      <path d="M-40 -46 H32 M-40 -36 H32 M-40 -26 H32 M-40 -16 H32 M-40 -6 H32" stroke="#6f604f" stroke-width="1" opacity=".7"/>
+      <path d="M-22 -50 l6 3 -4 4 M18 -20 l5 2 -3 5" stroke="#5c4e41" stroke-width="1.2" fill="none"/>
+      <rect x="18" y="-82" width="9" height="20" fill="#7a5a48" stroke="#4f4237" stroke-width="1.5" transform="rotate(7 22 -72)"/>
+      <g class="critter c-chimney" transform="translate(23 -82)">${raccoonBit()}</g>
+      <rect x="16" y="-84" width="13" height="4" fill="#6a4a3a" stroke="#4f4237" stroke-width="1.2" transform="rotate(7 22 -82)"/>
+      <path d="M-48 -54 L-4 -88 L40 -56 Q-4 -50 -48 -54 Z" fill="#4f4440" stroke="#2d2623" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M-30 -62 h8 M-16 -70 h8 M2 -66 h8 M14 -60 h8" stroke="#3b322e" stroke-width="2"/>
+      <path d="M-6 -78 L4 -72 L-2 -66 L-12 -70 Z" fill="#1f1a17"/>
+      <path d="M-8 -76 L2 -68 M-4 -78 L-10 -68" stroke="#7a5a48" stroke-width="1.2"/>
+      <g class="critter c-roof" transform="translate(-30 -60) rotate(-20)">${squirrelBit()}</g>
+      ${boards(-33, -48, 16, 13)}
+      ${boards(10, -48, 16, 13)}
+      <g class="critter c-window" transform="translate(-25 -36)">${squirrelBit(true)}</g>
+      ${boards(-33, -27, 14, 11)}
+      <path d="M-6 0 V-26 H8 V0 Z" fill="#2a221d"/>
+      <path d="M-6 -26 H8 L10 -2 L-4 1 Z" fill="#6b4f3a" stroke="#3b2a1c" stroke-width="1.2" transform="rotate(9 -6 -26)"/>
+      <circle cx="5" cy="-12" r="1" fill="#c9a24a"/>
+      <path d="M14 -24 h12 v10 h-12 Z" fill="#1f1a17"/><path d="M14 -24 L26 -14" stroke="#b08a5a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M-12 0 H16 L14 4 H-10 Z" fill="#6f5a45"/>
+    </g>
+    <g transform="translate(34 2) rotate(-25)"><rect x="-6" y="-12" width="12" height="12" rx="2" fill="#7d8a90" stroke="#4d5a60" stroke-width="1.2"/><path d="M-7 -12 h14" stroke="#4d5a60" stroke-width="2"/></g>
+    <g class="critter c-porch" transform="translate(42 -1)">${raccoonBit()}</g>
+    <g transform="translate(-44 2) rotate(-6)">
+      <rect x="-1.6" y="-30" width="3.2" height="30" fill="#6b4529"/>
+      <path d="M-27 -33 H23 L24 -20 H-28 Z" fill="#e3d5b5" stroke="#6b4529" stroke-width="1.3"/>
+      <text x="-2" y="-23.6" text-anchor="middle" font-size="7.6" font-weight="900" fill="#a3201c" font-family="'Lilita One', sans-serif" textLength="44" lengthAdjust="spacingAndGlyphs" transform="rotate(-3 -2 -26)">NOAH&#8217;S ARC</text>
+    </g>
+    ${hit(52, -40)}`,
+});
 
 const signpost = (text: string): Prop => ({
   r: 18, poke: 'wobble', sfx: 'knock',
@@ -649,7 +717,7 @@ export const THEMES: Theme[] = [
     ground: '#6f8a7a', dark: '#627d6d', light: '#7f9a8a', path: '#b9a888', edge: '#7d6a4f', dots: '#9fc3d6',
     texture: mix(tuft('#55705f'), dot('#9fc3d6', 1.3), dot('#5b4330', 1.6)),
     props: (r) => [
-      [() => puddle(), 7], [() => wellies(pick(r, ['#e8352f', '#ffc12e', '#2f8fe0'])), 3], [() => umbrella('#2f8fe0', '#ffc12e'), 1],
+      [() => noahsArc(), 1], [() => puddle(), 7], [() => wellies(pick(r, ['#e8352f', '#ffc12e', '#2f8fe0'])), 3], [() => umbrella('#2f8fe0', '#ffc12e'), 1],
       [() => tree('#4f8f5a', '#3e7a49'), 3], [() => mushroom(), 3], [() => pawTrail(r), 3], [() => bird('#5d6f7c'), 2], [() => rock('#7d8a90'), 2],
     ],
   },
@@ -686,7 +754,7 @@ export const THEMES: Theme[] = [
 // ───────────────────────────── layout ─────────────────────────────
 
 const wrap = (x: number, y: number, p: Prop) =>
-  `<g transform="translate(${f(x)} ${f(y)})"><g class="p"${p.poke ? ` data-poke="${p.poke}"` : ''}${p.fx ? ` data-fx="${p.fx}"` : ''}${p.sfx ? ` data-sfx="${p.sfx}"` : ''}>${p.svg}</g></g>`;
+  `<g transform="translate(${f(x)} ${f(y)})"><g class="p"${p.poke ? ` data-poke="${p.poke}"` : ''}${p.fx ? ` data-fx="${p.fx}"` : ''}${p.sfx ? ` data-sfx="${p.sfx}"` : ''}${p.say ? ` data-say="${p.say.join('|').replace(/"/g, '&quot;')}"` : ''}>${p.svg}</g></g>`;
 
 function samplePath(nodes: Pt[]): Pt[] {
   const pts: Pt[] = [];
@@ -827,7 +895,8 @@ const FX: Record<string, (i: number) => string> = {
  * birds fly off, dogs hop) and throws a little burst of leaves, hearts, snow or confetti.
  * Returns a cleanup function.
  */
-export function wireScenery(root: HTMLElement, play: (sound: string) => void): () => void {
+export function wireScenery(root: HTMLElement, play: (sound: string) => void, onSay?: (text: string) => void): () => void {
+  const sayTurn = new Map<string, number>();
   const onTap = (e: Event) => {
     const p = (e.target as Element).closest<SVGGElement>('[data-poke]');
     if (!p || p.classList.contains('poked')) return;
@@ -839,6 +908,12 @@ export function wireScenery(root: HTMLElement, play: (sound: string) => void): (
       p.removeEventListener('animationend', done);
     });
     if (p.dataset.sfx) play(p.dataset.sfx);
+    if (p.dataset.say && onSay) {
+      const lines = p.dataset.say.split('|');
+      const n = sayTurn.get(p.dataset.say) ?? 0;
+      sayTurn.set(p.dataset.say, n + 1);
+      onSay(lines[n % lines.length]);
+    }
     const fx = p.dataset.fx && FX[p.dataset.fx];
     if (fx) {
       const box = p.getBBox();
