@@ -373,6 +373,13 @@ function showDaily(): void {
 
 // ───────────────────────────── Modals ─────────────────────────────
 
+// The visible height on iPhone Safari changes as its toolbars show and hide; pop-ups size to it.
+const syncViewportHeight = () =>
+  document.documentElement.style.setProperty('--vvh', `${Math.round(window.visualViewport ? window.visualViewport.height * window.visualViewport.scale : window.innerHeight)}px`);
+syncViewportHeight();
+window.visualViewport?.addEventListener('resize', syncViewportHeight);
+window.addEventListener('resize', syncViewportHeight);
+
 function modal(inner: string, onClose?: () => void): HTMLElement {
   const m = h(`<div class="modal-wrap"><div class="modal">${inner}</div></div>`);
   if (onClose) {
@@ -382,6 +389,14 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
         onClose();
       }
     });
+  }
+  // A lone main button at the end becomes a sticky footer, so it never scrolls out of view.
+  const last = m.querySelector('.modal')!.lastElementChild;
+  if (last?.classList.contains('btn')) {
+    const foot = document.createElement('div');
+    foot.className = 'actions';
+    last.replaceWith(foot);
+    foot.append(last);
   }
   document.body.append(m);
   m.querySelector<HTMLElement>('.modal')!.setAttribute('role', 'dialog');
