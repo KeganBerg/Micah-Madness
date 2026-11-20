@@ -378,6 +378,22 @@ const effects = {
     noise(0.05, 0.05, 'bandpass', 2200 + chain * 200);
     if (chain >= 3) later(50, () => tone(f * 1.5, 0.1, 'sine', 0.05));
   },
+  /** A combo callout: a quick rising run that climbs higher for bigger combos, with a happy woof at the top. */
+  combo(tier: number) {
+    const steps = [523, 659, 784, 1046, 1318, 1568, 2093];
+    const n = Math.min(steps.length, 2 + tier);
+    const lift = Math.max(0, Math.min(tier, 3) - 1); // bigger combos start higher up the run
+    const note = (i: number) => steps[Math.min(steps.length - 1, i + lift)];
+    for (let i = 0; i < n; i++) later(i * 45, () => tone(note(i), 0.16, 'triangle', 0.08));
+    later(n * 45, () => tone(note(n), 0.35, 'sine', 0.06));
+    noise(0.25 + tier * 0.05, 0.035, 'highpass', 5000);
+    if (tier >= 4) later(n * 45 + 60, () => woof(380, 0.13));
+  },
+  /** A party popper, for a level win and big moments. */
+  popper() {
+    noise(0.09, 0.16, 'highpass', 1800);
+    later(30, () => noise(0.5, 0.05, 'highpass', 6000, 9000));
+  },
   swap() {
     tone(300, 0.07, 'sine', 0.08, 380);
   },
