@@ -53,6 +53,8 @@ import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { playMusic, setMusic, setSound, sfx } from './sound';
 import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
+import { canVibrate, haptic, setHaptics } from './haptics';
+import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
 const COLS = 8;
@@ -65,6 +67,7 @@ document.addEventListener('click', (e) => {
 });
 const canSave = persist(save);
 requestDurableStorage();
+setupInstall();
 window.addEventListener('pagehide', () => persist(save));
 // Phones often close a backgrounded app without a pagehide, so save whenever the game is hidden.
 document.addEventListener('visibilitychange', () => {
@@ -78,6 +81,7 @@ onSavedElsewhere((data) => {
 });
 setSound(save.sound);
 setMusic(save.music);
+setHaptics(save.haptics);
 installTapFx();
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
@@ -304,10 +308,36 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     placeMicah(unlocked);
     if (after) setTimeout(after, 0);
   }
+  if (!after) maybeNudgeInstall();
 
   const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
   const target = nodePos((walkFrom ?? scrollTo ?? unlocked) - 1).y;
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
+}
+
+/** Once a player is hooked (3 levels in), suggest the Home Screen so the phone doesn't clear their save. */
+function maybeNudgeInstall(): void {
+  if (isInstalled() || save.seen.includes('install') || Object.keys(save.stars).length < 3) return;
+  window.setTimeout(() => {
+    if (document.querySelector('.modal-wrap') || !document.querySelector('.map-screen')) return;
+    save.seen.push('install');
+    persist(save);
+    const m = modal(`
+      <header class="modal-head">
+        ${micahImg('modal-avatar cheer')}
+        <div><p class="eyebrow">Keep your progress safe</p><h2>Put Micah on your Home Screen</h2></div>
+        <button class="close" aria-label="Close">${UI.close}</button>
+      </header>
+      <p class="body">Phones sometimes tidy away saved games for websites you haven\u2019t opened in a while. Add Micah to your Home Screen and she stays put, opens like an app and works offline.</p>
+      ${installSteps()}
+      ${canPrompt() ? '<button class="btn" data-act="install">Add to Home Screen</button>' : '<button class="btn" data-act="ok">Got it</button>'}`, () => {});
+    m.querySelector('.close')!.addEventListener('click', () => m.remove());
+    m.querySelector('[data-act="ok"]')?.addEventListener('click', () => m.remove());
+    m.querySelector('[data-act="install"]')?.addEventListener('click', async () => {
+      m.remove();
+      if (await promptInstall()) toast('Micah is on your Home Screen.');
+    });
+  }, 900);
 }
 
 const SCENERY_SOUNDS: Record<string, () => void> = {
@@ -744,6 +774,9 @@ function showSettings(): void {
       <button class="setting-row" data-act="music" role="switch" aria-checked="${save.music}">
         <span>${save.music ? UI.musicOn : UI.musicOff}</span><b>Music</b><i class="switch"></i>
       </button>
+      ${canVibrate() ? `<button class="setting-row" data-act="haptics" role="switch" aria-checked="${save.haptics}">
+        <span>${UI.vibrate}</span><b>Vibration</b><i class="switch"></i>
+      </button>` : ''}
       <p class="body setting-hint">No sound on iPhone? Check the volume and that the side switch isn\u2019t on silent.</p>
     </section>
     <section>
@@ -758,6 +791,11 @@ function showSettings(): void {
       <h3>How to play</h3>
       <dl class="how-to">${HOW_TO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
     </section>
+    ${isInstalled() ? '' : `<section>
+      <h3>Keep Micah on your phone</h3>
+      <p class="body">Add Micah Madness to your Home Screen. It opens like an app, works offline, and your phone won\u2019t clear your progress.</p>
+      ${canPrompt() ? '<button class="btn secondary" data-act="install">Add to Home Screen</button>' : installSteps()}
+    </section>`}
     <section>
       <h3>Play on another device</h3>
       <p class="body">Progress is saved in this browser only. Copy your transfer code here, then paste it on the other device.</p>
@@ -782,6 +820,17 @@ function showSettings(): void {
     soundBtn.setAttribute('aria-checked', String(save.sound));
     soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
     // The page-wide button listener plays the tap that confirms sound is back on.
+  });
+  const hapticBtn = m.querySelector<HTMLButtonElement>('[data-act="haptics"]');
+  hapticBtn?.addEventListener('click', () => {
+    save.haptics = !save.haptics;
+    setHaptics(save.haptics);
+    persist(save);
+    hapticBtn.setAttribute('aria-checked', String(save.haptics));
+    haptic.power();
+  });
+  m.querySelector('[data-act="install"]')?.addEventListener('click', async () => {
+    if (await promptInstall()) toast('Micah is on your Home Screen.');
   });
   const musicBtn = m.querySelector<HTMLButtonElement>('[data-act="music"]')!;
   musicBtn.addEventListener('click', () => {
@@ -809,6 +858,7 @@ function showSettings(): void {
     if (!incoming) {
       msg.textContent = box.value.trim() ? 'That code didn\u2019t work. Check you copied all of it.' : 'Paste a transfer code first.';
       sfx.bad();
+      haptic.bad();
       return;
     }
     const n = Object.keys(incoming.stars).length;
@@ -1167,6 +1217,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       } else ring(boardEl, x, y, '#ffffff', 1.2);
       if (f.special === 'bark') sfx.bark();
       else sfx.zoom();
+      haptic.blast();
     }
   }
 
@@ -1227,9 +1278,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         }
       }
       sfx.pop(chain);
+      haptic.pop(chain);
       if (washed) sfx.splash();
       if (untangled) sfx.snip();
-      if (res.created.length) setTimeout(() => sfx.powerUp(), 120);
+      if (res.created.length) setTimeout(() => (sfx.powerUp(), haptic.power()), 120);
       const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
       if (doneNow > goalsDone) {
         goalsDone = doneNow;
@@ -1343,6 +1395,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (locked(...a) || locked(...b)) {
       selectCell(null);
       sfx.bad();
+      haptic.bad();
       const y = yarnEls[a[0]][a[1]] ?? yarnEls[b[0]][b[1]];
       y?.classList.remove('tug');
       void y?.offsetWidth;
@@ -1372,6 +1425,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         swap(grid, a, b);
         renderAll();
         sfx.bad();
+      haptic.bad();
         say('That swap doesn\u2019t make a match.', 'sad');
         await wait(170);
         return;
@@ -1544,6 +1598,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (goalsMet()) {
       over = true;
       sfx.win();
+      haptic.win();
       sfx.popper();
       callout(boardEl, 'Level clear!', 5, moves > 0 ? 'Victory lap!' : '');
       confetti(boardEl, 50, 60, 50, 1.3);
