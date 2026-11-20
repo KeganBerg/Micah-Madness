@@ -255,7 +255,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       width: w, height, bands, banners,
       nodes: LEVELS.map((_, i) => { const p = nodePos(i); return { x: p.x * sx, y: p.y }; }),
     });
-    unwire = wireScenery(sceneEl, playScenerySound);
+    unwire = wireScenery(sceneEl, playScenerySound, (text) => toast(text));
   };
   const resizeWatch = new ResizeObserver(paintScenery);
   // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
@@ -353,6 +353,15 @@ function maybeNudgeInstall(): void {
   }, 900);
 }
 
+/** What happens when Micah wins the race to the thing that fell. */
+const GULPS = [
+  'Micah ate {x}. She regrets nothing.',
+  'Gulp. That was {x}. Micah would like seconds.',
+  'Too slow! Micah swallowed {x} whole.',
+  'Micah ate {x}. Delicious, apparently.',
+  '{x}? Gone. Micah is very proud of herself.',
+];
+
 const SCENERY_SOUNDS: Record<string, () => void> = {
   boing: () => sfx.pop(2),
   pop: () => sfx.pop(6),
@@ -387,7 +396,7 @@ function showYard(): void {
       </header>
       <div class="yard-body">
         <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume))}</div>
-        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'}</p>
+        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'} <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
         </div>
@@ -436,7 +445,21 @@ function showYard(): void {
   );
   let stopRoam: (() => void) | null = null;
   mount(screen, () => stopRoam?.());
-  stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx);
+  stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx, {
+    onSnack: (snack, saved) => {
+      bump(save, saved ? 'saves' : 'gulps');
+      if (saved) save.biscuits += 2;
+      const tags = awardBadges(save);
+      persist(save);
+      haptic.tick();
+      if (saved) toast(`${icon('biscuit', 'biscuit-icon')} Saved ${snack.name}! +2 biscuits`);
+      else {
+        const line = GULPS[(save.tally.gulps ?? 1) % GULPS.length].replace('{x}', snack.name);
+        toast(line[0].toUpperCase() + line.slice(1));
+      }
+      if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
+    },
+  });
 }
 
 // ───────────────────────────── Wardrobe ─────────────────────────────
