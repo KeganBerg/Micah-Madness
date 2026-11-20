@@ -25,6 +25,7 @@ import {
   type Tile,
 } from './board';
 import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, svg } from './art';
+import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { sceneryHTML, wireScenery } from './scenery';
@@ -1166,6 +1167,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const zone = ZONES[level.zone];
   const screen = h(`
     <div class="screen game-screen">
+      ${backdropHTML(level.zone)}
       <header class="hud">
         <button class="round-btn back" aria-label="Back to map">${UI.back}</button>
         <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : level.id}</b></div>
@@ -1211,6 +1213,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     const size = Math.max(200, Math.floor(Math.min(freeW, freeH)));
     boardEl.style.width = `${size}px`;
     boardWrap.style.height = `${size + outline}px`;
+    // The backdrop's little landscape (Micah's running path) fills the space under the item bar.
+    const tools = screen.querySelector<HTMLElement>('.tools')!;
+    screen.style.setProperty('--lane', `${Math.max(0, screen.clientHeight - tools.offsetTop - tools.offsetHeight)}px`);
   };
   fitBoard();
   const ro = new ResizeObserver(fitBoard);
