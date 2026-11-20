@@ -111,8 +111,14 @@ export const BOOSTER_ICONS: Record<string, string> = {
   micah: micahFace({ cap: true }),
   bark: `<path d="M50 12 L58 30 L78 22 L72 42 L90 50 L72 58 L78 78 L58 70 L50 88 L42 70 L22 78 L28 58 L10 50 L28 42 L22 22 L42 30 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
           <circle cx="50" cy="50" r="18" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="6 5"/>`,
-  biscuit: `<path d="M50 18 L58 34 L76 30 L70 48 L84 60 L66 66 L64 84 L50 74 L36 84 L34 66 L16 60 L30 48 L24 30 L42 34 Z" fill="#e3a64e" stroke="#94631c" stroke-width="3" stroke-linejoin="round"/>
-          <circle cx="44" cy="46" r="3" fill="#94631c"/><circle cx="56" cy="52" r="3" fill="#94631c"/><circle cx="48" cy="60" r="3" fill="#94631c"/>`,
+  // A golden biscuit coin stamped with a paw, so it never reads as a star.
+  biscuit: `<circle cx="50" cy="52" r="38" fill="#b9771f"/>
+          <circle cx="50" cy="48" r="38" fill="#f2b84b" stroke="#a8691a" stroke-width="3"/>
+          <circle cx="50" cy="48" r="29" fill="none" stroke="#d99a32" stroke-width="3" stroke-dasharray="3 5"/>
+          <ellipse cx="50" cy="58" rx="12" ry="10" fill="#a8691a"/>
+          <ellipse cx="34" cy="44" rx="5.5" ry="7" fill="#a8691a"/><ellipse cx="44" cy="35" rx="5.5" ry="7" fill="#a8691a"/>
+          <ellipse cx="56" cy="35" rx="5.5" ry="7" fill="#a8691a"/><ellipse cx="66" cy="44" rx="5.5" ry="7" fill="#a8691a"/>
+          <path d="M28 30 Q36 20 48 18" fill="none" stroke="#fff3c8" stroke-width="4" stroke-linecap="round" opacity=".8"/>`,
   mud: `<path d="M14 60 C10 40 30 30 44 36 C54 22 82 28 82 46 C94 52 90 74 72 74 C60 84 32 82 26 74 C14 74 10 66 14 60Z" fill="#7a5233" stroke="#4f331d" stroke-width="3"/>
           <ellipse cx="40" cy="50" rx="8" ry="4" fill="#9a7050"/><ellipse cx="62" cy="60" rx="6" ry="3" fill="#9a7050"/>`,
   yarn: `<circle cx="50" cy="52" r="32" fill="#e86aa6" stroke="#a83a72" stroke-width="3"/>
@@ -128,6 +134,8 @@ export const YARN_OVERLAY = `<svg viewBox="0 0 100 100" class="yarn-strands" ari
 
 /** Interface icons from the Lucide set (ISC licence), all on a 24px grid at the same stroke weight. */
 export const UI = {
+  share: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`,
+  vibrate: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 9v6"/><path d="M21 9v6"/></svg>`,
   back: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`,
   close: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
   soundOn: `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.4 18.4a9 9 0 0 0 0-12.8"/></svg>`,

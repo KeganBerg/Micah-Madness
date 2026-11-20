@@ -50,9 +50,13 @@ import {
 } from './save';
 import { DECOR, yardScene } from './yard';
 import { runLaunch } from './launch';
-import { floatLabel, installTapFx, pop, pressDown, pressUp } from './tap';
+import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { playMusic, setMusic, setSound, sfx } from './sound';
+import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
+import { canVibrate, haptic, setHaptics } from './haptics';
+import { shareCard } from './share';
+import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
 const COLS = 8;
@@ -65,6 +69,7 @@ document.addEventListener('click', (e) => {
 });
 const canSave = persist(save);
 requestDurableStorage();
+setupInstall();
 window.addEventListener('pagehide', () => persist(save));
 // Phones often close a backgrounded app without a pagehide, so save whenever the game is hidden.
 document.addEventListener('visibilitychange', () => {
@@ -78,6 +83,7 @@ onSavedElsewhere((data) => {
 });
 setSound(save.sound);
 setMusic(save.music);
+setHaptics(save.haptics);
 installTapFx();
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
@@ -121,6 +127,8 @@ function goalText(goal: Goal): string {
   return `Score ${goal.target.toLocaleString()} points`;
 }
 
+const PAW_POINTER = `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="62" rx="20" ry="17" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="24" cy="40" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="40" cy="25" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="60" cy="25" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/><ellipse cx="76" cy="40" rx="9" ry="11" fill="#fff" stroke="#173a52" stroke-width="5"/></svg>`;
+
 /** One tip the first time a mechanic appears, so the difficulty ramps with the teaching. */
 const TIPS: Record<number, string> = {
   1: 'Drag a piece onto a neighbour to swap them. Three or more in a line clears them.',
@@ -138,6 +146,12 @@ const TIPS: Record<number, string> = {
   56: 'The last stretch. Look for five in a row: some goals need a Micah piece.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
+
+/** In-level tools arrive one at a time, so level 1 is just the board. */
+const TOOL_UNLOCK: Record<'treat' | 'squirrel' | 'leash' | 'dust' | 'bed', number> = { treat: 3, squirrel: 5, leash: 7, dust: 9, bed: 11 };
+const TOOL_ORDER = ['treat', 'squirrel', 'leash', 'dust', 'bed'] as const;
+/** A tool is available from its level on, or anywhere once the player has got that far. */
+const toolOpen = (id: keyof typeof TOOL_UNLOCK, levelId: number) => Math.max(levelId, unlockedUpTo(save)) >= TOOL_UNLOCK[id];
 
 // ───────────────────────────── Map screen ─────────────────────────────
 
@@ -184,6 +198,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
                 ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
           }).join('')}
+          <div class="map-end" style="top:${nodePos(LEVELS.length - 1).y - 196}px">
+            ${save.stars[LEVELS.length] ? `<button class="map-end-sign done" data-act="finale"><b>You finished!</b><small>Tap to see Micah\u2019s big finish</small></button>` : `<div class="map-end-sign"><b>More adventures</b><small>coming soon</small></div>`}
+          </div>
           <button class="map-micah" aria-label="Micah">${micahImg('micah-idle')}</button>
         </div>
       </div>
@@ -206,6 +223,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     </div>`);
 
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
+  screen.querySelector('[data-act="finale"]')?.addEventListener('click', () => showFinale());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
@@ -304,10 +322,36 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     placeMicah(unlocked);
     if (after) setTimeout(after, 0);
   }
+  if (!after) maybeNudgeInstall();
 
   const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
   const target = nodePos((walkFrom ?? scrollTo ?? unlocked) - 1).y;
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
+}
+
+/** Once a player is hooked (3 levels in), suggest the Home Screen so the phone doesn't clear their save. */
+function maybeNudgeInstall(): void {
+  if (isInstalled() || save.seen.includes('install') || Object.keys(save.stars).length < 3) return;
+  window.setTimeout(() => {
+    if (document.querySelector('.modal-wrap') || !document.querySelector('.map-screen')) return;
+    save.seen.push('install');
+    persist(save);
+    const m = modal(`
+      <header class="modal-head">
+        ${micahImg('modal-avatar cheer')}
+        <div><p class="eyebrow">Keep your progress safe</p><h2>Put Micah on your Home Screen</h2></div>
+        <button class="close" aria-label="Close">${UI.close}</button>
+      </header>
+      <p class="body">Phones sometimes tidy away saved games for websites you haven\u2019t opened in a while. Add Micah to your Home Screen and she stays put, opens like an app and works offline.</p>
+      ${installSteps()}
+      ${canPrompt() ? '<button class="btn" data-act="install">Add to Home Screen</button>' : '<button class="btn" data-act="ok">Got it</button>'}`, () => {});
+    m.querySelector('.close')!.addEventListener('click', () => m.remove());
+    m.querySelector('[data-act="ok"]')?.addEventListener('click', () => m.remove());
+    m.querySelector('[data-act="install"]')?.addEventListener('click', async () => {
+      m.remove();
+      if (await promptInstall()) toast('Micah is on your Home Screen.');
+    });
+  }, 900);
 }
 
 const SCENERY_SOUNDS: Record<string, () => void> = {
@@ -744,6 +788,9 @@ function showSettings(): void {
       <button class="setting-row" data-act="music" role="switch" aria-checked="${save.music}">
         <span>${save.music ? UI.musicOn : UI.musicOff}</span><b>Music</b><i class="switch"></i>
       </button>
+      ${canVibrate() ? `<button class="setting-row" data-act="haptics" role="switch" aria-checked="${save.haptics}">
+        <span>${UI.vibrate}</span><b>Vibration</b><i class="switch"></i>
+      </button>` : ''}
       <p class="body setting-hint">No sound on iPhone? Check the volume and that the side switch isn\u2019t on silent.</p>
     </section>
     <section>
@@ -758,6 +805,11 @@ function showSettings(): void {
       <h3>How to play</h3>
       <dl class="how-to">${HOW_TO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
     </section>
+    ${isInstalled() ? '' : `<section>
+      <h3>Keep Micah on your phone</h3>
+      <p class="body">Add Micah Madness to your Home Screen. It opens like an app, works offline, and your phone won\u2019t clear your progress.</p>
+      ${canPrompt() ? '<button class="btn secondary" data-act="install">Add to Home Screen</button>' : installSteps()}
+    </section>`}
     <section>
       <h3>Play on another device</h3>
       <p class="body">Progress is saved in this browser only. Copy your transfer code here, then paste it on the other device.</p>
@@ -782,6 +834,17 @@ function showSettings(): void {
     soundBtn.setAttribute('aria-checked', String(save.sound));
     soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
     // The page-wide button listener plays the tap that confirms sound is back on.
+  });
+  const hapticBtn = m.querySelector<HTMLButtonElement>('[data-act="haptics"]');
+  hapticBtn?.addEventListener('click', () => {
+    save.haptics = !save.haptics;
+    setHaptics(save.haptics);
+    persist(save);
+    hapticBtn.setAttribute('aria-checked', String(save.haptics));
+    haptic.power();
+  });
+  m.querySelector('[data-act="install"]')?.addEventListener('click', async () => {
+    if (await promptInstall()) toast('Micah is on your Home Screen.');
   });
   const musicBtn = m.querySelector<HTMLButtonElement>('[data-act="music"]')!;
   musicBtn.addEventListener('click', () => {
@@ -809,6 +872,7 @@ function showSettings(): void {
     if (!incoming) {
       msg.textContent = box.value.trim() ? 'That code didn\u2019t work. Check you copied all of it.' : 'Paste a transfer code first.';
       sfx.bad();
+      haptic.bad();
       return;
     }
     const n = Object.keys(incoming.stars).length;
@@ -853,6 +917,66 @@ function toast(html: string, cls = ''): void {
   window.setTimeout(() => t.remove(), 3200);
 }
 
+// ───────────────────────────── Sharing and the finale ─────────────────────────────
+
+async function shareWin(card: { title: string; subtitle: string; stars: number; lines: [string, string][] }): Promise<void> {
+  toast('Drawing your card\u2026');
+  const result = await shareCard({ ...card, micah: costumeUrl(save.costume) });
+  if (result === 'saved') toast('Saved your card. Send it to a friend!');
+  else if (result === 'failed') toast('Couldn\u2019t make the card on this browser.');
+}
+
+const FINALE_BISCUITS = 300;
+
+/** The end of the road (for now): every level done. */
+function showFinale(): void {
+  const firstTime = !save.seen.includes('finale');
+  if (firstTime) {
+    save.seen.push('finale');
+    save.biscuits += FINALE_BISCUITS;
+    persist(save);
+  }
+  sfx.win();
+  haptic.win();
+  playMusic('map');
+  const stars = totalStars(save);
+  const confetti = Array.from({ length: 40 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 7) * 0.35}s;--c:${['#e8352f', '#ffd23f', '#5fc7f0', '#7ed36f', '#ff9cc8'][i % 5]}"></i>`).join('');
+  const m = modal(`
+    <div class="finale-top">
+      <div class="finale-confetti" aria-hidden="true">${confetti}</div>
+      <div class="finale-hero">
+        <img class="finale-micah cheer" src="${costumeUrl('champion')}" alt="Micah wearing her champion medal" />
+      </div>
+    </div>
+    <p class="eyebrow center">All ${ZONES.length} adventures done</p>
+    <h2 class="center">Micah\u2019s big finish!</h2>
+    <p class="body center">From the backyard to the starry sleepover, you helped Micah fetch every toy, wash every muddy paw and untangle every bit of yarn. She\u2019s had the best day ever, and now she\u2019s off for the comfiest nap.</p>
+    <dl class="stat-rows">
+      <dt>Levels cleared</dt><dd>${LEVELS.length} of ${LEVELS.length}</dd>
+      <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${stars} of ${LEVELS.length * 3}</dd>
+      ${firstTime ? `<dt>Champion prize</dt><dd>${icon('biscuit', 'biscuit-icon')}${FINALE_BISCUITS}</dd>` : ''}
+    </dl>
+    <p class="notice">New outfit unlocked in the Closet: <b>Champion</b>. More adventures are on their way, and you can replay any level for three stars.</p>
+    <div class="actions">
+      <button class="btn" data-act="map">Back to the map</button>
+      <button class="btn secondary" data-act="share">${UI.share}Share Micah\u2019s big finish</button>
+    </div>`, () => showMap(LEVELS.length));
+  m.classList.add('finale-wrap');
+  m.querySelector('[data-act="map"]')!.addEventListener('click', () => (m.remove(), showMap(LEVELS.length)));
+  m.querySelector('[data-act="share"]')!.addEventListener('click', () =>
+    shareWin({
+      title: 'Every level cleared!',
+      subtitle: 'Micah\u2019s big finish',
+      stars: 3,
+      lines: [
+        ['Levels', `${LEVELS.length} of ${LEVELS.length}`],
+        ['Stars', `${stars} of ${LEVELS.length * 3}`],
+        ['Outfit earned', 'Champion'],
+      ],
+    }),
+  );
+}
+
 // ───────────────────────────── Game screen ─────────────────────────────
 
 const CHEERS = ['Good match!', 'Woof!', 'Treat time!', 'Wag wag!', 'Nice!', 'Bork!'];
@@ -879,6 +1003,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let selected: Pos | null = null;
   let bonusPts = 0;
   let goalsDone = 0;
+  let starsLit = 0;
+  let bestChain = 1;
+  let lastGoalsHtml = '';
+  let lastToolsHtml = '';
   let hintTimer = 0;
   // A level counts as lost until it is won, so quitting or closing the tab ends the streak too.
   const streakAtStart = save.winStreak;
@@ -1040,13 +1168,57 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     mascot.classList.add(mood === 'sad' ? 'shake' : mood === 'big' ? 'cheer' : 'bounce');
   }
 
+  // The tool that first appears on this level gets a "New" badge and a word from Micah.
+  const newTool = TOOL_ORDER.find((id) => TOOL_UNLOCK[id] === level.id && !save.seen.includes(`tool-${id}`));
+  if (newTool) {
+    save.seen.push(`tool-${newTool}`);
+    persist(save);
+  }
+
+  // Level 1, first visit: a paw shows the very first swap until the player makes it.
+  let guideEl: HTMLElement | null = null;
+  function showGuide() {
+    if (over || busy || guideEl) return;
+    const mv = findMove(grid, locked);
+    if (!mv) return;
+    const [a, b] = mv;
+    guideEl = h(`<div class="guide-paw" aria-hidden="true"><span>${PAW_POINTER}</span></div>`);
+    guideEl.style.setProperty('--dx', String(b[1] - a[1]));
+    guideEl.style.setProperty('--dy', String(b[0] - a[0]));
+    placeEl(guideEl, a[0], a[1]);
+    boardEl.append(guideEl);
+    for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('guided');
+    say('Drag the wiggly piece the way the paw goes to make three in a row.');
+  }
+  function endGuide() {
+    if (!guideEl) return;
+    guideEl.remove();
+    guideEl = null;
+    boardEl.querySelectorAll('.guided').forEach((e) => e.classList.remove('guided'));
+    save.seen.push('guide');
+    persist(save);
+  }
+
   function renderHud() {
     screen.querySelector('.moves-val')!.textContent = String(moves);
     screen.querySelector('.moves')!.classList.toggle('low', moves <= 5);
-    screen.querySelector('.score-val')!.textContent = score.toLocaleString();
+    countUp(screen.querySelector<HTMLElement>('.score-val')!, score);
     (screen.querySelector('.star-fill') as HTMLElement).style.width = `${Math.min(100, (score / level.stars[2]) * 100)}%`;
     screen.querySelectorAll<HTMLElement>('.star-bar i').forEach((s, i) => s.classList.toggle('on', score >= level.stars[i]));
-    screen.querySelector('.goals')!.innerHTML = level.goals
+    // A star on the score bar lights up: it pops, chimes, and Micah says so.
+    const starsNow = level.stars.filter((s) => score >= s).length;
+    if (starsNow > starsLit) {
+      for (let i = starsLit; i < starsNow; i++) {
+        const st = screen.querySelectorAll<HTMLElement>('.star-bar i')[i];
+        replay(st, 'star-hit');
+        setTimeout(() => sfx.star(i + 1), 150 + (i - starsLit) * 180);
+      }
+      starsLit = starsNow;
+      if (!over) say(starsNow === 3 ? 'Three stars! Best girl!' : `${starsNow === 1 ? 'First' : 'Second'} star!`, 'big');
+    }
+    // Only rebuild the goal chips and item bar when something on them changed, so their
+    // animations (a goal ticking off) can play out and phones skip needless redraws.
+    const goalsHtml = level.goals
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
@@ -1054,12 +1226,24 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
-    screen.querySelector('.tools')!.innerHTML = (['treat', 'squirrel', 'leash', 'dust', 'bed'] as const)
-      .map(
-        (id) => `<button class="tool ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
-          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span></button>`,
+    if (goalsHtml !== lastGoalsHtml) {
+      const goalsEl = screen.querySelector('.goals')!;
+      const wasDone = [...goalsEl.children].map((g) => g.classList.contains('done'));
+      goalsEl.innerHTML = lastGoalsHtml = goalsHtml;
+      [...goalsEl.children].forEach((g, i) => {
+        if (g.classList.contains('done') && wasDone.length && !wasDone[i]) replay(g, 'goal-pop');
+      });
+    }
+    const toolsHtml = TOOL_ORDER
+      .map((id) =>
+        !toolOpen(id, level.id)
+          ? `<div class="tool locked" aria-label="${BOOSTERS[id].name} unlocks at level ${TOOL_UNLOCK[id]}">${UI.lock}<span class="label">Level ${TOOL_UNLOCK[id]}</span></div>`
+          : `<button class="tool ${newTool === id ? 'spotlight' : ''} ${(id === 'treat' && treatMode) || (id === 'dust' && dustMode) ? 'active' : ''}" data-id="${id}" aria-label="${BOOSTERS[id].name}: ${BOOSTERS[id].desc} ${save.inventory[id] ? `${save.inventory[id]} left` : 'None left, tap to buy'}">
+          ${icon(id, 'tool-icon')}<span class="label">${BOOSTERS[id].short ?? BOOSTERS[id].name}</span><span class="count ${save.inventory[id] ? '' : 'empty'}">${save.inventory[id] || UI.plus}</span>${newTool === id ? '<em class="new-badge">New</em>' : ''}</button>`,
       )
       .join('');
+    if (toolsHtml === lastToolsHtml) return;
+    screen.querySelector('.tools')!.innerHTML = lastToolsHtml = toolsHtml;
     screen.querySelectorAll<HTMLButtonElement>('.tool').forEach((b) => b.addEventListener('click', () => useTool(b.dataset.id as BoosterId)));
   }
 
@@ -1087,10 +1271,17 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }, 6000);
   }
 
-  function shake() {
-    boardEl.classList.remove('shake');
-    void boardEl.offsetWidth;
-    boardEl.classList.add('shake');
+  const shake = (strength = 2) => shakeBoard(boardEl, strength);
+  /** Centre of a set of cells, in % of the board. */
+  function centre(cells: Iterable<number>): [number, number] {
+    let sr = 0, sc = 0, n = 0;
+    for (const k of cells) {
+      const [r, c] = unkey(k);
+      sr += r;
+      sc += c;
+      n++;
+    }
+    return n ? [((sc / n + 0.5) / COLS) * 100, ((sr / n + 0.5) / ROWS) * 100] : [50, 50];
   }
 
   /** A few coloured crumbs burst from every cleared piece. */
@@ -1125,27 +1316,38 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       fx.style.setProperty('--c', String(c));
       boardEl.append(fx);
       setTimeout(() => fx.remove(), 500);
-      if (f.special === 'bark' || f.special === 'micah') shake();
+      const x = ((c + 0.5) / COLS) * 100;
+      const y = ((r + 0.5) / ROWS) * 100;
+      if (f.special === 'micah') {
+        shake(4);
+        ring(boardEl, x, y, '#ffc12e', 3);
+        confetti(boardEl, x, y, 40, 1.2);
+      } else if (f.special === 'bark') {
+        shake(2);
+        ring(boardEl, x, y, '#e8352f', 1.6);
+      } else ring(boardEl, x, y, '#ffffff', 1.2);
       if (f.special === 'bark') sfx.bark();
       else sfx.zoom();
+      haptic.blast();
     }
   }
 
-  function floatScore(points: number, cells: Set<number>) {
+  /** The points for a wave float up from where it happened, bigger and golder as the combo grows. */
+  function floatScore(points: number, cells: Set<number>, chain: number) {
     if (!cells.size) return;
-    let sr = 0, sc = 0;
-    for (const k of cells) {
-      const [r, c] = unkey(k);
-      sr += r;
-      sc += c;
-    }
+    const [x, y] = centre(cells);
     const el = document.createElement('div');
-    el.className = 'float-score';
-    el.textContent = `+${points}`;
-    el.style.left = `${((sc / cells.size + 0.5) / COLS) * 100}%`;
-    el.style.top = `${((sr / cells.size + 0.5) / ROWS) * 100}%`;
+    el.className = `float-score ${chain >= 3 || points >= 600 ? 'hot' : chain >= 2 || points >= 300 ? 'warm' : ''}`;
+    el.textContent = `+${points.toLocaleString()}`;
+    if (chain >= 2) {
+      const x2 = document.createElement('small');
+      x2.textContent = ` x${chain}`;
+      el.append(x2);
+    }
+    el.style.left = `${Math.min(86, Math.max(14, x))}%`;
+    el.style.top = `${Math.min(90, Math.max(10, y))}%`;
     boardEl.append(el);
-    setTimeout(() => el.remove(), 900);
+    setTimeout(() => el.remove(), 1000);
   }
 
   async function cascade(preferred: Pos[], forced: number[] = []) {
@@ -1187,16 +1389,32 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         }
       }
       sfx.pop(chain);
+      haptic.pop(chain);
       if (washed) sfx.splash();
       if (untangled) sfx.snip();
-      if (res.created.length) setTimeout(() => sfx.powerUp(), 120);
+      if (res.created.length) setTimeout(() => (sfx.powerUp(), haptic.power()), 120);
       const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
       if (doneNow > goalsDone) {
         goalsDone = doneNow;
         setTimeout(() => sfx.goal(), 200);
       }
       flashEffects(res);
-      floatScore(points, res.cleared);
+      floatScore(points, res.cleared, chain);
+      for (const { pos } of res.created) ring(boardEl, ((pos[1] + 0.5) / COLS) * 100, ((pos[0] + 0.5) / ROWS) * 100, '#ffc12e', 1);
+      // The bigger the moment, the louder the party: words, confetti, a gold flash and Micah's hearts.
+      const hy = hype(chain, res.cleared.size, res.fired.some((f) => f.special === 'micah'), res.fired.length > 0);
+      if (hy.tier > 0) {
+        callout(boardEl, hy.text, hy.tier, chain >= 2 ? `${chain}x combo` : '');
+        setTimeout(() => sfx.combo(hy.tier), 60);
+        glow(boardEl, hy.tier);
+        if (hy.tier >= 2) {
+          const [x, y] = centre(res.cleared);
+          confetti(boardEl, x, y, 8 + hy.tier * 7);
+          shake(hy.tier);
+        }
+        hearts(mascot, hy.tier + 1);
+        bestChain = Math.max(bestChain, chain);
+      }
       if (res.fired.some((f) => f.special === 'micah') || res.cleared.size >= 12) say(BIG_CHEERS[Math.floor(Math.random() * BIG_CHEERS.length)], 'big');
       else if (chain >= 2) say(chain >= 3 ? `${chain}x combo! ${BIG_CHEERS[chain % BIG_CHEERS.length]}` : `Combo! ${CHEERS[Math.floor(Math.random() * CHEERS.length)]}`, 'big');
       else if (Math.random() < 0.3) say(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
@@ -1288,6 +1506,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (locked(...a) || locked(...b)) {
       selectCell(null);
       sfx.bad();
+      haptic.bad();
       const y = yarnEls[a[0]][a[1]] ?? yarnEls[b[0]][b[1]];
       y?.classList.remove('tug');
       void y?.offsetWidth;
@@ -1317,11 +1536,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         swap(grid, a, b);
         renderAll();
         sfx.bad();
+        haptic.bad();
         say('That swap doesn\u2019t make a match.', 'sad');
         await wait(170);
         return;
       }
       undoSnap = before;
+      endGuide();
       moves--;
       if (moves === 5) sfx.warn();
       renderHud();
@@ -1412,6 +1633,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     moves = snap.moves;
     score = snap.score;
     goalsDone = snap.goalsDone;
+    starsLit = level.stars.filter((st) => score >= st).length;
     snap.remaining.forEach((v, i) => (remaining[i] = v));
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -1488,6 +1710,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     if (goalsMet()) {
       over = true;
       sfx.win();
+      haptic.win();
+      sfx.popper();
+      callout(boardEl, 'Level clear!', 5, moves > 0 ? 'Victory lap!' : '');
+      confetti(boardEl, 50, 60, 50, 1.3);
+      hearts(mascot, 5);
+      await wait(900);
       if (moves > 0) {
         // Victory lap: each spare move turns a random piece into Zoomies, then they all go off.
         say(`Level cleared. Victory lap with ${moves} spare moves!`, 'big');
@@ -1547,33 +1775,51 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const tags = awardBadges(save);
       persist(save);
       setTimeout(() => celebrate(tags), 1400);
+      confettiRain(stars * 18 + 10);
+      setTimeout(() => sfx.popper(), 250);
       for (let s = 1; s <= stars; s++) setTimeout(() => sfx.star(s), 300 + s * 200);
       const m = modal(`
         <div class="modal-head">
           ${micahImg('modal-avatar cheer')}
           <div><p class="eyebrow">${zone.name}</p><h2>Level ${level.id} cleared</h2></div>
-          <span></span>
+          <button class="round-btn share-btn" aria-label="Share this win">${UI.share}</button>
         </div>
         <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
         <dl class="stat-rows">
           <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          ${bestChain >= 2 ? `<dt>Biggest combo</dt><dd>x${bestChain}</dd>` : ''}
           ${bonusPts ? `<dt>Victory lap</dt><dd>${bonusPts.toLocaleString()}</dd>` : ''}
           ${newStars ? `<dt>New stars for Micah's Yard</dt><dd><span class="star-pill">${UI.star}</span>${newStars}</dd>` : ''}
           <dt>Win streak</dt><dd>${save.winStreak}</dd>
           <dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${earned}</dd>
         </dl>
         <div class="actions">
-          ${level.id < LEVELS.length ? `<button class="btn next">Play level ${level.id + 1}</button>` : ''}
+          ${level.id < LEVELS.length ? `<button class="btn next">Play level ${level.id + 1}</button>` : `<button class="btn finale">See Micah\u2019s big finish</button>`}
           <div class="pair">
             <button class="btn secondary to-map">Back to map</button>
             <button class="btn secondary replay">Play again</button>
           </div>
         </div>`);
+      // Each star bursts with a little confetti as it lands.
+      m.querySelectorAll<HTMLElement>('.result-stars i.on').forEach((st, i) => setTimeout(() => confetti(st, 50, 50, 14, 2.5), 380 + i * 200));
       m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
       // Going back to the map shows Micah walking on to the newly unlocked level.
       // Only a first clear unlocks a new level, so replays don't send her walking.
       const walkFrom = firstClear ? level.id : undefined;
       m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap(level.id, walkFrom)));
+      m.querySelector('.finale')?.addEventListener('click', () => (m.remove(), showFinale()));
+      m.querySelector('.share-btn')!.addEventListener('click', () =>
+        shareWin({
+          title: `Level ${level.id} cleared`,
+          subtitle: zone.name,
+          stars,
+          lines: [
+            ['Score', score.toLocaleString()],
+            ['Win streak', String(save.winStreak)],
+            ['Stars so far', String(totalStars(save))],
+          ],
+        }),
+      );
       m.querySelector('.next')?.addEventListener('click', () => {
         m.remove();
         showMap(level.id + 1, walkFrom, () => showLevelIntro(LEVELS[level.id]));
@@ -1758,6 +2004,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   renderHud();
   say(level.goals.map(goalText).join(', then ') + '.');
   armHint();
+  if (level.id === 1 && !save.seen.includes('guide')) window.setTimeout(showGuide, 700);
+  else if (newTool) {
+    window.setTimeout(() => {
+      if (over) return;
+      say(`New tool: ${BOOSTERS[newTool].name}! ${BOOSTERS[newTool].desc}`, 'big');
+    }, 2200);
+  }
   // Safety: a fresh board never starts with a match, but boosters could create none anyway.
   if (findRuns(grid).length) void runLocked(() => cascade([]));
 }
