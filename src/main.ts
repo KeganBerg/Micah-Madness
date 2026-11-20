@@ -754,7 +754,7 @@ function showSettings(): void {
     persist(save);
     soundBtn.setAttribute('aria-checked', String(save.sound));
     soundBtn.querySelector('span')!.innerHTML = save.sound ? UI.soundOn : UI.soundOff;
-    if (save.sound) sfx.tap();
+    // The page-wide button listener plays the tap that confirms sound is back on.
   });
   const musicBtn = m.querySelector<HTMLButtonElement>('[data-act="music"]')!;
   musicBtn.addEventListener('click', () => {
