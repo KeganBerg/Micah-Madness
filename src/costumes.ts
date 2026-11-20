@@ -110,6 +110,15 @@ const pumpkinSuit = `
   <path d="M40 64 L44 61 L46 66 Z M60 64 L56 61 L54 66 Z M42 70 L46 73 L50 70 L54 73 L58 70 L54 76 L50 74 L46 76 Z" fill="#1a1a1a"/>`;
 const pumpkinHat = `<path d="M47 18 Q46 10 52 6" stroke="#3f8a3a" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M52 10 Q60 6 64 12 Q58 14 52 10 Z" fill="#5fae57"/>`;
 
+// Earned by clearing the very last level: a gold medal on a red ribbon, and a sash.
+const championSash = `
+  <path d="M30 56 L74 100 L62 100 L26 64 Z" fill="#e8352f"/>
+  <path d="M30 56 L74 100" stroke="#ffd23f" stroke-width="2"/>`;
+const championMedal = `
+  <path d="M40 56 L48 70 M60 56 L52 70" stroke="#e8352f" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="50" cy="75" r="9" fill="#ffd23f" stroke="#b58a00" stroke-width="2.5"/>
+  <path d="M50 69.5 L51.8 73.2 L55.8 73.6 L52.8 76.3 L53.6 80.2 L50 78.2 L46.4 80.2 L47.2 76.3 L44.2 73.6 L48.2 73.2 Z" fill="#fff4c2"/>`;
+
 export const COSTUMES: Costume[] = [
   { id: 'lobster', name: 'Lobster Suit', desc: 'The classic. Claws and all.', unlock: { free: true } },
   { id: 'cap', name: 'Orange Cap', desc: 'Her everyday look.', unlock: { free: true }, front: cap },
@@ -122,6 +131,7 @@ export const COSTUMES: Costume[] = [
   { id: 'pumpkin', name: 'Pumpkin', desc: 'Round, orange and very huggable.', unlock: { biscuits: 160 }, suit: pumpkinSuit, front: pumpkinHat },
   { id: 'pirate', name: 'Pirate Captain', desc: 'Arr. Mostly hunts for biscuits.', unlock: { level: 25 }, front: pirate },
   { id: 'crown', name: 'Royal Crown', desc: 'Queen of the yard.', unlock: { level: 40 }, front: crown },
+  { id: 'champion', name: 'Champion', desc: 'For finishing every last level. The goodest girl.', unlock: { level: 60 }, suit: championSash, front: championMedal },
 ];
 
 export const DEFAULT_COSTUME = 'lobster';
