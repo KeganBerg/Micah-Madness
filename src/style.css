@@ -769,6 +769,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .dock { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .dock-btn .tally { right: calc(50% - 36px); }
 
+/* Add-to-Home-Screen steps */
+.install-steps { margin: 8px 0 12px; padding-left: 1.4em; display: grid; gap: 6px; font-size: 0.95rem; line-height: 1.4; }
+.install-steps .ui-icon.inline { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em; margin: 0 2px; }
+
 /* ───── Accessibility ───── */
 /* Tap targets: every button is at least 44px, the size Apple and Google recommend for fingers. */
 .round-btn, .close { width: 44px; height: 44px; }
