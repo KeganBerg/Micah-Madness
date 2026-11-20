@@ -42,6 +42,7 @@ import {
 } from './save';
 import { DECOR, yardScene } from './yard';
 import { runLaunch } from './launch';
+import { floatLabel, installTapFx, pop, pressDown, pressUp } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
 import { playMusic, setMusic, setSound, sfx } from './sound';
 
@@ -59,6 +60,7 @@ requestDurableStorage();
 window.addEventListener('pagehide', () => persist(save));
 setSound(save.sound);
 setMusic(save.music);
+installTapFx();
 
 const wait = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 const h = (html: string): HTMLElement => {
@@ -277,7 +279,7 @@ function showYard(): void {
         <ul class="shop-list">
           ${DECOR.map((d) => {
             const has = owned.includes(d.id);
-            return `<li class="${has ? 'owned' : ''}">
+            return `<li class="${has ? 'owned' : ''}" data-id="${d.id}">
               ${svg(d.svg, 'booster-icon')}
               <div class="shop-info"><b>${d.name}</b><span>${d.desc}</span></div>
               ${has
@@ -299,6 +301,9 @@ function showYard(): void {
       persist(save);
       sfx.build();
       showYard();
+      const row = app.querySelector(`.shop-list li[data-id="${d.id}"]`);
+      pop(row?.querySelector('.booster-icon'));
+      pop(row?.querySelector('.built'));
       celebrate(tags);
     }),
   );
@@ -337,6 +342,9 @@ function showDaily(): void {
     sfx.coin();
     m.remove();
     showDaily();
+    const li = document.querySelectorAll('.daily-grid li')[save.daily.day - 1];
+    pop(li?.querySelector('.booster-icon'));
+    floatLabel(li, '+1');
     celebrate(tags);
   });
 }
@@ -458,6 +466,11 @@ function showShop(onClose: () => void): void {
         persist(save);
         m.querySelector('.modal')!.innerHTML = render();
         wire();
+        const row = m.querySelector(`.buy[data-id="${id}"]`)?.closest('li');
+        pop(row?.querySelector('.booster-icon'));
+        pop(row?.querySelector('.shop-info small'));
+        pop(m.querySelector('.wallet-row .biscuit-icon'));
+        floatLabel(row?.querySelector('.booster-icon'), '+1');
       }),
     );
   };
@@ -1276,6 +1289,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     const r = Math.floor((e.clientY - rect.top) / tileSize());
     return r >= 0 && c >= 0 && r < ROWS && c < COLS ? [r, c] : null;
   };
+  let pressedPiece: Element | null = null;
+  const releasePiece = () => (pressUp(pressedPiece), (pressedPiece = null));
   boardEl.addEventListener('pointerdown', (e) => {
     if (busy || over) return;
     const p = cellAt(e);
@@ -1285,6 +1300,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       return;
     }
     dragStart = { p, x: e.clientX, y: e.clientY };
+    pressedPiece = tileEls.get(grid[p[0]][p[1]]?.id ?? -1)?.querySelector('.piece') ?? null;
+    pressDown(pressedPiece);
     boardEl.setPointerCapture(e.pointerId);
   });
   boardEl.addEventListener('pointermove', (e) => {
@@ -1296,9 +1313,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     const [r, c] = dragStart.p;
     const to: Pos = Math.abs(dx) > Math.abs(dy) ? [r, c + Math.sign(dx)] : [r + Math.sign(dy), c];
     dragStart = null;
+    releasePiece();
     if (to[0] >= 0 && to[1] >= 0 && to[0] < ROWS && to[1] < COLS) void trySwap([r, c], to);
   });
   boardEl.addEventListener('pointerup', () => {
+    releasePiece();
     if (!dragStart) return;
     const p = dragStart.p;
     dragStart = null;
@@ -1307,7 +1326,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     else selectCell(p);
   });
 
-  boardEl.addEventListener('pointercancel', () => (dragStart = null));
+  boardEl.addEventListener('pointercancel', () => (releasePiece(), (dragStart = null)));
 
   screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id));
 
