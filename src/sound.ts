@@ -92,6 +92,7 @@ function rebuild(): void {
   sfxBus = null;
   musicBus = null;
   delay = null;
+  mix = null;
   playing = null;
   unlocked = false;
   stale = false;
@@ -234,10 +235,13 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0
   const osc = a.createOscillator();
   const g = a.createGain();
   osc.type = type;
-  osc.frequency.setValueAtTime(freq, t);
-  if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  // A hair of random pitch and level, like a real instrument never hitting the same note twice.
+  const wobble = 1 + (Math.random() - 0.5) * 0.02;
+  osc.frequency.setValueAtTime(freq * wobble, t);
+  if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo * wobble, t + dur);
+  gain *= 0.9 + Math.random() * 0.2;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(gain, t + 0.005);
+  g.gain.linearRampToValueAtTime(gain, t + 0.006);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   osc.connect(g).connect(sfxBus!);
   osc.start(t);
@@ -622,7 +626,7 @@ function startMusic(mood: Mood): void {
   const fresh = !playing;
   playing = { mood, zone };
   musicBus.gain.cancelScheduledValues(a.currentTime);
-  musicBus.gain.setTargetAtTime(0, a.currentTime, 0.08);
+  musicBus.gain.setTargetAtTime(0, a.currentTime, fresh ? 0.01 : 0.22);
   stopScheduler();
   const begin = () => {
     if (!playing || playing.mood !== mood || playing.zone !== zone || !musicOn || !ctx || ctx.state !== 'running') return;
@@ -633,12 +637,12 @@ function startMusic(mood: Mood): void {
     step = 0;
     nextTime = ctx.currentTime + 0.1;
     musicBus!.gain.cancelScheduledValues(ctx.currentTime);
-    musicBus!.gain.setTargetAtTime(MUSIC_VOL, ctx.currentTime, 0.4);
+    musicBus!.gain.setTargetAtTime(MUSIC_VOL, ctx.currentTime, fresh ? 1.2 : 0.7);
     timer = window.setInterval(tick, 25);
     tick();
   };
   if (fresh) begin();
-  else later(350, begin);
+  else later(800, begin);
 }
 
 function stopScheduler(): void {
@@ -660,8 +664,8 @@ function duck(seconds: number): void {
   if (!ctx || !musicBus || !playing) return;
   const t = ctx.currentTime;
   musicBus.gain.cancelScheduledValues(t);
-  musicBus.gain.setTargetAtTime(MUSIC_VOL * 0.2, t, 0.05);
-  musicBus.gain.setTargetAtTime(MUSIC_VOL, t + seconds, 0.6);
+  musicBus.gain.setTargetAtTime(MUSIC_VOL * 0.2, t, 0.12);
+  musicBus.gain.setTargetAtTime(MUSIC_VOL, t + seconds, 1.1);
 }
 
 /** A soft dotted-eighth echo that makes the lead sparkle. */
@@ -696,83 +700,205 @@ function tick(): void {
     // Swing pushes every off-beat eighth (and the 16th after it) later.
     const pos = step % 4;
     const swing = pos === 2 ? tune.swing * sixteenth : pos === 3 ? tune.swing * sixteenth * 0.5 : 0;
+    // A player breathes at the end of the loop: the last two beats ease back a little.
+    const last = sc.bars * 16;
+    const ease = step >= last - 8 ? 1 + ((step - (last - 8)) / 8) * 0.12 : 1;
     playStep(a, tune, sc, step, nextTime + swing, sixteenth);
-    nextTime += sixteenth;
+    nextTime += sixteenth * ease;
     step = (step + 1) % (sc.bars * 16);
   }
 }
 
+// ── The mixer: a little room, some stereo width and a warm top end ──
+
+interface Mix { verb: GainNode; warm: BiquadFilterNode }
+let mix: Mix | null = null;
+
+/** A soft, short "room" reverb from a generated impulse (decaying, slightly filtered noise). */
+function mixer(a: AudioContext): Mix {
+  if (mix) return mix;
+  const warm = a.createBiquadFilter();
+  warm.type = 'highshelf';
+  warm.frequency.value = 6000;
+  warm.gain.value = -5; // round off the digital fizz
+  warm.connect(musicBus!);
+  const len = Math.floor(a.sampleRate * 1.9);
+  const ir = a.createBuffer(2, len, a.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const x = i / len;
+      lp += ((Math.random() * 2 - 1) - lp) * (0.55 - 0.4 * x); // darker as it fades, like a real room
+      d[i] = lp * Math.pow(1 - x, 3.2) * (i < a.sampleRate * 0.012 ? i / (a.sampleRate * 0.012) : 1);
+    }
+  }
+  const verb = a.createGain();
+  verb.gain.value = 0.55;
+  if (typeof a.createConvolver === 'function') {
+    const conv = a.createConvolver();
+    conv.buffer = ir;
+    const back = a.createGain();
+    back.gain.value = 0.5;
+    verb.connect(conv).connect(back).connect(warm);
+  }
+  mix = { verb, warm };
+  return mix;
+}
+
+/** A tiny random nudge, in seconds, so the band never plays like a metronome. */
+const loose = (ms: number) => ((Math.random() + Math.random() - 1) * ms) / 1000;
+/** A gentle random level change around 1. */
+const touch = (amount: number) => 1 + (Math.random() * 2 - 1) * amount;
+
+function panner(a: AudioContext, pan: number, dest: AudioNode): AudioNode {
+  if (!pan || typeof a.createStereoPanner !== 'function') return dest;
+  const p = a.createStereoPanner();
+  p.pan.value = pan;
+  p.connect(dest);
+  return p;
+}
+
+interface PluckOpts {
+  attack?: number;
+  vibrato?: number;
+  type?: OscillatorType;
+  /** Lowpass cutoff; with `bloom` the filter starts brighter and mellows as the note rings. */
+  cutoff?: number;
+  bloom?: number;
+  /** Second voice detuned by this many cents for a warm chorus. */
+  detune?: number;
+  pan?: number;
+  /** How much goes to the room reverb (0..1). */
+  verb?: number;
+}
+
 /** One plucked/blown note with a few harmonics: the heart of each instrument. */
-function pluck(a: AudioContext, hz: number, t: number, dur: number, gain: number, dest: AudioNode, partials: [number, number][], opts: { attack?: number; vibrato?: number; type?: OscillatorType; cutoff?: number } = {}): void {
+function pluck(a: AudioContext, hz: number, t: number, dur: number, gain: number, dest: AudioNode, partials: [number, number][], opts: PluckOpts = {}): void {
   const g = a.createGain();
-  const attack = opts.attack ?? 0.004;
+  const attack = opts.attack ?? 0.008;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(gain, t + attack);
-  g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  // Two-stage decay: a quick settle after the strike, then a long natural ring-out.
+  g.gain.setTargetAtTime(gain * 0.55, t + attack, Math.max(0.03, dur * 0.12));
+  g.gain.setTargetAtTime(0.0001, t + attack + dur * 0.25, dur * 0.28);
   let out: AudioNode = g;
   if (opts.cutoff) {
     const f = a.createBiquadFilter();
     f.type = 'lowpass';
-    f.frequency.value = opts.cutoff;
+    f.Q.value = 0.5;
+    const open = opts.cutoff * (opts.bloom ?? 1);
+    f.frequency.setValueAtTime(open, t);
+    if (opts.bloom) f.frequency.setTargetAtTime(opts.cutoff, t + attack, dur * 0.3);
     g.connect(f);
     out = f;
   }
-  out.connect(dest);
-  let lfo: OscillatorNode | null = null;
+  out.connect(panner(a, opts.pan ?? 0, dest));
+  if (opts.verb && mix) {
+    const send = a.createGain();
+    send.gain.value = opts.verb;
+    out.connect(send).connect(mix.verb);
+  }
+  let lg: GainNode | null = null;
   if (opts.vibrato) {
-    lfo = a.createOscillator();
-    lfo.frequency.value = 5.2;
-    const lg = a.createGain();
+    const lfo = a.createOscillator();
+    lfo.frequency.value = 4.6 + Math.random() * 1.2;
+    lg = a.createGain();
+    // Vibrato blooms in after the note starts, the way a singer or wind player does it.
     lg.gain.setValueAtTime(0, t);
-    lg.gain.linearRampToValueAtTime(hz * opts.vibrato, t + Math.min(0.25, dur * 0.5));
+    lg.gain.linearRampToValueAtTime(hz * opts.vibrato, t + Math.min(0.35, dur * 0.6));
     lfo.connect(lg);
     lfo.start(t);
-    lfo.stop(t + dur + 0.05);
-    (lfo as unknown as { _g: GainNode })._g = lg;
+    lfo.stop(t + dur * 1.6 + 0.05);
   }
-  for (const [mult, amp] of partials) {
-    const o = a.createOscillator();
-    o.type = opts.type ?? 'sine';
-    o.frequency.value = hz * mult;
-    if (lfo) (lfo as unknown as { _g: GainNode })._g.connect(o.frequency);
-    const pg = a.createGain();
-    pg.gain.value = amp;
-    o.connect(pg).connect(g);
-    o.start(t);
-    o.stop(t + dur + 0.05);
+  const voices = opts.detune ? [-opts.detune / 2, opts.detune / 2] : [0];
+  for (const cents of voices) {
+    for (const [mult, amp] of partials) {
+      const o = a.createOscillator();
+      o.type = opts.type ?? 'sine';
+      o.frequency.value = hz * mult;
+      o.detune.value = cents;
+      if (lg) lg.connect(o.frequency);
+      const pg = a.createGain();
+      pg.gain.value = amp / voices.length;
+      o.connect(pg).connect(g);
+      o.start(t);
+      o.stop(t + dur * 1.6 + 0.05);
+    }
   }
 }
 
-function leadNote(a: AudioContext, t: Tune, midi: number, when: number, len: number, sixteenth: number): void {
+/** A breathy puff at the start of an ocarina note. */
+function breath(a: AudioContext, t: number, gain: number): void {
+  const src = a.createBufferSource();
+  src.buffer = noiseBuffer(a);
+  src.loop = true;
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = 2400;
+  f.Q.value = 1.2;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + 0.12);
+  src.connect(f).connect(g).connect(musicBus!);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + 0.15);
+}
+
+/**
+ * How hard a melody note is played: phrases swell toward their middle and relax at the end,
+ * downbeats lean a little, long notes sing out, and every note varies slightly.
+ */
+function expression(i: number, len: number): number {
+  const inPhrase = (i % 64) / 64; // 4-bar phrase
+  const arch = 0.82 + 0.26 * Math.sin(Math.PI * inPhrase);
+  const pos = i % 16;
+  const beat = pos === 0 ? 1.1 : pos === 8 ? 1.04 : pos % 4 === 0 ? 1 : 0.88;
+  const sing = len >= 8 ? 1.06 : 1;
+  return arch * beat * sing * touch(0.08);
+}
+
+function leadNote(a: AudioContext, t: Tune, midi: number, when: number, len: number, sixteenth: number, vel: number): void {
   const hz = midiToHz(midi);
   const fx = echo(a, sixteenth);
   const held = len * sixteenth;
-  const send = (dest: AudioNode, k: number) => {
-    if (t.lead === 'musicbox') pluck(a, hz, when, Math.max(0.5, held * 1.6), 0.13 * k, dest, [[1, 1], [2, 0.32], [3, 0.12], [4.2, 0.05]]);
-    else if (t.lead === 'toypiano') pluck(a, hz, when, Math.max(0.3, held * 1.1), 0.13 * k, dest, [[1, 1], [2, 0.25], [3.98, 0.12]], { type: 'triangle' });
-    else pluck(a, hz, when, Math.max(0.22, held * 0.98), 0.12 * k, dest, [[1, 1], [2, 0.08]], { attack: 0.04, vibrato: 0.006, type: 'sine' });
-  };
-  send(musicBus!, 1);
-  send(fx, 0.5);
+  // One voice, split to the dry mix and the echo, so each note costs half the oscillators.
+  const split = a.createGain();
+  split.connect(mix ? mix.warm : musicBus!);
+  const wet = a.createGain();
+  wet.gain.value = 0.45;
+  split.connect(wet).connect(fx);
+  const verb = 0.35;
+  if (t.lead === 'musicbox')
+    pluck(a, hz, when, Math.max(0.6, held * 1.8), 0.12 * vel, split, [[1, 1], [2, 0.3], [3, 0.1], [4.2, 0.04]], { cutoff: 3200, bloom: 1.8, detune: 6, verb });
+  else if (t.lead === 'toypiano')
+    pluck(a, hz, when, Math.max(0.35, held * 1.2), 0.12 * vel, split, [[1, 1], [2, 0.22], [3.98, 0.1]], { type: 'triangle', cutoff: 2800, bloom: 2, detune: 5, verb });
+  else
+    pluck(a, hz, when, Math.max(0.25, held * 1.05), 0.11 * vel, split, [[1, 1], [2, 0.07], [3, 0.02]], { attack: 0.045, vibrato: 0.0055, cutoff: 2400, verb });
+  if (t.lead === 'ocarina') breath(a, when, 0.018 * vel);
 }
 
 function perc(a: AudioContext, t: number, kind: 'kick' | 'shaker' | 'tick' | 'clap', vel = 1): void {
   const bus = musicBus!;
+  vel *= touch(0.15);
   if (kind === 'kick') {
+    // A soft, round kick: more "thump" than "boom".
     const o = a.createOscillator();
-    o.frequency.setValueAtTime(140, t);
-    o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(50, t + 0.1);
     const g = a.createGain();
-    g.gain.setValueAtTime(0.42 * vel, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.34 * vel, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
     o.connect(g).connect(bus);
     o.start(t);
-    o.stop(t + 0.17);
+    o.stop(t + 0.22);
     return;
   }
   if (kind === 'tick') {
-    // A little wood block.
-    pluck(a, 1760, t, 0.05, 0.05 * vel, bus, [[1, 1], [2.7, 0.4]]);
+    // A little wood block, never quite the same pitch twice.
+    pluck(a, 1650 * touch(0.03), t, 0.06, 0.04 * vel, bus, [[1, 1], [2.7, 0.35]], { pan: 0.25, verb: 0.3 });
     return;
   }
   const src = a.createBufferSource();
@@ -780,13 +906,27 @@ function perc(a: AudioContext, t: number, kind: 'kick' | 'shaker' | 'tick' | 'cl
   src.loop = true;
   const f = a.createBiquadFilter();
   f.type = kind === 'clap' ? 'bandpass' : 'highpass';
-  f.frequency.value = kind === 'clap' ? 1300 : 5500;
+  f.frequency.value = kind === 'clap' ? 1200 * touch(0.06) : 6000 * touch(0.1);
   const g = a.createGain();
-  const len = kind === 'clap' ? 0.11 : 0.05;
-  const peak = (kind === 'clap' ? 0.14 : 0.04) * vel;
-  g.gain.setValueAtTime(peak, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + len);
-  src.connect(f).connect(g).connect(bus);
+  // A shaker is a swish (soft in, soft out); a clap is a few hands landing at once.
+  const len = kind === 'clap' ? 0.12 : 0.07;
+  const peak = (kind === 'clap' ? 0.1 : 0.03) * vel;
+  g.gain.setValueAtTime(0.0001, t);
+  if (kind === 'clap') {
+    for (let n = 0; n < 3; n++) {
+      g.gain.linearRampToValueAtTime(peak, t + n * 0.009 + 0.002);
+      g.gain.linearRampToValueAtTime(peak * 0.3, t + n * 0.009 + 0.008);
+    }
+    g.gain.linearRampToValueAtTime(peak, t + 0.03);
+  } else g.gain.linearRampToValueAtTime(peak, t + 0.025);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + len);
+  const dest = panner(a, kind === 'shaker' ? 0.35 : -0.15, bus);
+  src.connect(f).connect(g).connect(dest);
+  if (kind === 'clap' && mix) {
+    const s = a.createGain();
+    s.gain.value = 0.4;
+    g.connect(s).connect(mix.verb);
+  }
   src.start(t, Math.random() * 0.5);
   src.stop(t + len + 0.02);
 }
@@ -800,56 +940,84 @@ function voicing(root: number, tones: number[], k: number): number[] {
   }).sort((x, y) => x - y);
 }
 
+let strumDown = true;
+
 function playStep(a: AudioContext, t: Tune, s: Score, i: number, when: number, sixteenth: number): void {
-  const bus = musicBus!;
+  mixer(a);
+  const bus = mix!.warm;
   const k = shift(t);
   const bar = Math.floor(i / 16);
   const pos = i % 16;
   const half = s.harmony[bar * 2 + (pos >= 8 ? 1 : 0)];
   const inB = bar >= 8;
   const lastBar = bar % 8 === 7;
+  // Each player sits slightly differently against the beat: the lead a touch ahead and loose,
+  // the bass steady and a hair behind, the strummer in between.
+  const lead = when + loose(9) - 0.004;
+  const bassT = when + 0.006 + loose(4);
+  const strumT = when + loose(7);
 
-  // Lead melody.
-  for (const h of byStep.get(i) ?? []) leadNote(a, t, h.midi + k, when, h.len, sixteenth);
+  // Lead melody, with a grace note now and then on a long note, like a player decorating it.
+  for (const h of byStep.get(i) ?? []) {
+    const vel = expression(i, h.len);
+    if (h.len >= 6 && Math.random() < 0.18 && lead - sixteenth * 0.35 > a.currentTime) {
+      // The scale step above: a half step above E, B and the raised notes, a whole step otherwise.
+      const up = [1, 4, 6, 8, 11].includes(h.midi % 12) ? 1 : 2;
+      leadNote(a, t, h.midi + k + up, lead - sixteenth * 0.3, 1, sixteenth, vel * 0.5);
+    }
+    leadNote(a, t, h.midi + k, lead, h.len, sixteenth, vel);
+  }
 
   // Strummed chord: "oom-pah" on 2 and 4 for the stroll, off-beat skanks for the bouncy tunes.
+  // Strums alternate down and up, and the top note of an up-strum is lighter, as on a real uke.
   const strum = t.feel === 'stroll' ? pos === 4 || pos === 12 : pos % 4 === 2;
   if (strum) {
-    voicing(half.root, half.tones, k).forEach((m, n) =>
-      pluck(a, midiToHz(m), when + n * 0.012, sixteenth * (t.feel === 'stroll' ? 3 : 1.6), 0.035, bus, [[1, 1], [2, 0.2]], { type: 'triangle', cutoff: 1800 }),
+    const notes = voicing(half.root, half.tones, k);
+    const order = strumDown ? notes : [...notes].reverse();
+    const spread = (strumDown ? 0.014 : 0.009) * touch(0.25);
+    const sv = (strumDown ? 1 : 0.75) * touch(0.12) * (inB ? 1.05 : 0.95);
+    order.forEach((m, n) =>
+      pluck(a, midiToHz(m), strumT + n * spread, sixteenth * (t.feel === 'stroll' ? 3.4 : 1.8), 0.032 * sv * (1 - n * 0.06), bus,
+        [[1, 1], [2, 0.18], [3, 0.05]], { type: 'triangle', cutoff: 1500, bloom: 1.6, pan: -0.3, verb: 0.25 }),
     );
+    strumDown = !strumDown;
   }
 
   // Bass: root on 1, fifth on 3, and a step that walks into the next chord.
   const root = 36 + ((half.root + k + 120) % 12);
-  if (pos === 0) pluck(a, midiToHz(root), when, sixteenth * 5, 0.24, bus, [[1, 1], [2, 0.15]], { type: 'triangle', cutoff: 700 });
-  if (pos === 8) pluck(a, midiToHz(root + (half === s.harmony[bar * 2] ? 7 : 0)), when, sixteenth * 5, 0.2, bus, [[1, 1], [2, 0.15]], { type: 'triangle', cutoff: 700 });
-  if (t.feel === 'bounce' && (pos === 6 || pos === 14)) pluck(a, midiToHz(root + 12), when, sixteenth * 1.5, 0.12, bus, [[1, 1]], { type: 'triangle', cutoff: 900 });
+  const bassOpts: PluckOpts = { type: 'triangle', cutoff: 650, bloom: 1.5 };
+  if (pos === 0) pluck(a, midiToHz(root), bassT, sixteenth * 6, 0.22 * touch(0.06), bus, [[1, 1], [2, 0.14]], bassOpts);
+  if (pos === 8) pluck(a, midiToHz(root + (half === s.harmony[bar * 2] ? 7 : 0)), bassT, sixteenth * 6, 0.18 * touch(0.06), bus, [[1, 1], [2, 0.14]], bassOpts);
+  if (t.feel === 'bounce' && (pos === 6 || pos === 14)) pluck(a, midiToHz(root + 12), bassT, sixteenth * 1.6, 0.1 * touch(0.1), bus, [[1, 1]], { type: 'triangle', cutoff: 850 });
   if (pos === 14 && t.feel === 'stroll') {
     const nextRoot = s.harmony[((bar + 1) % s.bars) * 2].root;
     const target = 36 + ((nextRoot + k + 120) % 12);
-    pluck(a, midiToHz(target + (target > root ? -1 : 1)), when, sixteenth * 2, 0.16, bus, [[1, 1]], { type: 'triangle', cutoff: 700 });
+    pluck(a, midiToHz(target + (target > root ? -1 : 1)), bassT, sixteenth * 2, 0.14 * touch(0.08), bus, [[1, 1]], bassOpts);
   }
 
-  // Marimba counter-line in the B half: a broken chord in eighths, an octave under the lead.
+  // Marimba counter-line in the B half: a broken chord in eighths, an octave under the lead,
+  // swelling into the middle of each bar.
   if (inB && pos % 2 === 0 && !lastBar) {
     const v = voicing(half.root, half.tones, k);
     const order = [0, 1, 2, 1];
     const m = v[order[(pos / 2) % 4] % v.length] + 12;
-    pluck(a, midiToHz(m), when, 0.18, 0.035, bus, [[1, 1], [4, 0.08]]);
+    const sw = 0.85 + 0.25 * Math.sin((Math.PI * pos) / 16);
+    pluck(a, midiToHz(m), when + loose(8), 0.22, 0.03 * sw * touch(0.15), bus, [[1, 1], [4, 0.07]], { pan: 0.35, verb: 0.3 });
   }
 
-  // Percussion.
+  // Percussion: quiet, with ghost notes that come and go.
   if (t.feel === 'stroll') {
-    if (pos === 0 || (pos === 8 && inB)) perc(a, when, 'kick', 0.8);
-    if (pos % 4 === 2) perc(a, when, 'shaker', 0.9);
-    if (pos === 4 || pos === 12) perc(a, when, 'tick', 0.6);
+    if (pos === 0 || (pos === 8 && inB)) perc(a, when, 'kick', 0.75);
+    if (pos % 4 === 2) perc(a, when + loose(6), 'shaker', 0.9);
+    else if (pos % 4 === 0 && Math.random() < 0.35) perc(a, when + loose(6), 'shaker', 0.35);
+    if (pos === 4 || pos === 12) perc(a, when + loose(5), 'tick', 0.55);
   } else {
-    if (pos === 0 || pos === 8) perc(a, when, 'kick');
-    if (pos % 2 === 0) perc(a, when, 'shaker', pos % 4 === 2 ? 1 : 0.5);
-    if ((pos === 4 || pos === 12) && inB) perc(a, when, 'clap', 0.8);
-    if ((pos === 4 || pos === 12) && !inB) perc(a, when, 'tick', 0.7);
+    if (pos === 0 || pos === 8) perc(a, when, 'kick', 0.9);
+    if (pos === 14 && Math.random() < 0.25) perc(a, when, 'kick', 0.4);
+    if (pos % 2 === 0) perc(a, when + loose(5), 'shaker', pos % 4 === 2 ? 1 : 0.45);
+    if ((pos === 4 || pos === 12) && inB) perc(a, when + loose(4), 'clap', 0.75);
+    if ((pos === 4 || pos === 12) && !inB) perc(a, when + loose(5), 'tick', 0.6);
   }
-  // A woodblock fill at the end of each half.
-  if (lastBar && pos >= 12 && pos !== 15) perc(a, when, 'tick', 0.5 + (pos - 12) * 0.2);
+  // A woodblock fill at the end of each half that builds into the next.
+  if (lastBar && pos >= 12 && pos !== 15) perc(a, when + loose(6), 'tick', 0.45 + (pos - 12) * 0.2);
 }

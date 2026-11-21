@@ -14,7 +14,7 @@ function param() {
 }
 function node(ctx: FakeContext, kind: string) {
   const n: Record<string, unknown> = {
-    gain: param(), frequency: param(), Q: param(), threshold: param(), ratio: param(), delayTime: param(), detune: param(),
+    gain: param(), frequency: param(), Q: param(), threshold: param(), ratio: param(), delayTime: param(), detune: param(), pan: param(),
     connect: (x: unknown) => x,
     disconnect() {},
     start() {
@@ -65,6 +65,8 @@ class FakeContext {
   createBiquadFilter() { return node(this, 'filter'); }
   createDynamicsCompressor() { return node(this, 'comp'); }
   createDelay() { return node(this, 'delay'); }
+  createConvolver() { return node(this, 'conv'); }
+  createStereoPanner() { return node(this, 'pan'); }
   createBufferSource() { return node(this, 'src'); }
   createBuffer(_c: number, len: number) {
     return { sampleRate: this.sampleRate, getChannelData: () => new Float32Array(len) };
