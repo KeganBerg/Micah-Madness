@@ -378,3 +378,27 @@ export function transformKind(grid: Grid, from: number, to: number): number[] {
   );
   return changed;
 }
+
+/**
+ * Fallen leaves blow in: one new leaf lands next to an existing one, on a cell that
+ * has no leaf and isn't blocked (mud or yarn). Returns where it landed, or null.
+ */
+export function spreadLeaf(leaf: boolean[][], blocked: (r: number, c: number) => boolean = () => false, rng: Rng = Math.random): Pos | null {
+  const seen = new Set<number>();
+  const options: Pos[] = [];
+  for (let r = 0; r < leaf.length; r++) {
+    for (let c = 0; c < leaf[0].length; c++) {
+      if (!leaf[r][c]) continue;
+      for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const rr = r + dr, cc = c + dc;
+        if (rr < 0 || cc < 0 || rr >= leaf.length || cc >= leaf[0].length || leaf[rr][cc] || blocked(rr, cc) || seen.has(key(rr, cc))) continue;
+        seen.add(key(rr, cc));
+        options.push([rr, cc]);
+      }
+    }
+  }
+  if (!options.length) return null;
+  const p = options[Math.floor(rng() * options.length)];
+  leaf[p[0]][p[1]] = true;
+  return p;
+}

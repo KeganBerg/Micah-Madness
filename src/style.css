@@ -284,6 +284,16 @@ h2, h3, p { margin: 0; }
 .cell.mud.deep { background: #4a2f1b; box-shadow: inset 0 0 0 3px #2f1c0f, inset 0 0 10px 2px #2a180c; }
 .cell.cleaned { animation: sparkle .6s; }
 @keyframes sparkle { 0% { background: var(--gold); } }
+/* Fallen leaves: they sit under the pieces like mud, and blow in when a move rakes none. */
+.cell.leafy { background: #f3c88a url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><g stroke-linejoin='round' stroke-width='1.2'><path d='M6 10 L11 6 L13 11 L18 9 L15 15 L19 18 L12 18 L10 23 L8 17 L3 16 L7 13 Z' fill='%23e8892f' stroke='%23a8501a'/><path d='M27 4 Q36 6 35 15 Q26 15 27 4 Z' fill='%23d9541f' stroke='%238f2f10'/><path d='M22 26 L27 22 L29 27 L34 25 L31 31 L35 34 L28 34 L26 39 L24 33 L19 32 L23 29 Z' fill='%23ffc12e' stroke='%23b58a00'/><path d='M4 30 Q12 26 14 35 Q6 38 4 30 Z' fill='%23c96a1f' stroke='%238f4510'/></g></svg>") center / 100% 100%; box-shadow: inset 0 0 0 2px #d9884a; }
+.cell.leafy.blown { animation: leaf-blow .6s cubic-bezier(.3, 1.4, .6, 1); }
+@keyframes leaf-blow { 0% { transform: translate(-30%, -40%) rotate(-40deg) scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.cell.raked { animation: leaf-rake .55s ease-out; }
+@keyframes leaf-rake { 0% { background: #ffd79a; } }
+/* Micah's Winter: mud becomes snow to shovel. */
+.board.snowy .cell.mud { background: radial-gradient(circle at 30% 70%, #fff 0 22%, transparent 23%), radial-gradient(circle at 72% 64%, #fff 0 26%, transparent 27%), #bcdaf0; box-shadow: inset 0 0 0 2px #6f9fc4; }
+.board.snowy .cell.mud.deep { background: radial-gradient(circle at 30% 70%, #e6f2fa 0 22%, transparent 23%), radial-gradient(circle at 72% 64%, #e6f2fa 0 26%, transparent 27%), #7fb0d6; box-shadow: inset 0 0 0 3px #3f75a3, inset 0 0 10px 2px #4f86b3; }
+@media (prefers-reduced-motion: reduce) { .cell.leafy.blown, .cell.raked { animation: none; } }
 
 .tile { position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%; transition: transform .26s cubic-bezier(.3, 1.3, .6, 1); will-change: transform; pointer-events: none; }
 .tile.no-anim { transition: none; }
@@ -1110,3 +1120,33 @@ h2.center { margin: 2px 0 6px; }
 /* Cloud save code */
 .cloud-code { margin: 6px 0 10px; padding: 12px; border-radius: var(--radius); background: var(--panel-2); text-align: center; font: 400 28px var(--font-display); letter-spacing: .12em; color: var(--sea-deep, #173a52); user-select: all; -webkit-user-select: all; }
 .code-input { width: 100%; box-sizing: border-box; margin: 10px 0 6px; padding: 12px; min-height: 44px; border-radius: var(--radius); border: 2px solid #c4d2dc; font: 800 18px var(--font-body, inherit); letter-spacing: .08em; text-transform: uppercase; text-align: center; }
+
+/* Micah's Winter */
+.winter-chip {
+  position: absolute; left: var(--s3); bottom: calc(94px + env(safe-area-inset-bottom)); z-index: 3;
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
+  background: #fff; color: #173a52; box-shadow: 0 4px 0 #8fb3cc, 0 8px 20px #0004; text-align: left;
+}
+.weekly-chip ~ .winter-chip { bottom: calc(150px + env(safe-area-inset-bottom)); }
+.winter-chip .snow-icon { width: 28px; height: 28px; }
+.winter-chip:not(.done) .snow-icon { animation: wiggle 1.8s ease-in-out infinite; }
+.winter-chip span { display: grid; line-height: 1.1; }
+.winter-chip b { font-family: var(--font-display); font-weight: 400; font-size: 16px; }
+.winter-chip small { font-size: 11px; font-weight: 800; opacity: .8; }
+.winter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+.winter-node {
+  aspect-ratio: 1; min-height: 44px; border-radius: 14px; display: grid; place-items: center;
+  font: 400 20px var(--font-display); background: #eef6fb; color: #173a52; border: 2px solid #cfe2ee;
+}
+.winter-node svg { width: 20px; height: 20px; }
+.winter-node.current { background: #e8352f; color: #fff; border-color: #a3201c; box-shadow: 0 3px 0 #a3201c; animation: wiggle 2s ease-in-out infinite; }
+.winter-node.done { background: #dff3e4; color: #23925a; border-color: #9fd4ae; }
+.winter-node.locked { opacity: .55; }
+.winter-prizes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.winter-prize { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 14px; background: var(--panel-2); }
+.winter-prize img { width: 48px; height: 48px; filter: grayscale(1) opacity(.55); }
+.winter-prize.have img { filter: none; }
+.winter-prize span { display: grid; line-height: 1.15; }
+.winter-prize b { font-size: 13px; }
+.winter-prize small { font-size: 11px; opacity: .75; }
+@media (prefers-reduced-motion: reduce) { .winter-chip .snow-icon, .winter-node.current { animation: none; } }

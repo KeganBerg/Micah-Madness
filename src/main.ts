@@ -17,6 +17,7 @@ import {
   shuffle,
   swap,
   transformKind,
+  spreadLeaf,
   unkey,
   type ClearResult,
   type Grid,
@@ -29,7 +30,7 @@ import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
+import { LEVELS, ZONES, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -58,6 +59,7 @@ import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
 import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
+import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_LEVELS, claimWinter, isWinterLevel, winterNext, winterNumber, winterOpen, winterWon } from './winter';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -109,9 +111,24 @@ const micahImg = (cls: string, alt = '') =>
 const micahAlt = () => `Micah in her ${costumeById(save.costume).name.toLowerCase()}`;
 const stars3 = (n: number) => [1, 2, 3].map((s) => `<i class="${s <= n ? 'on' : ''}">${UI.star}</i>`).join('');
 
+/** ?winter in the address opens Micah's Winter early, to try it before December. */
+const WINTER_PREVIEW = (() => {
+  try {
+    return new URLSearchParams(location.search).has('winter');
+  } catch {
+    return false;
+  }
+})();
+/** Weekly and winter levels sit outside the map. */
+const isSpecial = (lv: Level) => lv.id === WEEKLY_ID || isWinterLevel(lv);
+const levelTitle = (lv: Level) => (lv.id === WEEKLY_ID ? 'Weekly Walk' : isWinterLevel(lv) ? `Winter ${winterNumber(lv)}` : `Level ${lv.id}`);
+
+/** Set while a winter level is on screen: mud is drawn and described as snow. */
+let snowy = false;
 function goalIcon(goal: Goal): string {
   if (goal.type === 'collect') return svg(KINDS[goal.kind].svg, 'goal-icon');
-  if (goal.type === 'mud') return svg(BOOSTER_ICONS.mud, 'goal-icon');
+  if (goal.type === 'mud') return svg(BOOSTER_ICONS[snowy ? 'snow' : 'mud'], 'goal-icon');
+  if (goal.type === 'leaves') return svg(BOOSTER_ICONS.leaves, 'goal-icon');
   if (goal.type === 'yarn') return svg(BOOSTER_ICONS.yarn, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
@@ -124,7 +141,8 @@ const POWER_NAMES: Record<Power, [string, string]> = {
 const powerOf = (s: Special): Power => (s === 'bark' ? 'bark' : s === 'micah' ? 'micah' : 'zoomies');
 function goalText(goal: Goal): string {
   if (goal.type === 'collect') return `Collect ${goal.count} ${KINDS[goal.kind].plural.toLowerCase()}`;
-  if (goal.type === 'mud') return 'Wash away every mud patch';
+  if (goal.type === 'mud') return snowy ? 'Shovel every snow drift' : 'Wash away every mud patch';
+  if (goal.type === 'leaves') return 'Rake up every fallen leaf';
   if (goal.type === 'yarn') return 'Untangle every ball of yarn';
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
@@ -146,7 +164,15 @@ const TIPS: Record<number, string> = {
   36: 'Micah\u2019s birthday! Every trick you\u2019ve learned comes together.',
   41: 'Dark mud is deep mud. Wash it once to make it ordinary mud, then once more to clean it.',
   46: 'New goal: make power-ups! Four in a row makes Zoomies, an L or T makes a Big Bark, five makes Micah.',
-  56: 'The last stretch. Look for five in a row: some goals need a Micah piece.',
+  1001: 'Snow drifts sit under pieces. Match on top of a drift to shovel it away.',
+  1004: 'Scarves tie a piece down so you can\u2019t swap it. Match through it, or blast it, to untangle it.',
+  1006: 'Deep snow is darker. Shovel it once to make it ordinary snow, then once more to clear it.',
+  1007: 'Make power-ups! Four in a row makes Zoomies, an L or T makes a Big Bark, five makes Micah.',
+  1015: 'The very last winter level. The Santa Hat is waiting!',
+  56: 'Look for five in a row: some goals need a Micah piece.',
+  61: 'Fallen leaves! Match on top of them to rake them up. If a move rakes none, the wind blows one more in, so keep at them.',
+  66: 'That\u2019s Noah\u2019s Arc up ahead. Rake the leaves before they bury the porch.',
+  76: 'The last street before home. Every trick you know, all at once.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
 
@@ -219,6 +245,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${weeklyOpen(save) && Object.keys(save.stars).length > 0
         ? `<button class="weekly-chip ${weeklyWonThisWeek(save) ? 'done' : ''}" data-act="weekly">${UI.paw}<span><b>Weekly Walk</b><small>${weeklyWonThisWeek(save) ? 'Done. New one Monday' : 'New this week'}</small></span></button>`
         : ''}
+      ${winterOpen(save, new Date(), WINTER_PREVIEW)
+        ? `<button class="winter-chip ${winterNext(save) ? '' : 'done'}" data-act="winter">${svg(BOOSTER_ICONS.snow, 'snow-icon')}<span><b>Micah\u2019s Winter</b><small>${winterNext(save) ? `${winterWon(save).length} of ${WINTER_COUNT} done` : 'All done. Ho ho woof!'}</small></span></button>`
+        : ''}
       <nav class="dock" aria-label="Main">
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
@@ -231,6 +260,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="yard"]')!.addEventListener('click', () => showYard());
   screen.querySelector('[data-act="finale"]')?.addEventListener('click', () => showFinale());
   screen.querySelector('[data-act="weekly"]')?.addEventListener('click', () => showWeekly());
+  screen.querySelector('[data-act="winter"]')?.addEventListener('click', () => showWinter());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
@@ -512,7 +542,7 @@ function showWardrobe(onClose: () => void): void {
         if (!isUnlocked(c, clearedUpTo(), save.wardrobe)) {
           if (!('biscuits' in c.unlock)) {
             sfx.warn();
-            toast(`<span><b>${c.name}</b> unlocks when you clear level ${'level' in c.unlock ? c.unlock.level : ''}.</span>`);
+            toast(`<span><b>${c.name}</b>: ${unlockText(c)}.</span>`);
             return;
           }
           if (save.biscuits < c.unlock.biscuits) {
@@ -646,13 +676,14 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
 }
 
 function showLevelIntro(level: Level): void {
+  snowy = !!level.snow;
   const picks: Record<'zoomies' | 'micah', boolean> = { zoomies: false, micah: false };
   const zone = ZONES[level.zone];
   const m = modal(
     `
     <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">${zone.name}</p><h2>${level.id === WEEKLY_ID ? 'Weekly Walk' : `Level ${level.id}`}</h2></div>
+      <div><p class="eyebrow">${isWinterLevel(level) ? 'Micah\u2019s Winter' : zone.name}</p><h2>${levelTitle(level)}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <section>
@@ -675,7 +706,7 @@ function showLevelIntro(level: Level): void {
         .join('')}
       </div>
     </section>
-    <button class="btn play">${level.id === WEEKLY_ID ? 'Start the walk' : `Start level ${level.id}`}</button>`,
+    <button class="btn play">${level.id === WEEKLY_ID ? 'Start the walk' : `Start ${levelTitle(level).toLowerCase()}`}</button>`,
     () => {},
   );
   m.querySelector('.close')!.addEventListener('click', () => m.remove());
@@ -800,6 +831,7 @@ const HOW_TO: [string, string][] = [
   ['Deep mud', 'Darker mud takes two washes: the first turns it into ordinary mud.'],
   ['Power-up goals', 'Some levels ask you to make Zoomies, Big Barks or Micah pieces.'],
   ['Yarn', 'A tangled piece can\u2019t be swapped. Match through it to untangle it.'],
+  ['Fallen leaves', 'Match on top of a leaf to rake it. Any move that rakes none blows one more leaf in.'],
   ['Stars', 'Spend them in Micah\u2019s Yard. Biscuits buy treats in the shop.'],
 ];
 
@@ -1044,6 +1076,37 @@ function showWeekly(): void {
   m.querySelector('[data-act="go"]')!.addEventListener('click', () => (m.remove(), showLevelIntro(lv)));
 }
 
+// ───────────────────────────── Micah's Winter ─────────────────────────────
+
+function showWinter(): void {
+  const won = winterWon(save);
+  const next = winterNext(save);
+  const prize = (id: string, at: number, name: string) => {
+    const have = save.wardrobe.includes(id);
+    return `<div class="winter-prize ${have ? 'have' : ''}"><img src="${costumeUrl(id)}" alt=""><span><b>${name}</b><small>${have ? 'In your Closet' : `Win ${at} levels`}</small></span></div>`;
+  };
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">December only</p><h2>Micah\u2019s Winter</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <p class="body">${WINTER_COUNT} snowy levels to shovel, untangle and fetch through. Each one you win pays <b>${WINTER_BISCUITS} biscuits</b>, and the outfits are yours to keep.</p>
+    <div class="winter-grid">${WINTER_LEVELS.map((lv) => {
+      const n = winterNumber(lv);
+      const done = won.includes(n);
+      const open = done || n === next;
+      return `<button class="winter-node ${done ? 'done' : n === next ? 'current' : 'locked'}" data-n="${n}" ${open ? '' : 'disabled'} aria-label="Winter level ${n}${done ? ', won' : open ? '' : ', locked'}">${done ? UI.check : open ? n : UI.lock}</button>`;
+    }).join('')}</div>
+    <div class="winter-prizes">${prize('antlers', ANTLERS_AT, 'Reindeer Antlers')}${prize('santa', WINTER_COUNT, 'Santa Hat')}</div>
+    ${next ? `<button class="btn" data-act="go">Play winter ${next}</button>` : '<p class="notice">You won every winter level! Tap any snowflake to play it again.</p>'}`, () => {});
+  m.querySelector('.close')!.addEventListener('click', () => m.remove());
+  m.querySelectorAll<HTMLButtonElement>('.winter-node').forEach((b) =>
+    b.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[Number(b.dataset.n) - 1]))),
+  );
+  m.querySelector('[data-act="go"]')?.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[next - 1])));
+}
+
 // ───────────────────────────── Sharing and the finale ─────────────────────────────
 
 async function shareWin(card: { title: string; subtitle: string; stars: number; lines: [string, string][] }): Promise<void> {
@@ -1057,9 +1120,10 @@ const FINALE_BISCUITS = 300;
 
 /** The end of the road (for now): every level done. */
 function showFinale(): void {
-  const firstTime = !save.seen.includes('finale');
+  // 'finale' was the old level-60 ending; the walk home to level 80 is a new finish with its own prize.
+  const firstTime = !save.seen.includes('finale80');
   if (firstTime) {
-    save.seen.push('finale');
+    save.seen.push('finale80');
     save.biscuits += FINALE_BISCUITS;
     persist(save);
   }
@@ -1077,7 +1141,7 @@ function showFinale(): void {
     </div>
     <p class="eyebrow center">All ${ZONES.length} adventures done</p>
     <h2 class="center">Micah\u2019s big finish!</h2>
-    <p class="body center">From the backyard to the starry sleepover, you helped Micah fetch every toy, wash every muddy paw and untangle every bit of yarn. She\u2019s had the best day ever, and now she\u2019s off for the comfiest nap.</p>
+    <p class="body center">From the backyard, past Noah\u2019s Arc and all the way to her own front porch, you helped Micah fetch every toy, wash every muddy paw, untangle every bit of yarn and rake every last leaf. She\u2019s home, she\u2019s fed, and she\u2019s off for the comfiest nap.</p>
     <dl class="stat-rows">
       <dt>Levels cleared</dt><dd>${LEVELS.length} of ${LEVELS.length}</dd>
       <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${stars} of ${LEVELS.length * 3}</dd>
@@ -1117,6 +1181,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const yarn: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
     Array.from({ length: COLS }, (_, c) => (level.yarn?.[r]?.[c] ?? '.') === 'y'),
   );
+  const leaf: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.leaves?.[r]?.[c] === 'l'));
+  const leavesLeft = () => leaf.reduce((n, row) => n + row.filter(Boolean).length, 0);
+  let rakedThisMove = false;
+  let blownSaid = 0;
+  snowy = !!level.snow;
   const locked = (r: number, c: number) => yarn[r][c];
   let moves = level.moves;
   let score = 0;
@@ -1125,7 +1194,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let treatMode = false;
   let dustMode = false;
   /** The board just before the last swap, for the Orthopedic Bed's undo. */
-  type Snap = { grid: Grid; mud: number[][]; yarn: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
+  type Snap = { grid: Grid; mud: number[][]; yarn: boolean[][]; leaf: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
   let undoSnap: Snap | null = null;
   let selected: Pos | null = null;
   let bonusPts = 0;
@@ -1143,8 +1212,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.target,
+    g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.target,
   );
+  const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
 
   // Pre-level boosters: drop specials onto random cells.
   const randomCell = (): Pos => [2 + Math.floor(Math.random() * 4), Math.floor(Math.random() * COLS)];
@@ -1170,7 +1240,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       ${backdropHTML(level.zone)}
       <header class="hud">
         <button class="round-btn back" aria-label="Back to map">${UI.back}</button>
-        <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : level.id}</b></div>
+        <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : isWinterLevel(level) ? 'Winter' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : isWinterLevel(level) ? winterNumber(level) : level.id}</b></div>
         <div class="stat moves"><small>Moves</small><b class="moves-val">${moves}</b></div>
         <div class="stat score"><div class="score-line"><small>Score</small><b class="score-val">0</b></div>
           <div class="star-bar"><div class="star-fill"></div>${level.stars
@@ -1185,7 +1255,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         </div>
         <div class="goals"></div>
       </div>
-      <div class="board-wrap"><div class="board"></div></div>
+      <div class="board-wrap"><div class="board ${level.snow ? 'snowy' : ''}"></div></div>
       <p class="sr-only board-status" aria-live="polite"></p>
       <div class="tools"></div>
     </div>`);
@@ -1227,7 +1297,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     cellEls.push([]);
     for (let c = 0; c < COLS; c++) {
       const cell = document.createElement('div');
-      cell.className = `cell ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''} ${mud[r][c] > 1 ? 'deep' : ''}`;
+      cell.className = `cell ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''} ${mud[r][c] > 1 ? 'deep' : ''} ${leaf[r][c] ? 'leafy' : ''}`;
       cell.style.left = `${(c / COLS) * 100}%`;
       cell.style.top = `${(r / ROWS) * 100}%`;
       boardEl.append(cell);
@@ -1349,7 +1419,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? 'mud patches left' : g.type === 'yarn' ? 'yarn balls left' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -1488,6 +1558,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       score += points;
       let washed = false;
       let untangled = false;
+      let raked = false;
       level.goals.forEach((g, i) => {
         if (g.type === 'collect') remaining[i] -= res.collected[g.kind];
         if (g.type === 'power') remaining[i] -= res.created.filter((cr) => powerOf(cr.tile.special) === g.power).length;
@@ -1514,7 +1585,17 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           bump(save, 'yarn');
           level.goals.forEach((g, i) => g.type === 'yarn' && remaining[i]--);
         }
+        if (leaf[r][c]) {
+          leaf[r][c] = false;
+          cellEls[r][c].classList.remove('leafy', 'blown');
+          cellEls[r][c].classList.add('raked');
+          setTimeout(() => cellEls[r][c].classList.remove('raked'), 600);
+          rakedThisMove = raked = true;
+          bump(save, 'leaves');
+        }
       }
+      syncLeaves();
+      if (raked) sfx.rustle();
       sfx.pop(chain);
       haptic.pop(chain);
       if (washed) sfx.splash();
@@ -1651,6 +1732,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         grid: cloneGrid(grid),
         mud: mud.map((row) => [...row]),
         yarn: yarn.map((row) => [...row]),
+        leaf: leaf.map((row) => [...row]),
         remaining: [...remaining],
         moves,
         score,
@@ -1675,7 +1757,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       renderHud();
       const forced = comboClears(grid, a, b) ?? [];
       if (forced.length) renderAll();
+      rakedThisMove = false;
       await cascade([b, a], forced);
+      if (!rakedThisMove && leavesLeft() > 0) blowLeaf();
     });
     if (legal) await checkEnd();
     armHint();
@@ -1752,6 +1836,18 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
 
+  /** The wind blows one more leaf onto the board, next to the others. */
+  function blowLeaf() {
+    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c]);
+    if (!p) return;
+    const el = cellEls[p[0]][p[1]];
+    el.classList.add('leafy', 'blown');
+    syncLeaves();
+    sfx.whoosh();
+    if (blownSaid++ < 2 || Math.random() < 0.2) say(blownSaid === 1 ? 'Whoosh! The wind blew in another leaf. Rake some each move.' : 'More leaves blew in!', 'sad');
+    renderHud();
+  }
+
   /** Put the board back exactly as it was in a snapshot (Orthopedic Bed). */
   function restore(snap: Snap) {
     clearHint();
@@ -1768,6 +1864,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         cellEls[r][c].classList.toggle('mud', mud[r][c] > 0);
         cellEls[r][c].classList.toggle('deep', mud[r][c] > 1);
         cellEls[r][c].classList.remove('cleaned');
+        leaf[r][c] = snap.leaf[r][c];
+        cellEls[r][c].classList.toggle('leafy', leaf[r][c]);
+        cellEls[r][c].classList.remove('blown', 'raked');
         yarn[r][c] = snap.yarn[r][c];
         if (yarn[r][c] && !yarnEls[r][c]?.isConnected) yarnEls[r][c] = makeYarnEl(r, c);
         else if (!yarn[r][c] && yarnEls[r][c]) {
@@ -1923,6 +2022,49 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       );
       return;
     }
+    if (won && isWinterLevel(level)) {
+      const n = winterNumber(level);
+      const stars = level.stars.filter((s) => score >= s).length || 1;
+      save.winStreak = streakAtStart + 1;
+      bump(save, 'wins');
+      save.tally.bestStreak = Math.max(save.tally.bestStreak ?? 0, save.winStreak);
+      const prize = claimWinter(save, n);
+      const tags = awardBadges(save);
+      persist(save);
+      setTimeout(() => celebrate(tags), 1400);
+      confettiRain(stars * 18 + 10);
+      for (let st = 1; st <= stars; st++) setTimeout(() => sfx.star(st), 300 + st * 200);
+      const next = winterNext(save);
+      const outfit = prize?.hat ? 'santa' : prize?.antlers ? 'antlers' : '';
+      const m = modal(`
+        <div class="modal-head">
+          ${outfit ? `<img class="modal-avatar cheer" src="${costumeUrl(outfit)}" alt="">` : micahImg('modal-avatar cheer')}
+          <div><p class="eyebrow">Micah\u2019s Winter</p><h2>Winter ${n} cleared</h2></div>
+          <button class="round-btn share-btn" aria-label="Share this win">${UI.share}</button>
+        </div>
+        <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
+        <dl class="stat-rows">
+          <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          <dt>Winter levels won</dt><dd>${winterWon(save).length} of ${WINTER_COUNT}</dd>
+          ${prize ? `<dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${prize.biscuits}</dd>` : ''}
+        </dl>
+        ${prize?.hat ? '<p class="notice">Every winter level done! The <b>Santa Hat</b> is waiting in Micah\u2019s Closet. Ho ho woof!</p>' : prize?.antlers ? '<p class="notice">The <b>Reindeer Antlers</b> are waiting in Micah\u2019s Closet!</p>' : ''}
+        <div class="actions">
+          ${next ? `<button class="btn next">Play winter ${next}</button>` : ''}
+          <div class="pair">
+            <button class="btn secondary to-map">Back to map</button>
+            <button class="btn secondary replay">Play again</button>
+          </div>
+        </div>`);
+      m.querySelectorAll<HTMLElement>('.result-stars i.on').forEach((st, i) => setTimeout(() => confetti(st, 50, 50, 14, 2.5), 380 + i * 200));
+      m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
+      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap()));
+      m.querySelector('.next')?.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[next - 1])));
+      m.querySelector('.share-btn')!.addEventListener('click', () =>
+        shareWin({ title: `Winter ${n} cleared`, subtitle: 'Micah\u2019s Winter', stars, lines: [['Score', score.toLocaleString()], ['Winter levels', `${winterWon(save).length} of ${WINTER_COUNT}`], ['Win streak', String(save.winStreak)]] }),
+      );
+      return;
+    }
     if (won) {
       const stars = level.stars.filter((s) => score >= s).length || 1;
       const firstClear = !(save.stars[level.id] > 0);
@@ -1990,7 +2132,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const m = modal(`
         <div class="modal-head">
           ${micahImg('modal-avatar sad')}
-          <div><p class="eyebrow">${level.id === WEEKLY_ID ? 'Weekly Walk' : `Level ${level.id}`}</p><h2>Out of moves</h2></div>
+          <div><p class="eyebrow">${levelTitle(level)}</p><h2>Out of moves</h2></div>
           <span></span>
         </div>
         <section>
@@ -2028,7 +2170,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         save.winStreak = 0;
         persist(save);
       };
-      m.querySelector('.quit')!.addEventListener('click', () => (endStreak(), m.remove(), showMap(level.id === WEEKLY_ID ? undefined : level.id)));
+      m.querySelector('.quit')!.addEventListener('click', () => (endStreak(), m.remove(), showMap(isSpecial(level) ? undefined : level.id)));
       m.querySelector('.retry')!.addEventListener('click', () => (endStreak(), m.remove(), showLevelIntro(level)));
     }
   }
@@ -2101,7 +2243,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const describe = ([r, c]: Pos) => {
     const t = grid[r][c];
     const what = !t ? 'empty' : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
-    const extra = [mud[r][c] > 1 ? 'deep mud' : mud[r][c] ? 'mud' : '', yarn[r][c] ? 'tangled in yarn' : ''].filter(Boolean).join(', ');
+    const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : ''].filter(Boolean).join(', ');
     return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
   };
   const announce = (text: string) => {
@@ -2160,7 +2302,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   });
 
-  screen.querySelector('.back')!.addEventListener('click', () => showMap(level.id === WEEKLY_ID ? undefined : level.id));
+  screen.querySelector('.back')!.addEventListener('click', () => showMap(isSpecial(level) ? undefined : level.id));
 
   renderAll();
   renderHud();

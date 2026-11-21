@@ -1,6 +1,6 @@
 // Level-balance bot used by scripts/sim.test.ts. Pure logic, no DOM.
-import { mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
-import { applyClear, applyGravity, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, shuffle, swap, unkey, type Grid, type Pos } from '../src/board';
+import { leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
+import { applyClear, applyGravity, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -10,8 +10,12 @@ export function play(lv: Level, smart = true): Outcome {
   const grid: Grid = createGrid(8, 8, Math.random, lv.kinds);
   const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => mudDepth(lv, r, c)));
   const yarn = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.yarn?.[r]?.[c] === 'y'));
+  const leaf = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.leaves?.[r]?.[c] === 'l'));
   const locked = (r: number, c: number) => yarn[r][c];
-  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.target));
+  const leavesLeft = () => leaf.flat().filter(Boolean).length;
+  let raked = false;
+  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.target));
+  const syncLeaves = () => lv.goals.forEach((g, i) => g.type === 'leaves' && (rem[i] = leavesLeft()));
   let score = 0;
   const done = () => lv.goals.every((g, i) => (g.type === 'score' ? score >= g.target : rem[i] <= 0));
 
@@ -29,7 +33,9 @@ export function play(lv: Level, smart = true): Outcome {
         const [r, c] = unkey(k);
         if (mud[r][c]) { mud[r][c]--; lv.goals.forEach((g, i) => g.type === 'mud' && rem[i]--); }
         if (yarn[r][c]) { yarn[r][c] = false; lv.goals.forEach((g, i) => g.type === 'yarn' && rem[i]--); }
+        if (leaf[r][c]) { leaf[r][c] = false; raked = true; }
       }
+      syncLeaves();
       applyClear(grid, res); applyGravity(grid, Math.random, lv.kinds);
       chain++; pref = []; forced = [];
     }
@@ -49,6 +55,7 @@ export function play(lv: Level, smart = true): Outcome {
       const [rr, cc] = unkey(k);
       if (lv.goals.some((g, i) => g.type === 'mud' && rem[i] > 0) && mud[rr][cc]) v += smart ? 5 + mud[rr][cc] : 3;
       if (lv.goals.some((g, i) => g.type === 'yarn' && rem[i] > 0) && yarn[rr][cc]) v += smart ? 5 : 3;
+      if (leaf[rr][cc]) v += smart ? 6 : 3;
     }
     for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += smart ? 8 : 4; });
     lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
@@ -69,7 +76,9 @@ export function play(lv: Level, smart = true): Outcome {
     const forced = comboClears(grid, a, b) ?? [];
     swap(grid, a, b);
     moves--;
+    raked = false;
     cascade([b, a], forced);
+    if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c]); syncLeaves(); }
     let n = 0; while (!hasMove(grid, locked) && n++ < 20) shuffle(grid);
   }
   const won = done();
@@ -87,7 +96,7 @@ export function play(lv: Level, smart = true): Outcome {
     score += moves * 100;
     cascade([], forced);
   }
-  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.count)));
+  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? Math.max(1, leafCount(lv)) : g.count)));
   return { won, movesLeft, score, left };
 }
 

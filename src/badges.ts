@@ -5,7 +5,7 @@ import { LEVELS } from './levels';
 import { DECOR } from './yard';
 import type { SaveData } from './save';
 
-export type TallyKey = 'mud' | 'yarn' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps';
+export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps';
 
 export interface Badge {
   id: string;

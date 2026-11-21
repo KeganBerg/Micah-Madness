@@ -8,24 +8,26 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'vitest';
 import { LEVELS } from '../src/levels';
+import { WINTER_LEVELS } from '../src/winter';
 import { play, summarize } from './sim';
 
 test.skipIf(!process.env.SIM)('simulate win rates', () => {
   const out: string[] = [];
+  const set = process.env.SIM_WINTER ? WINTER_LEVELS : LEVELS;
   const from = Number(process.env.SIM_FROM ?? 1) - 1;
-  const to = Number(process.env.SIM_TO ?? LEVELS.length);
+  const to = Number(process.env.SIM_TO ?? set.length);
   const N = Number(process.env.SIM_N ?? 100);
   const smart = process.env.SIM_BOT !== 'greedy';
   for (let i = from; i < to; i++) {
-    const s = summarize(LEVELS[i], N, smart);
-    out.push(`L${i + 1}\twin ${s.win}%\tspare ${s.spare}\tmedian ${s.p50}\tp85 ${s.p85}\tstars ${s.stars.join('/')}%\tstuck ${s.stuck.join('/')}%`);
+    const s = summarize(set[i], N, smart);
+    out.push(`${process.env.SIM_WINTER ? 'W' : 'L'}${i + 1}\twin ${s.win}%\tspare ${s.spare}\tmedian ${s.p50}\tp85 ${s.p85}\tstars ${s.stars.join('/')}%\tstuck ${s.stuck.join('/')}%`);
   }
   writeFileSync(join(tmpdir(), 'micah-sim.txt'), out.join('\n') + '\n');
 }, 3600000);
 
 // Catches a level change that makes a level unwinnable: even the bot wins every level well over a third of the time.
 test('the bot can win every level', () => {
-  for (const lv of LEVELS) {
+  for (const lv of [...LEVELS, ...WINTER_LEVELS]) {
     let won = false;
     for (let t = 0; t < 25 && !won; t++) won = play(lv).won;
     if (!won) throw new Error(`L${lv.id} was not won in 25 bot runs`);

@@ -34,13 +34,15 @@ export interface SaveData {
   seen: string[];
   /** Weekly Walk: the week (its Monday) last won, and paw stamps collected. */
   weekly: { won: string; stamps: number };
+  /** Micah's Winter: which winter (its December's year) and the winter levels won in it. */
+  winter: { season: number; won: number[] };
   /** Cloud save: the secret code this save syncs under ('' when off). */
   cloud: string;
   /** When this save was last written (ms), to tell which copy is newer. */
   savedAt: number;
 }
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 /** A copy of the stored save from before it was upgraded or found damaged, so nothing is ever lost outright. */
@@ -76,6 +78,7 @@ export function freshSave(): SaveData {
     haptics: true,
     seen: [],
     weekly: { won: '', stamps: 0 },
+    winter: { season: 0, won: [] },
     cloud: '',
     savedAt: 0,
   };
@@ -134,12 +137,23 @@ export function migrate(raw: unknown): SaveData {
     })(),
     badges: Array.isArray(d.badges) ? [...new Set(d.badges.filter((x): x is string => typeof x === 'string'))] : [],
     costume: typeof d.costume === 'string' ? d.costume : base.costume,
-    wardrobe: Array.isArray(d.wardrobe) ? [...new Set(d.wardrobe.filter((x): x is string => typeof x === 'string'))] : [],
+    wardrobe: (() => {
+      const w = Array.isArray(d.wardrobe) ? [...new Set(d.wardrobe.filter((x): x is string => typeof x === 'string'))] : [];
+      // The Champion outfit moved from level 60 to level 80: anyone who already finished level 60 keeps it.
+      const st = (d.stars && typeof d.stars === 'object' ? d.stars : {}) as Record<string, unknown>;
+      if ((num(st['60']) ?? 0) > 0 && !w.includes('champion')) w.push('champion');
+      return w;
+    })(),
     haptics: typeof d.haptics === 'boolean' ? d.haptics : base.haptics,
     seen: Array.isArray(d.seen) ? [...new Set(d.seen.filter((x): x is string => typeof x === 'string'))] : [],
     weekly: (() => {
       const w = (d.weekly && typeof d.weekly === 'object' ? d.weekly : {}) as Record<string, unknown>;
       return { won: typeof w.won === 'string' ? w.won : '', stamps: num(w.stamps, 0, 9999) ?? 0 };
+    })(),
+    winter: (() => {
+      const w = (d.winter && typeof d.winter === 'object' ? d.winter : {}) as Record<string, unknown>;
+      const won = Array.isArray(w.won) ? w.won.map((x) => num(x, 1, 99)).filter((x): x is number => x !== undefined) : [];
+      return { season: num(w.season, 0, 9999) ?? 0, won: [...new Set(won)].sort((a, b) => a - b) };
     })(),
     cloud: typeof d.cloud === 'string' && /^[A-HJ-NP-Z2-9]{10}$/.test(d.cloud) ? d.cloud : '',
     savedAt: num(d.savedAt) ?? 0,

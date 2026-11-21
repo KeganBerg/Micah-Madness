@@ -126,6 +126,14 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <path d="M78 74 C88 82 90 90 84 94" fill="none" stroke="#a83a72" stroke-width="3" stroke-linecap="round"/>`,
 };
 
+/** A fallen autumn leaf (the leaves goal). */
+BOOSTER_ICONS.leaves = `<path d="M50 10 L58 30 L78 22 L70 44 L90 48 L72 62 L78 80 L56 72 L50 90 L44 72 L22 80 L28 62 L10 48 L30 44 L22 22 L42 30 Z" fill="#e8892f" stroke="#a8501a" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M50 30 V92 M50 52 L66 40 M50 64 L34 52" fill="none" stroke="#a8501a" stroke-width="3" stroke-linecap="round"/>`;
+/** A snow drift (mud on winter levels). */
+BOOSTER_ICONS.snow = `<path d="M10 74 C12 54 30 46 42 52 C50 34 80 36 84 56 C94 58 94 74 88 78 Z" fill="#ffffff" stroke="#8fb3cc" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M30 64 Q42 58 54 64 M60 60 Q70 56 78 62" fill="none" stroke="#cfe2ee" stroke-width="3" stroke-linecap="round"/>
+          <path d="M66 14 V34 M57 19 L75 29 M57 29 L75 19" stroke="#8fb3cc" stroke-width="3" stroke-linecap="round"/>`;
+
 /** Loose strands drawn over a tangled cell; see-through so the piece underneath still reads. */
 export const YARN_OVERLAY = `<svg viewBox="0 0 100 100" class="yarn-strands" aria-hidden="true" preserveAspectRatio="none">
   <path d="M-4 22 C30 6 62 40 104 18 M-4 52 C26 34 70 70 104 46 M-4 82 C34 62 66 98 104 76" fill="none" stroke="#e86aa6" stroke-width="7" stroke-linecap="round"/>

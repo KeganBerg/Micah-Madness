@@ -2,7 +2,7 @@
 // is drawn over a hand-drawn Micah (a black dog with a grey muzzle) in a 100x100 box.
 import micahPhoto from './assets/micah.png';
 
-export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number };
+export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number } | { winter: number };
 
 export interface Costume {
   id: string;
@@ -129,6 +129,21 @@ const championMedal = `
   <circle cx="50" cy="75" r="9" fill="#ffd23f" stroke="#b58a00" stroke-width="2.5"/>
   <path d="M50 69.5 L51.8 73.2 L55.8 73.6 L52.8 76.3 L53.6 80.2 L50 78.2 L46.4 80.2 L47.2 76.3 L44.2 73.6 L48.2 73.2 Z" fill="#fff4c2"/>`;
 
+// Micah's Winter prizes: reindeer antlers (with a glowing nose) and a Santa hat.
+const antlers = `
+  <path d="M38 22 C34 12 30 8 24 2 M33 14 L24 14 M30 9 L33 1" fill="none" stroke="#8a5a26" stroke-width="4" stroke-linecap="round"/>
+  <path d="M62 22 C66 12 70 8 76 2 M67 14 L76 14 M70 9 L67 1" fill="none" stroke="#8a5a26" stroke-width="4" stroke-linecap="round"/>
+  <path d="M34 22 Q50 14 66 22" fill="none" stroke="#e8352f" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="50" cy="44" r="5.8" fill="#e8352f"/><circle cx="48.2" cy="42.4" r="1.6" fill="#fff" opacity=".7"/>`;
+const santaHat = `
+  <path d="M28 24 C30 6 50 -2 66 4 C76 8 82 16 86 30 L74 22 Z" fill="#e8352f" stroke="#a3201c" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="86" cy="31" r="6" fill="#fff" stroke="#d4e6f1" stroke-width="1.5"/>
+  <path d="M24 26 Q50 14 76 24 Q78 31 76 32 Q50 22 26 34 Q22 31 24 26 Z" fill="#fff" stroke="#d4e6f1" stroke-width="1.5"/>`;
+const winterScarf = `
+  <path d="M30 58 Q50 68 70 58 L70 64 Q50 74 30 64 Z" fill="#e8352f"/>
+  <path d="M58 64 L62 84 L54 84 L52 66 Z" fill="#e8352f"/>
+  <path d="M34 61 H40 M46 64 H52 M58 62 H64 M55 74 H61" stroke="#fff" stroke-width="2.2"/>`;
+
 export const COSTUMES: Costume[] = [
   { id: 'lobster', name: 'Lobster Suit', desc: 'The classic. Claws and all.', unlock: { free: true } },
   { id: 'cap', name: 'Orange Cap', desc: 'Her everyday look.', unlock: { free: true }, front: cap },
@@ -142,7 +157,9 @@ export const COSTUMES: Costume[] = [
   { id: 'pirate', name: 'Pirate Captain', desc: 'Arr. Mostly hunts for biscuits.', unlock: { level: 25 }, front: pirate },
   { id: 'crown', name: 'Royal Crown', desc: 'Queen of the yard.', unlock: { level: 40 }, front: crown },
   { id: 'raincoat', name: 'Rain Slicker', desc: 'For the walker who goes out every week, rain or shine.', unlock: { weekly: 4 }, suit: raincoatSuit, front: raincoatHood },
-  { id: 'champion', name: 'Champion', desc: 'For finishing every last level. The goodest girl.', unlock: { level: 60 }, suit: championSash, front: championMedal },
+  { id: 'antlers', name: 'Reindeer Antlers', desc: 'With a nose so bright she can find her treats in the dark.', unlock: { winter: 8 }, front: antlers },
+  { id: 'santa', name: 'Santa Hat', desc: 'For finishing all of Micah\u2019s Winter. Ho ho woof.', unlock: { winter: 15 }, suit: winterScarf, front: santaHat },
+  { id: 'champion', name: 'Champion', desc: 'For walking every last level, all the way home. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
 ];
 
 export const DEFAULT_COSTUME = 'lobster';
@@ -172,7 +189,7 @@ export function costumeUrl(id: string): string {
 /** Whether the player can wear it now. `cleared` is the highest level cleared. */
 export function isUnlocked(c: Costume, cleared: number, bought: string[]): boolean {
   if ('free' in c.unlock) return true;
-  if ('level' in c.unlock) return cleared >= c.unlock.level;
+  if ('level' in c.unlock) return cleared >= c.unlock.level || bought.includes(c.id);
   return bought.includes(c.id);
 }
 
@@ -180,5 +197,6 @@ export function unlockText(c: Costume): string {
   if ('free' in c.unlock) return 'Free';
   if ('level' in c.unlock) return `Clear level ${c.unlock.level}`;
   if ('weekly' in c.unlock) return `Win ${c.unlock.weekly} Weekly Walks`;
+  if ('winter' in c.unlock) return c.unlock.winter >= 15 ? 'Finish Micah\u2019s Winter (December)' : `Win ${c.unlock.winter} levels of Micah\u2019s Winter`;
   return `${c.unlock.biscuits} biscuits`;
 }
