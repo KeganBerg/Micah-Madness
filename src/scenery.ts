@@ -565,6 +565,66 @@ const moon = (): Prop => ({
   svg: `${hit(16, -24)}<g class="bob"><circle cx="0" cy="-26" r="13" fill="#fff3c4"/><circle cx="6" cy="-30" r="11" fill="#5b5a9e"/></g>`,
 });
 
+
+// ── Neighbourhood Walk: the streets on Micah's daily walk ──
+const house = (wall: string, roof: string, door = '#e8352f'): Prop => ({
+  r: 36, poke: 'wobble', fx: 'leaf', sfx: 'knock',
+  svg: `${shadow(34, 0.16)}
+    <rect x="-26" y="-36" width="52" height="36" fill="${wall}" stroke="#0003" stroke-width="1.5"/>
+    <path d="M-32 -34 L0 -60 L32 -34 Z" fill="${roof}" stroke="#0004" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="12" y="-56" width="7" height="12" fill="${roof}" stroke="#0004" stroke-width="1"/>
+    <rect x="-20" y="-28" width="12" height="11" fill="#cfe6f5" stroke="#fff" stroke-width="2"/><path d="M-14 -28 V-17 M-20 -22.5 H-8" stroke="#fff" stroke-width="1.2"/>
+    <rect x="8" y="-28" width="12" height="11" fill="#ffe7a3" stroke="#fff" stroke-width="2"/><path d="M14 -28 V-17 M8 -22.5 H20" stroke="#fff" stroke-width="1.2"/>
+    <rect x="-5" y="-18" width="10" height="18" rx="1" fill="${door}"/><circle cx="2.5" cy="-9" r="1" fill="#ffc12e"/>`,
+});
+const mailbox = (): Prop => ({
+  r: 14, poke: 'hop', sfx: 'knock',
+  say: ['Mail’s here. Micah suspects the mail carrier, as always.', 'Micah checked the mailbox. Nothing for her. Rude.', 'The little flag is up. Micah barks at it, just in case.'],
+  svg: `${shadow(8, 0.15)}<rect x="-1.6" y="-22" width="3.2" height="22" fill="#6b4529"/>
+    <path d="M-10 -22 V-32 Q-10 -38 0 -38 Q10 -38 10 -32 V-22 Z" fill="#2f8fe0" stroke="#1f5f9e" stroke-width="1.3"/>
+    <rect x="10" y="-36" width="2" height="10" fill="#e8352f"/><rect x="10" y="-36" width="6" height="4" fill="#e8352f"/>`,
+});
+const leafPile = (): Prop => ({
+  r: 20, poke: 'bounce', fx: 'leaf', sfx: 'rustle',
+  say: ['A perfect leaf pile. Micah jumped in. It is now a leaf carpet.', 'Somebody raked this. Micah is very sorry. (She is not sorry.)', 'Crunch crunch crunch.'],
+  svg: `${shadow(20, 0.14)}<path d="M-22 0 Q-18 -16 -4 -18 Q8 -24 16 -14 Q24 -10 22 0 Z" fill="#e8892f"/>
+    <circle cx="-10" cy="-10" r="3" fill="#d9541f"/><circle cx="4" cy="-15" r="3" fill="#ffc12e"/><circle cx="12" cy="-6" r="3" fill="#c96a1f"/><circle cx="-2" cy="-5" r="2.6" fill="#ffc12e"/><circle cx="-16" cy="-3" r="2.4" fill="#a8501a"/>`,
+});
+const gnome = (): Prop => ({
+  r: 10, poke: 'spin', sfx: 'boing',
+  say: ['A garden gnome. Micah has questions.', 'The gnome hasn’t moved. Micah is keeping an eye on him anyway.'],
+  svg: `${shadow(7, 0.15)}<path d="M-6 0 L-5 -10 H5 L6 0 Z" fill="#2f8fe0"/><path d="M-5 -10 Q0 -6 5 -10 L3 -14 H-3 Z" fill="#fff"/>
+    <circle cx="0" cy="-15" r="3.4" fill="#f3c9a8"/><path d="M-5 -16 L0 -30 L5 -16 Z" fill="#e8352f"/>`,
+});
+const catWindow = (): Prop => ({
+  r: 22, poke: 'hop', sfx: 'bark',
+  say: ['The neighbour’s cat. Micah’s sworn enemy since forever.', 'The cat yawns. Micah takes this personally.', 'Micah: BARK. The cat: blinks slowly.'],
+  svg: `${shadow(20, 0.14)}<rect x="-20" y="-34" width="40" height="34" fill="#d9c7a3" stroke="#0003" stroke-width="1.5"/>
+    <rect x="-12" y="-28" width="24" height="18" fill="#cfe6f5" stroke="#fff" stroke-width="2.4"/>
+    <g class="critter"><ellipse cx="0" cy="-12" rx="7" ry="4" fill="#e8892f"/><circle cx="0" cy="-17" r="5" fill="#e8892f"/>
+    <path d="M-4.5 -20 L-3.5 -25 L-1 -21 Z M4.5 -20 L3.5 -25 L1 -21 Z" fill="#e8892f"/>
+    <path d="M-3 -17.5 h2 M1 -17.5 h2" stroke="#2b2b2b" stroke-width="1.1" stroke-linecap="round"/></g>
+    <rect x="-14" y="-10" width="28" height="3" fill="#fff"/>`,
+});
+const bin = (): Prop => ({
+  r: 10, poke: 'wobble', sfx: 'knock',
+  say: ['Bin day. Micah would like to inspect the contents.', 'Something smells AMAZING in there.'],
+  svg: `${shadow(8, 0.15)}<path d="M-7 0 L-8 -20 H8 L7 0 Z" fill="#23925a" stroke="#176a40" stroke-width="1.2"/><rect x="-9" y="-23" width="18" height="4" rx="1" fill="#1b7a4a"/>`,
+});
+const homePorch = (): Prop => ({
+  r: 44, poke: 'hop', fx: 'heart', sfx: 'bark',
+  say: ['Home! Paws wiped, bowl full, best spot on the couch.', 'Micah’s front door. Every walk ends here.', 'The doormat says MICAH. She agrees.'],
+  svg: `${shadow(42, 0.18)}
+    <rect x="-38" y="-46" width="76" height="46" fill="#f2c27b" stroke="#b5833f" stroke-width="2"/>
+    <path d="M-44 -44 L0 -76 L44 -44 Z" fill="#e8352f" stroke="#a3201c" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="-30" y="-36" width="16" height="14" fill="#ffe7a3" stroke="#fff" stroke-width="2.4"/>
+    <rect x="14" y="-36" width="16" height="14" fill="#ffe7a3" stroke="#fff" stroke-width="2.4"/>
+    <rect x="-8" y="-26" width="16" height="26" rx="2" fill="#173a52"/><circle cx="4" cy="-13" r="1.4" fill="#ffc12e"/>
+    <path d="M-10 -32 Q0 -38 10 -32" fill="none" stroke="#23925a" stroke-width="3"/>
+    <rect x="-14" y="0" width="28" height="7" rx="1.5" fill="#a8743a"/>
+    <text x="0" y="5.6" text-anchor="middle" font-size="5.4" font-weight="900" fill="#fff" font-family="sans-serif">MICAH</text>`,
+});
+
 /** Mown show-ring stripes for the Big Dog Show. */
 const mownStripes = (w: number, b: Band): string => {
   let s = '';
@@ -749,6 +809,44 @@ export const THEMES: Theme[] = [
       [() => sparkleStar(), 8], [() => pine('#3d4a7a', '#30395f', false), 3], [() => dog('#2b2b2b', '#151515', true), 1],
     ],
   },
+
+  // 13 · Neighbourhood Walk: tidy houses, mailboxes and leaves piling up on every lawn.
+  {
+    ground: '#8fae5e', dark: '#81a052', light: '#9dbc6b', path: '#d8d2c4', edge: '#a39a86', dots: '#e8892f',
+    texture: mix(tuft('#6f8f45'), dot('#e8892f', 1.6), dot('#d9541f', 1.4), dot('#ffc12e', 1.2)),
+    props: (r) => [
+      [() => house('#fbf4e6', '#5d6f7c'), 1], [() => house('#cfe6f5', '#8a5a26', '#23925a'), 1], [() => mailbox(), 2], [() => leafPile(), 3],
+      [() => tree('#e8892f', '#c96a1f'), 3], [() => gnome(), 1], [() => hydrant(), 1], [() => fence(), 2], [() => bird(pick(r, ['#e8352f', '#5d6f7c'])), 2],
+      [() => dog('#c9893f', '#8a5a26', true), 1],
+    ],
+  },
+  // 14 · Noah's Arc Lane: the famous falling-down house, the neighbour's cat, and more leaves.
+  {
+    ground: '#7d8f5a', dark: '#71834f', light: '#8a9c66', path: '#c9bfa8', edge: '#8f8470', dots: '#c96a1f',
+    texture: mix(tuft('#5f7040'), dot('#c96a1f', 1.6), dot('#ffc12e', 1.2)),
+    props: (r) => [
+      [() => noahsArc(), 1], [() => catWindow(), 1], [() => leafPile(), 3], [() => tree('#d9541f', '#b8401a'), 3], [() => bin(), 2],
+      [() => mailbox(), 1], [() => lamp(), 2], [() => mushroom(), 2], [() => bird(pick(r, ['#2b2b2b', '#5d6f7c'])), 2],
+    ],
+  },
+  // 15 · The Long Way Home: every hydrant, lamp post and bin gets a good sniff.
+  {
+    ground: '#a7834e', dark: '#9a7744', light: '#b48f5a', path: '#e3d7bd', edge: '#9e8c6a', dots: '#e8892f',
+    texture: mix(dot('#e8892f', 1.6), dot('#d9541f', 1.4), tuft('#7f6a3a')),
+    props: (r) => [
+      [() => house('#ffe0ea', '#a3201c', '#2f8fe0'), 1], [() => hydrant(), 3], [() => lamp(), 3], [() => bin(), 2], [() => leafPile(), 3],
+      [() => tree('#e8892f', '#c96a1f', 1.1), 3], [() => bench(), 1], [() => signpost('HOME →'), 1], [() => pawTrail(r), 2],
+    ],
+  },
+  // 16 · Front Porch: Micah's own house at the very top, leaves on the steps, home at last.
+  {
+    ground: '#9c6b45', dark: '#8f603c', light: '#a97851', path: '#f1d9a8', edge: '#a8743a', dots: '#ffc12e',
+    texture: mix(dot('#ffc12e', 1.4), dot('#d9541f', 1.6), dot('#fff3c4', 1.1)),
+    props: () => [
+      [() => homePorch(), 1], [() => leafPile(), 4], [() => pumpkin(), 2], [() => tree('#d9541f', '#b8401a', 1.1), 3], [() => mailbox(), 1],
+      [() => gnome(), 1], [() => lamp(), 2], [() => bird('#e8352f'), 2],
+    ],
+  },
 ];
 
 // ───────────────────────────── layout ─────────────────────────────
@@ -847,6 +945,7 @@ export function sceneryHTML(s: SceneInput): string {
 
     // Ambient extras: falling snow on Snow Day, drifting confetti and sparkles for the parties.
     if (zi === 5) for (let i = 0; i < 22; i++) svg += `<circle class="flake" style="animation-delay:-${f(r() * 7)}s;animation-duration:${f(6 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" r="${f(1.4 + r() * 1.8)}" fill="#fff"/>`;
+    if (zi >= 12) for (let i = 0; i < 10; i++) svg += `<ellipse class="flake" style="animation-delay:-${f(r() * 8)}s;animation-duration:${f(7 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" rx="3" ry="1.6" fill="${pick(r, ['#e8892f', '#d9541f', '#ffc12e'])}"/>`;
     if (zi === 8) for (let i = 0; i < 26; i++) svg += `<ellipse class="flake" style="animation-delay:-${f(r() * 7)}s;animation-duration:${f(3 + r() * 2)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" rx="1" ry="3" fill="#cfe6f5" opacity=".8"/>`;
     if (zi === 4 || zi === 7 || zi === 11) for (let i = 0; i < 8; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="1.6" fill="#fff"/>`;
 
@@ -966,6 +1065,10 @@ export function backdropProps(zone: number): { back: string[]; hurdle: string } 
     [[() => pine('#2f6a3c', '#245a31', false, 1.15), () => tent('#e8352f', '#a3201c'), () => campfire(), () => tent('#2f8fe0', '#1f5f9e'), () => pine('#2f6a3c', '#245a31')], () => log()],
     [[() => tree('#e8892f', '#c96a1f'), () => pumpkin(1.3), () => hay(), () => pumpkin(), () => tree('#d9541f', '#b8401a', 0.9)], () => pumpkin(0.8)],
     [[() => tent('#8e5bd6', '#5a3392'), () => pillow('#f6b8c8'), () => lamp(), () => pine('#3d4a7a', '#30395f'), () => pillow('#fff3c4')], () => pillow('#b38df0')],
+    [[() => house('#fbf4e6', '#5d6f7c'), () => tree('#e8892f', '#c96a1f'), () => mailbox(), () => house('#cfe6f5', '#8a5a26', '#23925a'), () => fence()], () => leafPile()],
+    [[() => tree('#d9541f', '#b8401a'), () => catWindow(), () => noahsArc(), () => bin(), () => lamp()], () => leafPile()],
+    [[() => house('#ffe0ea', '#a3201c', '#2f8fe0'), () => lamp(), () => hydrant(), () => tree('#e8892f', '#c96a1f'), () => bin()], () => hydrant()],
+    [[() => tree('#d9541f', '#b8401a'), () => pumpkin(), () => homePorch(), () => mailbox(), () => lamp()], () => leafPile()],
   ];
   const [back, hurdle] = sets[zone % sets.length];
   return { back: back.map((p) => p().svg), hurdle: hurdle().svg };

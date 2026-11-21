@@ -40,6 +40,10 @@ export const LOOKS: Look[] = [
   { sky: '#f0a46a', far: '#b9806a', hill: '#3a6e37', ground: '#4f8a4b', path: '#d2b98a', speck: ['#3a6e37', '#7a5233'], sun: 'sunset', cloud: '#ffd6b0', weather: '', chase: 'firefly', outfit: 'bandana' },
   { sky: '#f5c07a', far: '#e2a160', hill: '#c97a3a', ground: '#c9884a', path: '#f1d9a8', speck: ['#e07a1f', '#ffc12e'], sun: 'sun', cloud: '#fff1dc', weather: 'leaves', chase: 'leaf', outfit: 'scarf' },
   { sky: '#2e2b6a', far: '#3b3880', hill: '#46448e', ground: '#5b5a9e', path: '#8e8acb', speck: ['#ffffff', '#8e8acb'], sun: 'moon', cloud: '', weather: 'stars', chase: 'star', outfit: 'nightcap' },
+  { sky: '#f7c99a', far: '#c9b48a', hill: '#8fae5e', ground: '#8fae5e', path: '#d8d2c4', speck: ['#e8892f', '#ffc12e'], sun: 'sun', cloud: '#fff1dc', weather: 'leaves', chase: 'leaf', outfit: 'bandana' },
+  { sky: '#c9c0b0', far: '#a7a08c', hill: '#7d8f5a', ground: '#7d8f5a', path: '#c9bfa8', speck: ['#c96a1f', '#ffc12e'], sun: '', cloud: '#e8e2d6', weather: 'leaves', chase: 'squirrel', outfit: 'scarf' },
+  { sky: '#f0b07a', far: '#c98a5a', hill: '#a7834e', ground: '#a7834e', path: '#e3d7bd', speck: ['#e8892f', '#d9541f'], sun: 'sunset', cloud: '#ffd6b0', weather: 'leaves', chase: 'ball', outfit: 'scarf' },
+  { sky: '#e89a6a', far: '#b9806a', hill: '#9c6b45', ground: '#9c6b45', path: '#f1d9a8', speck: ['#ffc12e', '#d9541f'], sun: 'sunset', cloud: '#ffd6b0', weather: 'leaves', chase: 'leaf', outfit: 'bandana' },
 ];
 
 // ───────────────────────────── Micah, side on ─────────────────────────────

@@ -4,6 +4,7 @@ export type Goal =
   | { type: 'collect'; kind: number; count: number }
   | { type: 'mud' } // clean every muddy cell
   | { type: 'yarn' } // untangle every yarn-wrapped cell
+  | { type: 'leaves' } // rake every fallen leaf (they spread on any move that rakes none)
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
 
@@ -18,6 +19,9 @@ export interface Level {
   stars: [number, number, number]; // score thresholds
   mud?: string[]; // 8 rows, 'm' marks a muddy cell, 'M' deep mud that takes two washes
   yarn?: string[]; // 8 rows, 'y' marks a cell wrapped in yarn (its piece can't be swapped)
+  leaves?: string[]; // 8 rows, 'l' marks a cell under fallen leaves
+  /** Micah's Winter: mud is drawn as snow drifts to shovel. */
+  snow?: boolean;
 }
 
 export interface Zone {
@@ -39,7 +43,11 @@ export const ZONES: Zone[] = [
   { name: 'Rainy Walk', blurb: 'Puddles, wellies and mud so deep it takes two washes.', sky: '#c9d6e3', ground: '#6f8a7a' },
   { name: 'Camping Trip', blurb: 'Tents, campfire snacks and a tree to sniff for every power-up.', sky: '#ffd9a8', ground: '#4f8a4b' },
   { name: 'Pumpkin Patch', blurb: 'Crunchy leaves and pumpkins bigger than Micah.', sky: '#ffe6c2', ground: '#d9884a' },
-  { name: 'Starry Sleepover', blurb: 'One last big adventure, then the comfiest nap.', sky: '#c7c3f0', ground: '#5b5a9e' },
+  { name: 'Starry Sleepover', blurb: 'A big night under the stars, then the comfiest nap.', sky: '#c7c3f0', ground: '#5b5a9e' },
+  { name: 'Neighbourhood Walk', blurb: 'Leaves on every lawn, and they spread if you leave them.', sky: '#ffe3c4', ground: '#8fae5e' },
+  { name: 'Noah\u2019s Arc Lane', blurb: 'The falling-down house is still standing. The raccoons say hi.', sky: '#d9d2c4', ground: '#7d8f5a' },
+  { name: 'The Long Way Home', blurb: 'Every hydrant, every mailbox, every single sniff.', sky: '#f7c9a0', ground: '#a7834e' },
+  { name: 'Front Porch', blurb: 'Almost home. One last pile of leaves, then dinner.', sky: '#f2b48a', ground: '#9c6b45' },
 ];
 
 const BONE = 0, BALL = 1, PAW = 2, BOWL = 3, LOBSTER = 4, CAP = 5;
@@ -79,6 +87,23 @@ const YARN_VINES = ['y......y', '.y....y.', '..y..y..', '........', '........', 
 const YARN_STARS = ['.y....y.', 'yyy..yyy', '.y....y.', '........', '........', '.y....y.', 'yyy..yyy', '.y....y.'];
 const YARN_BAND = ['........', '........', 'yyyyyyyy', '........', '........', 'yyyyyyyy', '........', '........'];
 
+// Fallen leaves ('l'): rake them with a match on top. Any move that rakes none blows one more in.
+const LEAF_CORNER = ['ll......', 'll......', 'l.......', '........', '........', '........', '........', '........'];
+const LEAF_TWO = ['........', '.ll.....', '.ll.....', '........', '........', '.....ll.', '.....ll.', '........'];
+const LEAF_STRIP = ['........', '........', '........', '........', '........', '........', 'llllllll', '........'];
+const LEAF_PILE = ['........', '........', '...ll...', '..llll..', '..llll..', '...ll...', '........', '........'];
+const LEAF_EDGES = ['l......l', 'l......l', '........', '........', '........', '........', 'l......l', 'l......l'];
+const LEAF_LAWNS = ['lll..lll', 'll....ll', '........', '........', '........', '........', 'll....ll', 'lll..lll'];
+const LEAF_TOP = ['llllllll', '.llllll.', '........', '........', '........', '........', '........', '........'];
+const LEAF_SCATTER = ['l...l...', '........', '..l...l.', '........', 'l...l...', '........', '..l...l.', '........'];
+const LEAF_PORCH = ['........', '........', '........', '........', '........', 'll....ll', 'llllllll', 'llllllll'];
+
+const MUD_DRIVE = ['........', '........', '........', '...mm...', '...mm...', '...mm...', '...mm...', '...mm...'];
+const DEEP_GUTTER = ['M......M', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'M......M'];
+const YARN_FENCE = ['........', '........', '........', '........', 'y.y.y.y.', 'yyyyyyyy', '........', '........'];
+const YARN_ARC = ['...yy...', '..yyyy..', '.y....y.', '.y.yy.y.', '.y.yy.y.', '........', '........', '........'];
+const YARN_DOOR = ['........', '........', '........', '...yy...', '..y..y..', '..y..y..', '..y..y..', '........'];
+
 const L = (
   id: number,
   moves: number,
@@ -87,6 +112,7 @@ const L = (
   stars: [number, number, number],
   mud?: string[],
   yarn?: string[],
+  leaves?: string[],
 ): Level => ({
   id,
   zone: Math.floor((id - 1) / 5),
@@ -96,12 +122,14 @@ const L = (
   stars,
   mud,
   yarn,
+  leaves,
 });
 const Y: Goal = { type: 'yarn' };
 const M: Goal = { type: 'mud' };
 const C = (kind: number, count: number): Goal => ({ type: 'collect', kind, count });
 const P = (power: Power, count: number): Goal => ({ type: 'power', power, count });
 const S = (target: number): Goal => ({ type: 'score', target });
+const F: Goal = { type: 'leaves' };
 
 export const LEVELS: Level[] = [
   L(1, 20, 5, [{ type: 'collect', kind: BONE, count: 15 }], [1500, 3000, 4500]),
@@ -183,6 +211,34 @@ export const LEVELS: Level[] = [
   L(58, 31, 6, [S(8000), P('zoomies', 4)], [8000, 9000, 10000]),
   L(59, 45, 6, [M, C(CAP, 26), C(PAW, 26)], [6000, 10000, 12500], DEEP_ALL),
   L(60, 45, 6, [M, Y, P('micah', 1), C(LOBSTER, 26)], [6000, 10500, 13000], DEEP_MOON, YARN_STARS),
+
+  // Neighbourhood Walk: fallen leaves, which spread if a move rakes none.
+  L(61, 22, 5, [F], [2500, 4500, 6500], undefined, undefined, LEAF_CORNER),
+  L(62, 24, 6, [F, C(BONE, 20)], [3000, 5500, 7000], undefined, undefined, LEAF_TWO),
+  L(63, 26, 6, [F], [3500, 6000, 8000], undefined, undefined, LEAF_STRIP),
+  L(64, 36, 6, [F, M], [4000, 6500, 8500], MUD_DRIVE, undefined, LEAF_EDGES),
+  L(65, 26, 6, [F, P('zoomies', 3)], [4000, 6500, 8500], undefined, undefined, LEAF_PILE),
+
+  // Noah's Arc Lane: leaves, yarn and the deep puddles out front.
+  L(66, 36, 6, [F, Y], [4000, 6500, 8500], undefined, YARN_ARC, LEAF_EDGES),
+  L(67, 35, 6, [F, C(BALL, 22), C(PAW, 22)], [4000, 6500, 8000], undefined, undefined, LEAF_LAWNS),
+  L(68, 42, 6, [F, M], [5000, 8000, 10000], DEEP_GUTTER, undefined, LEAF_PILE),
+  L(69, 32, 6, [S(7500), F], [7500, 9000, 10500], undefined, undefined, LEAF_SCATTER),
+  L(70, 40, 6, [F, Y, P('bark', 2)], [5500, 9000, 11000], undefined, YARN_FENCE, LEAF_TOP),
+
+  // The Long Way Home: everything Micah has met so far, all on one street.
+  L(71, 34, 6, [F, C(BOWL, 24)], [4500, 7000, 9000], undefined, undefined, LEAF_PORCH),
+  L(72, 42, 6, [M, F], [5000, 8500, 10500], DEEP_PUDDLES, undefined, LEAF_EDGES),
+  L(73, 38, 6, [P('micah', 1), F], [5000, 8000, 10000], undefined, undefined, LEAF_LAWNS),
+  L(74, 40, 6, [Y, F, C(CAP, 22)], [5500, 9000, 11000], undefined, YARN_BAND, LEAF_SCATTER),
+  L(75, 45, 6, [M, Y, F], [6000, 9500, 12000], DEEP_SIDES, YARN_DOOR, LEAF_PILE),
+
+  // Front Porch: the last stretch home.
+  L(76, 36, 6, [F, P('zoomies', 3), P('bark', 2)], [5500, 8500, 10500], undefined, undefined, LEAF_PORCH),
+  L(77, 42, 6, [M, F, C(LOBSTER, 24)], [6000, 9500, 12000], DEEP_PUMPKIN, undefined, LEAF_EDGES),
+  L(78, 45, 6, [Y, F], [5500, 9000, 11500], undefined, YARN_DIAMOND, LEAF_LAWNS),
+  L(79, 36, 6, [S(9000), F, P('micah', 1)], [9000, 10500, 12000], undefined, undefined, LEAF_PILE),
+  L(80, 45, 6, [M, Y, F, P('micah', 1)], [6500, 10500, 13000], DEEP_MOON, YARN_DOOR, LEAF_EDGES),
 ];
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
@@ -194,6 +250,10 @@ export function mudDepth(level: Level, r: number, c: number): number {
 /** Total washes the level needs (deep mud counts twice). */
 export function mudCount(level: Level): number {
   return (level.mud ?? []).join('').split('').reduce((n, ch) => n + (ch === 'M' ? 2 : ch === 'm' ? 1 : 0), 0);
+}
+
+export function leafCount(level: Level): number {
+  return (level.leaves ?? []).join('').split('').filter((ch) => ch === 'l').length;
 }
 
 export function yarnCount(level: Level): number {

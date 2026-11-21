@@ -366,6 +366,10 @@ const effects = {
     noise(0.05, 0.12, 'highpass', 4000);
     later(60, () => tone(1200, 0.08, 'triangle', 0.06, 1600));
   },
+  /** Leaves raked up: a dry crunchy rustle. */
+  rustle() {
+    [0, 50, 110].forEach((ms) => later(ms, () => noise(0.06, 0.07, 'bandpass', 2200, 5000)));
+  },
   /** Micah's paws on the map path. */
   step() {
     noise(0.04, 0.08, 'lowpass', 500);
