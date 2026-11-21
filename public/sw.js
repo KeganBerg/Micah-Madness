@@ -1,10 +1,10 @@
 // Micah Madness offline support.
 // Pages: network first (so updates arrive), falling back to the cached copy offline.
 // Everything else (hashed game files, icons, fonts): cache first, filled as it's used.
-const CACHE = 'micah-v2';
+const CACHE = 'micah-v3';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './icons/icon-192.png'])).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './manifest.webmanifest', './icons/icon-192.png?v=2'])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
