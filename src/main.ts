@@ -648,7 +648,7 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
   const opener = document.activeElement as HTMLElement | null;
   // The screen behind may be redrawn while the pop-up is open, so remember how to find the opener again.
   const openerSel = opener?.dataset.act ? `[data-act="${opener.dataset.act}"]` : opener?.dataset.level ? `[data-level="${opener.dataset.level}"]` : '';
-  const behind = [...document.body.children].filter((el): el is HTMLElement => el instanceof HTMLElement && !el.inert);
+  const behind = [...document.body.children].filter((el): el is HTMLElement => el instanceof HTMLElement && !el.inert && !el.classList.contains('tag-card'));
   behind.forEach((el) => (el.inert = true));
   new MutationObserver((_, obs) => {
     if (m.isConnected) return;
@@ -812,12 +812,32 @@ function showCollar(): void {
 
 /** Announce newly earned tags one after another. */
 function celebrate(tags: Badge[]): void {
-  tags.forEach((b, i) =>
-    window.setTimeout(() => {
-      sfx.goal();
-      toast(`${tagSvg(b, true)}<span><b>New collar tag: ${b.name}</b> +${b.reward} biscuits</span>`, 'tag-toast');
-    }, i * 3400),
-  );
+  if (!tags.length) return;
+  // One card at the top for however many tags arrived, so nothing queues up over the buttons.
+  document.querySelector('.tag-card')?.remove();
+  const total = tags.reduce((t, b) => t + b.reward, 0);
+  const names = tags.length === 1 ? tags[0].name : tags.length === 2 ? `${tags[0].name} and ${tags[1].name}` : `${tags[0].name}, ${tags[1].name} and ${tags.length - 2} more`;
+  const card = h(`<div class="tag-card" role="status">
+    <button class="tag-card-open" aria-label="Open Micah\u2019s Collar">
+      <span class="tag-card-icons">${tags.slice(0, 3).map((b) => tagSvg(b, true)).join('')}</span>
+      <span class="tag-card-text"><b>${tags.length === 1 ? 'New collar tag' : `${tags.length} new collar tags`}</b><span>${names}</span></span>
+      <span class="tag-card-reward">+${total}${icon('biscuit', 'biscuit-icon')}</span>
+    </button>
+    <button class="tag-card-close" aria-label="Dismiss">${UI.close}</button>
+  </div>`);
+  const close = () => {
+    card.classList.add('leaving');
+    window.setTimeout(() => card.remove(), 200);
+  };
+  card.querySelector('.tag-card-close')!.addEventListener('click', close);
+  card.querySelector('.tag-card-open')!.addEventListener('click', () => {
+    card.remove();
+    // Only jump to the collar from the map, never out of a level or a pop-up.
+    if (document.querySelector('.map-screen') && !document.querySelector('.modal-wrap')) showCollar();
+  });
+  document.body.append(card);
+  sfx.goal();
+  window.setTimeout(close, 5000);
 }
 
 // ───────────────────────────── Settings ─────────────────────────────
