@@ -397,9 +397,11 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
  * Returns a cleanup function.
  */
 const OWL_NEAR = 240; // px from Micah to the perch
+const OWL_FLIGHT = 4200; // ms
+type Pt = { x: number; y: number };
 function owlWatch(mapEl: HTMLElement, micahEl: HTMLElement, firstDelay: number): () => void {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
-  let timer = 0, raf = 0, flyer: HTMLElement | null = null, perch: SVGGElement | null = null;
+  let timer = 0, hootTimer = 0, layerTimers: number[] = [], flyer: HTMLElement | null = null, perch: SVGGElement | null = null;
   const centre = (el: Element, base: DOMRect, dy = 0.5) => {
     const r = el.getBoundingClientRect();
     return { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height * dy };
@@ -415,53 +417,73 @@ function owlWatch(mapEl: HTMLElement, micahEl: HTMLElement, firstDelay: number):
     return (best as { el: SVGGElement } | null)?.el ?? null;
   };
   const land = () => {
+    flyer?.getAnimations({ subtree: true }).forEach((an) => an.cancel());
     flyer?.remove();
     flyer = null;
-    if (perch) perch.style.opacity = '';
+    clearTimeout(hootTimer);
+    layerTimers.forEach(clearTimeout);
+    if (perch) perch.style.visibility = '';
   };
+  // The whole flight is worked out up front and handed to the browser as transform animations
+  // on plain HTML layers, so the phone's compositor flies the owl even while the main thread is
+  // busy (scenery animations, Micah fidgeting). Nothing is measured or restyled per frame.
   const swoop = (el: SVGGElement) => {
     const base = mapEl.getBoundingClientRect();
     const home = centre(el, base, 0.55);
     const m = centre(micahEl, base, 0.42);
     perch = el;
-    el.style.opacity = '0';
     flyer = document.createElement('div');
     flyer.className = 'map-owl';
     flyer.setAttribute('aria-hidden', 'true');
-    flyer.innerHTML = `<svg viewBox="-30 -14 60 26">${owlSVG(true)}</svg>`;
+    flyer.innerHTML = `<div class="owl-face"><svg class="owl-wings" viewBox="-30 -14 60 26">${owlSVG(true, 'wings')}</svg><svg viewBox="-30 -14 60 26">${owlSVG(true, 'body')}</svg></div>`;
     mapEl.appendChild(flyer);
+    el.style.visibility = 'hidden';
     sfx.hoot();
-    const rx = 50, ry = 24, loops = 2;
+    hootTimer = window.setTimeout(() => sfx.hoot(), OWL_FLIGHT * 0.5);
+
+    const rx = 50, ry = 24, loops = 2, exitAngle = loops * Math.PI * 2;
     const enter = { x: m.x + rx, y: m.y };
-    const bez = (a: { x: number; y: number }, c: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({
-      x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x,
-      y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y,
-    });
-    const exitAngle = loops * Math.PI * 2;
     const out = { x: m.x + rx * Math.cos(exitAngle), y: m.y + ry * Math.sin(exitAngle) };
-    const lift = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 70 });
-    const T = 4200, t0 = performance.now();
-    let lastX = home.x, hooted = false;
-    const step = (now: number) => {
-      if (!flyer) return;
-      const k = Math.min(1, (now - t0) / T);
-      let pos: { x: number; y: number }, front = true;
-      if (k < 0.22) pos = bez(home, lift(home, enter), enter, easeInOut(k / 0.22));
-      else if (k < 0.8) {
+    const lift = (a: Pt, c: Pt) => ({ x: (a.x + c.x) / 2, y: Math.min(a.y, c.y) - 70 });
+    const bez = (a: Pt, c: Pt, d: Pt, t: number) => ({
+      x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * d.x,
+      y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * d.y,
+    });
+    const at = (k: number): Pt & { front: boolean } => {
+      if (k < 0.22) return { ...bez(home, lift(home, enter), enter, easeInOut(k / 0.22)), front: true };
+      if (k < 0.8) {
         const a = ((k - 0.22) / 0.58) * exitAngle;
-        pos = { x: m.x + rx * Math.cos(a), y: m.y + ry * Math.sin(a) - 6 * Math.sin(a * 3) };
-        front = Math.sin(a) > 0; // lower half of the loop passes in front of Micah
-        if (!hooted && k > 0.5) { hooted = true; sfx.hoot(); }
-      } else pos = bez(out, lift(out, home), home, easeInOut((k - 0.8) / 0.2));
-      const dx = pos.x - lastX;
-      lastX = pos.x;
-      flyer.style.translate = `${pos.x.toFixed(1)}px ${pos.y.toFixed(1)}px`;
-      if (Math.abs(dx) > 0.3) flyer.classList.toggle('facing-left', dx < 0);
-      flyer.style.zIndex = front ? '3' : '1';
-      if (k < 1) raf = requestAnimationFrame(step);
-      else land();
+        // the lower half of each loop passes in front of Micah, the upper half behind her
+        return { x: m.x + rx * Math.cos(a), y: m.y + ry * Math.sin(a) - 6 * Math.sin(a * 3), front: Math.sin(a) > 0 };
+      }
+      return { ...bez(out, lift(out, home), home, easeInOut((k - 0.8) / 0.2)), front: true };
     };
-    raf = requestAnimationFrame(step);
+    const N = 120; // samples: a keyframe every ~35ms, linear in between, reads as a smooth curve
+    const moves: Keyframe[] = [], faces: Keyframe[] = [], layers: { at: number; z: string }[] = [];
+    let left: boolean | null = null, front: boolean | null = null, prev = at(0);
+    for (let i = 0; i <= N; i++) {
+      const k = i / N, p = at(k);
+      moves.push({ offset: k, transform: `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px)` });
+      const dx = p.x - prev.x;
+      if (i === 0 || (Math.abs(dx) > 0.3 && dx < 0 !== left)) {
+        if (i > 0) left = dx < 0; else left = at(1 / N).x < p.x;
+        faces.push({ offset: k, transform: left ? 'scaleX(-1)' : 'scaleX(1)', easing: 'steps(1, end)' });
+      }
+      if (p.front !== front) {
+        front = p.front;
+        layers.push({ at: k * OWL_FLIGHT, z: front ? '3' : '1' });
+      }
+      prev = p;
+    }
+    const end = (list: Keyframe[]) => { if (list[list.length - 1].offset !== 1) list.push({ ...list[list.length - 1], offset: 1 }); return list; };
+    const opts = { duration: OWL_FLIGHT, fill: 'forwards' as const };
+    const flight = flyer.animate(moves, opts);
+    flyer.firstElementChild!.animate(end(faces), opts);
+    // Passing behind or in front of Micah is a handful of z-index swaps, set on timers rather than
+    // as an animation so the browser doesn't recalculate styles on every frame of the flight.
+    const f = flyer;
+    layerTimers = layers.map((l) => window.setTimeout(() => { f.style.zIndex = l.z; }, l.at));
+    flight.onfinish = land;
   };
   const tick = (delay: number) => {
     timer = window.setTimeout(() => {
@@ -474,7 +496,6 @@ function owlWatch(mapEl: HTMLElement, micahEl: HTMLElement, firstDelay: number):
   tick(firstDelay);
   return () => {
     clearTimeout(timer);
-    cancelAnimationFrame(raf);
     land();
   };
 }
