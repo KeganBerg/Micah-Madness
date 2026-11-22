@@ -93,10 +93,10 @@ const LEAF_TWO = ['........', '.ll.....', '.ll.....', '........', '........', '.
 const LEAF_STRIP = ['........', '........', '........', '........', '........', '........', 'llllllll', '........'];
 const LEAF_PILE = ['........', '........', '...ll...', '..llll..', '..llll..', '...ll...', '........', '........'];
 const LEAF_EDGES = ['l......l', 'l......l', '........', '........', '........', '........', 'l......l', 'l......l'];
-const LEAF_LAWNS = ['lll..lll', 'll....ll', '........', '........', '........', '........', 'll....ll', 'lll..lll'];
 const LEAF_TOP = ['llllllll', '.llllll.', '........', '........', '........', '........', '........', '........'];
 const LEAF_SCATTER = ['l...l...', '........', '..l...l.', '........', 'l...l...', '........', '..l...l.', '........'];
-const LEAF_PORCH = ['........', '........', '........', '........', '........', 'll....ll', 'llllllll', 'llllllll'];
+const LEAF_GATE = ['........', '........', '........', '........', '........', '........', '........', 'llllllll'];
+const LEAF_DUSK = ['........', '.....ll.', '.....ll.', '........', '........', '.....ll.', '.....ll.', '........'];
 
 const MUD_DRIVE = ['........', '........', '........', '...mm...', '...mm...', '...mm...', '...mm...', '...mm...'];
 const DEEP_GUTTER = ['M......M', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'M......M'];
@@ -185,14 +185,14 @@ export const LEVELS: Level[] = [
   L(40, 39, 6, [Y, M, { type: 'collect', kind: LOBSTER, count: 30 }], [5000, 8500, 10500], MUD_TOP, YARN_CAKE),
 
   // Rainy Walk: deep mud takes two washes.
-  L(41, 22, 5, [M], [3000, 5500, 8000], DEEP_PUDDLE),
+  L(41, 18, 6, [M], [3000, 5500, 8000], DEEP_PUDDLE),
   L(42, 22, 6, [C(BALL, 24), C(BOWL, 24)], [3500, 6000, 7000]),
   L(43, 25, 6, [M], [3500, 5500, 7500], DEEP_RIVER),
   L(44, 38, 6, [M, Y], [5000, 8500, 10000], DEEP_PUDDLES, YARN_BAND),
   L(45, 25, 6, [M, C(PAW, 24)], [3500, 6000, 7500], DEEP_BOTTOM),
 
   // Camping Trip: goals that ask for power-ups.
-  L(46, 22, 5, [P('zoomies', 4)], [3000, 5500, 7500]),
+  L(46, 18, 6, [P('zoomies', 5)], [3000, 5500, 7500]),
   L(47, 39, 6, [P('bark', 3), C(BONE, 20)], [5000, 8000, 11000]),
   L(48, 24, 6, [Y, P('zoomies', 4)], [3500, 5500, 7000], undefined, YARN_TENT),
   L(49, 45, 6, [M, P('bark', 2)], [6000, 10000, 12500], DEEP_SIDES),
@@ -215,30 +215,30 @@ export const LEVELS: Level[] = [
   // Neighbourhood Walk: fallen leaves, which spread if a move rakes none.
   L(61, 22, 5, [F], [2500, 4500, 6500], undefined, undefined, LEAF_CORNER),
   L(62, 24, 6, [F, C(BONE, 20)], [3000, 5500, 7000], undefined, undefined, LEAF_TWO),
-  L(63, 26, 6, [F], [3500, 6000, 8000], undefined, undefined, LEAF_STRIP),
-  L(64, 36, 6, [F, M], [4000, 6500, 8500], MUD_DRIVE, undefined, LEAF_EDGES),
+  L(63, 28, 6, [F], [3500, 6000, 8000], undefined, undefined, LEAF_STRIP),
+  L(64, 40, 6, [F, M], [4000, 6500, 8500], MUD_DRIVE, undefined, LEAF_EDGES),
   L(65, 26, 6, [F, P('zoomies', 3)], [4000, 6500, 8500], undefined, undefined, LEAF_PILE),
 
   // Noah's Arc Lane: leaves, yarn and the deep puddles out front.
-  L(66, 36, 6, [F, Y], [4000, 6500, 8500], undefined, YARN_ARC, LEAF_EDGES),
-  L(67, 35, 6, [F, C(BALL, 22), C(PAW, 22)], [4000, 6500, 8000], undefined, undefined, LEAF_LAWNS),
-  L(68, 42, 6, [F, M], [5000, 8000, 10000], DEEP_GUTTER, undefined, LEAF_PILE),
-  L(69, 32, 6, [S(7500), F], [7500, 9000, 10500], undefined, undefined, LEAF_SCATTER),
-  L(70, 40, 6, [F, Y, P('bark', 2)], [5500, 9000, 11000], undefined, YARN_FENCE, LEAF_TOP),
+  L(66, 37, 6, [F, Y], [4000, 6500, 8500], undefined, YARN_ARC, LEAF_TWO),
+  L(67, 40, 6, [F, C(BALL, 22), C(PAW, 22)], [4000, 6500, 8000], undefined, undefined, LEAF_EDGES),
+  L(68, 45, 6, [F, M], [5000, 8000, 10000], DEEP_GUTTER, undefined, LEAF_PILE),
+  L(69, 35, 6, [S(7500), F], [7500, 9000, 10500], undefined, undefined, LEAF_SCATTER),
+  L(70, 43, 6, [F, Y, P('bark', 2)], [5500, 9000, 11000], undefined, YARN_FENCE, LEAF_TOP),
 
   // The Long Way Home: everything Micah has met so far, all on one street.
-  L(71, 34, 6, [F, C(BOWL, 24)], [4500, 7000, 9000], undefined, undefined, LEAF_PORCH),
-  L(72, 42, 6, [M, F], [5000, 8500, 10500], DEEP_PUDDLES, undefined, LEAF_EDGES),
-  L(73, 38, 6, [P('micah', 1), F], [5000, 8000, 10000], undefined, undefined, LEAF_LAWNS),
+  L(71, 37, 6, [F, C(BOWL, 24)], [4500, 7000, 9000], undefined, undefined, LEAF_STRIP),
+  L(72, 45, 6, [M, F], [5000, 8500, 10500], DEEP_PUDDLES, undefined, LEAF_EDGES),
+  L(73, 42, 6, [P('micah', 1), F], [5000, 8000, 10000], undefined, undefined, LEAF_SCATTER),
   L(74, 40, 6, [Y, F, C(CAP, 22)], [5500, 9000, 11000], undefined, YARN_BAND, LEAF_SCATTER),
   L(75, 45, 6, [M, Y, F], [6000, 9500, 12000], DEEP_SIDES, YARN_DOOR, LEAF_PILE),
 
   // Front Porch: the last stretch home.
-  L(76, 36, 6, [F, P('zoomies', 3), P('bark', 2)], [5500, 8500, 10500], undefined, undefined, LEAF_PORCH),
-  L(77, 42, 6, [M, F, C(LOBSTER, 24)], [6000, 9500, 12000], DEEP_PUMPKIN, undefined, LEAF_EDGES),
-  L(78, 45, 6, [Y, F], [5500, 9000, 11500], undefined, YARN_DIAMOND, LEAF_LAWNS),
-  L(79, 36, 6, [S(9000), F, P('micah', 1)], [9000, 10500, 12000], undefined, undefined, LEAF_PILE),
-  L(80, 45, 6, [M, Y, F, P('micah', 1)], [6500, 10500, 13000], DEEP_MOON, YARN_DOOR, LEAF_EDGES),
+  L(76, 35, 6, [F, P('zoomies', 3), P('bark', 2)], [5500, 8500, 10500], undefined, undefined, LEAF_PILE),
+  L(77, 45, 6, [M, F, C(LOBSTER, 24)], [6000, 9500, 12000], DEEP_PUMPKIN, undefined, LEAF_GATE),
+  L(78, 45, 6, [Y, F], [5500, 9000, 11500], undefined, YARN_DIAMOND, LEAF_EDGES),
+  L(79, 39, 6, [S(9000), F, P('micah', 1)], [9000, 10500, 12000], undefined, undefined, LEAF_PILE),
+  L(80, 45, 6, [M, Y, F, P('micah', 1)], [6500, 10500, 13000], DEEP_MOON, YARN_DOOR, LEAF_DUSK),
 ];
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
