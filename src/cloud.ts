@@ -16,6 +16,10 @@ export const prettyCode = (code: string) => `${code.slice(0, 5)}-${code.slice(5)
 export const cleanCode = (typed: string) => typed.toUpperCase().replace(/[^A-Z0-9]/g, '');
 export const validCode = (code: string) => /^[A-HJ-NP-Z2-9]{10}$/.test(code);
 
+/** Called with the cloud's copy when it turned out to be newer than the one being uploaded. */
+let onStale: ((remote: SaveData) => void) | null = null;
+export const whenCloudIsNewer = (cb: (remote: SaveData) => void) => (onStale = cb);
+
 export async function upload(save: SaveData): Promise<boolean> {
   if (!save.cloud) return false;
   try {
@@ -25,6 +29,16 @@ export async function upload(save: SaveData): Promise<boolean> {
       body: JSON.stringify({ save }),
       keepalive: true,
     });
+    if (res.status === 409) {
+      // Another device saved more recently: hand its copy back so the game can merge the two.
+      const body = (await res.json().catch(() => null)) as { save?: unknown } | null;
+      if (body?.save && onStale) {
+        const remote = migrate(body.save);
+        remote.cloud = save.cloud;
+        onStale(remote);
+      }
+      return false;
+    }
     return res.ok;
   } catch {
     return false;
