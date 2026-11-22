@@ -30,7 +30,7 @@ import { BOOSTER_ICONS, KINDS, UI, YARN_OVERLAY, svg } from './art';
 import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
-import { sceneryHTML, wireScenery } from './scenery';
+import { owlSVG, sceneryHTML, wireScenery } from './scenery';
 import { LEVELS, ZONES, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
@@ -311,7 +311,8 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
 
   // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
   let idleTimer = 0;
-  mount(screen, () => (clearTimeout(idleTimer), resizeWatch.disconnect(), chromeWatch.disconnect(), unwire()));
+  let stopOwl = () => {};
+  mount(screen, () => (clearTimeout(idleTimer), stopOwl(), resizeWatch.disconnect(), chromeWatch.disconnect(), unwire()));
   measureChrome();
   paintScenery();
   resizeWatch.observe(mapEl);
@@ -374,11 +375,101 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     if (after) setTimeout(after, 0);
   }
   if (!after) maybeNudgeInstall();
+  stopOwl = owlWatch(mapEl, micahEl, walkFrom && walkFrom !== unlocked ? 1300 : 900);
 
   const scroller = screen.querySelector<HTMLElement>('.map-scroll')!;
   const target = nodePos((walkFrom ?? scrollTo ?? unlocked) - 1).y;
   scroller.scrollTop = scroller.classList.contains('has-welcome') ? scroller.scrollHeight : target - scroller.clientHeight / 2;
 }
+
+/**
+ * The owl who lives over Noah's Arc garage. Whenever Micah is standing near the house, the owl
+ * swoops down, circles her a couple of times (passing behind and in front of her) and flies home.
+ * Returns a cleanup function.
+ */
+const OWL_NEAR = 240; // px from Micah to the perch
+function owlWatch(mapEl: HTMLElement, micahEl: HTMLElement, firstDelay: number): () => void {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
+  let timer = 0, raf = 0, flyer: HTMLElement | null = null, perch: SVGGElement | null = null;
+  const centre = (el: Element, base: DOMRect, dy = 0.5) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height * dy };
+  };
+  const nearestPerch = () => {
+    const base = mapEl.getBoundingClientRect(), m = centre(micahEl, base);
+    let best: { el: SVGGElement; d: number } | null = null;
+    mapEl.querySelectorAll<SVGGElement>('.owl-perch').forEach((el) => {
+      const p = centre(el, base);
+      const d = Math.hypot(p.x - m.x, p.y - m.y);
+      if (d < OWL_NEAR && (!best || d < best.d)) best = { el, d };
+    });
+    return (best as { el: SVGGElement } | null)?.el ?? null;
+  };
+  const land = () => {
+    flyer?.remove();
+    flyer = null;
+    if (perch) perch.style.opacity = '';
+  };
+  const swoop = (el: SVGGElement) => {
+    const base = mapEl.getBoundingClientRect();
+    const home = centre(el, base, 0.55);
+    const m = centre(micahEl, base, 0.42);
+    perch = el;
+    el.style.opacity = '0';
+    flyer = document.createElement('div');
+    flyer.className = 'map-owl';
+    flyer.setAttribute('aria-hidden', 'true');
+    flyer.innerHTML = `<svg viewBox="-30 -14 60 26">${owlSVG(true)}</svg>`;
+    mapEl.appendChild(flyer);
+    sfx.hoot();
+    const rx = 50, ry = 24, loops = 2;
+    const enter = { x: m.x + rx, y: m.y };
+    const bez = (a: { x: number; y: number }, c: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({
+      x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * c.x + t * t * b.x,
+      y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * c.y + t * t * b.y,
+    });
+    const exitAngle = loops * Math.PI * 2;
+    const out = { x: m.x + rx * Math.cos(exitAngle), y: m.y + ry * Math.sin(exitAngle) };
+    const lift = (a: { x: number; y: number }, b: { x: number; y: number }) => ({ x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 70 });
+    const T = 4200, t0 = performance.now();
+    let lastX = home.x, hooted = false;
+    const step = (now: number) => {
+      if (!flyer) return;
+      const k = Math.min(1, (now - t0) / T);
+      let pos: { x: number; y: number }, front = true;
+      if (k < 0.22) pos = bez(home, lift(home, enter), enter, easeInOut(k / 0.22));
+      else if (k < 0.8) {
+        const a = ((k - 0.22) / 0.58) * exitAngle;
+        pos = { x: m.x + rx * Math.cos(a), y: m.y + ry * Math.sin(a) - 6 * Math.sin(a * 3) };
+        front = Math.sin(a) > 0; // lower half of the loop passes in front of Micah
+        if (!hooted && k > 0.5) { hooted = true; sfx.hoot(); }
+      } else pos = bez(out, lift(out, home), home, easeInOut((k - 0.8) / 0.2));
+      const dx = pos.x - lastX;
+      lastX = pos.x;
+      flyer.style.translate = `${pos.x.toFixed(1)}px ${pos.y.toFixed(1)}px`;
+      if (Math.abs(dx) > 0.3) flyer.classList.toggle('facing-left', dx < 0);
+      flyer.style.zIndex = front ? '3' : '1';
+      if (k < 1) raf = requestAnimationFrame(step);
+      else land();
+    };
+    raf = requestAnimationFrame(step);
+  };
+  const tick = (delay: number) => {
+    timer = window.setTimeout(() => {
+      if (!micahEl.isConnected) return;
+      const el = !document.hidden && !flyer && !document.querySelector('.modal-wrap') && !micahEl.classList.contains('walking') ? nearestPerch() : null;
+      if (el) swoop(el);
+      tick(el ? 9000 + Math.random() * 6000 : 2500);
+    }, delay);
+  };
+  tick(firstDelay);
+  return () => {
+    clearTimeout(timer);
+    cancelAnimationFrame(raf);
+    land();
+  };
+}
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 /** Once a player is hooked (3 levels in), suggest the Home Screen so the phone doesn't clear their save. */
 function maybeNudgeInstall(): void {

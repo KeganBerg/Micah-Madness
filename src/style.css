@@ -1110,6 +1110,13 @@ h2.center { margin: 2px 0 6px; }
 .live .c-chimney > g { animation: chimney-peek 6s ease-in-out infinite; }
 @keyframes chimney-peek { 0%, 70%, 100% { transform: translateY(6px); } 78%, 92% { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .live .c-chimney > g { animation: none; } }
+/* The owl over the garage, swooping around Micah when she stands near Noah's Arc */
+.owl-perch { transition: opacity .15s; }
+.map-owl { position: absolute; left: 0; top: 0; width: 60px; height: 26px; margin: -13px 0 0 -30px; pointer-events: none; will-change: translate; }
+.map-owl svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.map-owl.facing-left svg { scale: -1 1; }
+.map-owl .owl-wings { transform-box: fill-box; transform-origin: 50% 80%; animation: owl-flap .32s ease-in-out infinite; }
+@keyframes owl-flap { 50% { transform: scaleY(-.7); } }
 
 /* Yard: things falling from the sky */
 .snack { cursor: pointer; }
