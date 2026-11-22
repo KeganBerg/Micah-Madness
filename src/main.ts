@@ -41,6 +41,7 @@ import {
   importCode,
   load,
   onSavedElsewhere,
+  mergeSaves,
   persist,
   requestDurableStorage,
   starsToSpend,
@@ -57,7 +58,7 @@ import { playMusic, setMusic, setSound, sfx } from './sound';
 import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
 import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
-import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode } from './cloud';
+import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode, whenCloudIsNewer } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_LEVELS, claimWinter, isWinterLevel, winterNext, winterNumber, winterOpen, winterWon } from './winter';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
@@ -2348,47 +2349,52 @@ function adoptSave(next: SaveData): void {
   persist(save, false);
 }
 
-/** On launch, pick up newer progress saved from another device. */
-async function syncFromCloud(): Promise<void> {
-  if (!save.cloud) return;
-  const remote = await download(save.cloud);
-  if (remote === 'missing') return void upload(save);
-  if (!remote) return;
-  if (remote.savedAt <= save.savedAt + 2000) return void upload(save);
-  const here = progressOf(save);
-  const there = progressOf(remote);
-  if (there.stars >= here.stars && there.levels >= here.levels) {
-    adoptSave(remote);
-    if (document.querySelector('.map-screen') && !document.querySelector('.modal-wrap')) showMap();
-    toast('Loaded your latest progress from the cloud.');
-    return;
+/** Same player, two devices: fold the cloud's copy into this one so progress from both is kept. */
+function mergeFromCloud(remote: SaveData): void {
+  const merged = mergeSaves(save, remote);
+  // Compare with keys sorted, since the merge can list the same fields in a different order.
+  const stable = (v: unknown): string =>
+    v && typeof v === 'object'
+      ? Array.isArray(v)
+        ? `[${v.map(stable).join(',')}]`
+        : `{${Object.keys(v).filter((k) => k !== 'savedAt').sort().map((k) => `${k}:${stable((v as Record<string, unknown>)[k])}`).join(',')}}`
+      : JSON.stringify(v);
+  const gained = stable(merged) !== stable(save);
+  if (gained) {
+    // Mid-level, swap the save in place so the level keeps working with it.
+    if (document.querySelector('.game-screen')) Object.assign(save, merged);
+    else adoptSave(merged);
   }
-  // The cloud copy is newer but has less progress (this device played offline?): ask.
-  const m = modal(`
-    <div class="modal-head">
-      ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">Cloud save</p><h2>Which progress should Micah keep?</h2></div>
-      <span></span>
-    </div>
-    <dl class="stat-rows">
-      <dt>This device</dt><dd>${here.levels} levels, ${here.stars} stars</dd>
-      <dt>Cloud (saved more recently)</dt><dd>${there.levels} levels, ${there.stars} stars</dd>
-    </dl>
-    <div class="actions">
-      <button class="btn" data-act="keep">Keep this device</button>
-      <button class="btn secondary" data-act="cloud">Use the cloud copy</button>
-    </div>`);
-  m.querySelector('[data-act="keep"]')!.addEventListener('click', () => {
-    m.remove();
-    persist(save);
-    void upload(save);
-  });
-  m.querySelector('[data-act="cloud"]')!.addEventListener('click', () => {
-    m.remove();
-    adoptSave(remote);
-    showMap();
-  });
+  // Stamp it newest so the cloud accepts the merged copy, even if this device's clock runs behind.
+  persist(save);
+  if (save.savedAt <= remote.savedAt) {
+    save.savedAt = remote.savedAt + 1;
+    persist(save, false);
+  }
+  void upload(save);
+  if (!gained) return;
+  if (document.querySelector('.map-screen') && !document.querySelector('.modal-wrap')) showMap();
+  toast('Picked up your progress from another device.');
 }
+
+/** On launch and whenever the game comes back on screen, pick up progress saved on another device. */
+let syncing = false;
+async function syncFromCloud(): Promise<void> {
+  if (!save.cloud || syncing) return;
+  syncing = true;
+  try {
+    const remote = await download(save.cloud);
+    if (remote === 'missing') return void upload(save);
+    if (!remote) return;
+    mergeFromCloud(remote);
+  } finally {
+    syncing = false;
+  }
+}
+whenCloudIsNewer(mergeFromCloud);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') void syncFromCloud();
+});
 
 async function boot() {
   app.querySelector('.launch-micah')?.setAttribute('src', costumeUrl(save.costume));

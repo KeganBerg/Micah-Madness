@@ -319,3 +319,44 @@ export function importCode(code: string): SaveData | null {
     return null;
   }
 }
+
+// ── Cloud merge ──
+const maxMap = <K extends string | number>(a: Record<K, number>, b: Record<K, number>): Record<K, number> => {
+  const out = { ...a } as Record<K, number>;
+  for (const [k, v] of Object.entries(b) as [K, number][]) out[k] = Math.max(out[k] ?? 0, v);
+  return out;
+};
+const union = (a: string[], b: string[]) => [...new Set([...a, ...b])];
+const later = (a: string, b: string) => (a >= b ? a : b); // YYYY-MM-DD strings compare in date order
+
+/**
+ * Combine two copies of the same player's save (this device and the cloud) so progress made on
+ * either one survives: best stars and scores per level, every tag, outfit and decoration, and the
+ * larger count of biscuits and boosters. Settings and the current outfit come from the newer copy.
+ */
+export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
+  const [newer, older] = remote.savedAt > local.savedAt ? [remote, local] : [local, remote];
+  const winter =
+    local.winter.season === remote.winter.season
+      ? { season: local.winter.season, won: [...new Set([...local.winter.won, ...remote.winter.won])].sort((a, b) => a - b) }
+      : local.winter.season > remote.winter.season ? local.winter : remote.winter;
+  return {
+    ...older,
+    ...newer,
+    stars: maxMap(local.stars, remote.stars),
+    best: maxMap(local.best, remote.best),
+    biscuits: Math.max(local.biscuits, remote.biscuits),
+    inventory: maxMap(local.inventory, remote.inventory),
+    spentStars: Math.max(local.spentStars, remote.spentStars),
+    decor: union(local.decor, remote.decor),
+    daily: local.daily.last === later(local.daily.last, remote.daily.last) ? local.daily : remote.daily,
+    tally: maxMap(local.tally, remote.tally),
+    badges: union(local.badges, remote.badges),
+    wardrobe: union(local.wardrobe, remote.wardrobe),
+    seen: union(local.seen, remote.seen),
+    weekly: { won: later(local.weekly.won, remote.weekly.won), stamps: Math.max(local.weekly.stamps, remote.weekly.stamps) },
+    winter,
+    cloud: local.cloud || remote.cloud,
+    savedAt: Math.max(local.savedAt, remote.savedAt),
+  };
+}

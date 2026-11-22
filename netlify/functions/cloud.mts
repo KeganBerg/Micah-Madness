@@ -34,6 +34,10 @@ export default async (req: Request): Promise<Response> => {
     const save = (body as { save?: unknown })?.save;
     if (!save || typeof save !== 'object' || Array.isArray(save)) return json(400, { error: 'no save' });
     const savedAt = Number((save as { savedAt?: unknown }).savedAt) || Date.now();
+    // Never let an older copy (a phone left open in the background) overwrite newer progress.
+    // The game merges the copy sent back here with its own and uploads the result.
+    const current = (await store.get(code, { type: 'json' })) as { save?: unknown; savedAt?: number } | null;
+    if (current && Number(current.savedAt) > savedAt) return json(409, { error: 'stale', ...current });
     await store.setJSON(code, { save, savedAt, updatedAt: Date.now() });
     return json(200, { ok: true, savedAt });
   }
