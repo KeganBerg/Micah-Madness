@@ -54,7 +54,7 @@
   --sar: env(safe-area-inset-right, 0px);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--sea); overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; background: var(--sea-deep); overscroll-behavior: none; }
 body { display: flex; justify-content: center; }
 #app { width: 100%; max-width: 520px; height: 100%; height: var(--app-h, 100%); position: relative; overflow: hidden; background: var(--sea); }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
@@ -119,7 +119,10 @@ h2, h3, p { margin: 0; }
 .wallet .add { width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; }
 .wallet .add .ui-icon { width: 14px; height: 14px; }
 
-.map-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.map-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+/* Everything between the top bar and the dock. The welcome card and chips are placed inside
+   it, so they always end just above the dock, whatever height the dock or the browser has. */
+.map-stage { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .map { position: relative; width: 100%; }
 .scenery { position: absolute; inset: 0; }
 .zone-banner {
@@ -362,8 +365,8 @@ h2, h3, p { margin: 0; }
 .dock-btn:active { background: #ffffff1a; }
 .dock-btn .count { top: 2px; right: calc(50% - 30px); font-style: normal; }
 .dock-btn .count.dot { width: 14px; min-width: 14px; height: 14px; padding: 0; font-size: 0; top: 4px; right: calc(50% - 22px); }
-.welcome { bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); }
-.map-screen .save-warning { top: calc(72px + var(--sat)); }
+.welcome { bottom: var(--s3); max-height: calc(100% - 2 * var(--s3)); overflow-y: auto; }
+.map-screen .save-warning { top: var(--s3); }
 
 /* ───── Yard ───── */
 .yard-screen .topbar .brand { font-size: var(--fs-lg); }
@@ -1124,7 +1127,7 @@ h2.center { margin: 2px 0 6px; }
 
 /* Weekly Walk: a chip floating over the map, and paw stamps */
 .weekly-chip {
-  position: absolute; left: var(--s3); bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); z-index: 3;
+  position: absolute; left: var(--s3); bottom: var(--s3); z-index: 3;
   display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #ffd23f; color: #173a52; box-shadow: 0 4px 0 #b58a00, 0 8px 20px #0004; text-align: left;
 }
@@ -1150,11 +1153,11 @@ h2.center { margin: 2px 0 6px; }
 
 /* Micah's Winter */
 .winter-chip {
-  position: absolute; left: var(--s3); bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); z-index: 3;
+  position: absolute; left: var(--s3); bottom: var(--s3); z-index: 3;
   display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #fff; color: #173a52; box-shadow: 0 4px 0 #8fb3cc, 0 8px 20px #0004; text-align: left;
 }
-.weekly-chip ~ .winter-chip { bottom: calc(var(--dock-h, calc(80px + var(--sab))) + 68px); }
+.weekly-chip ~ .winter-chip { bottom: calc(var(--s3) + 56px); }
 .winter-chip .snow-icon { width: 28px; height: 28px; }
 .winter-chip:not(.done) .snow-icon { animation: wiggle 1.8s ease-in-out infinite; }
 .winter-chip span { display: grid; line-height: 1.1; }

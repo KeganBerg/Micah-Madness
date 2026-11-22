@@ -213,6 +213,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="wallet" data-act="shop" aria-label="${save.biscuits} biscuits. Open the Treat Shop">${icon('biscuit', 'biscuit-icon')}<b>${save.biscuits}</b><span class="add">${UI.plus}</span></button>
         <button class="round-btn" data-act="settings" aria-label="Settings and how to play">${UI.settings}</button>
       </header>
+      <div class="map-stage">
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
           <div class="scenery" aria-hidden="true"></div>
@@ -251,6 +252,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${winterOpen(save, new Date(), WINTER_PREVIEW)
         ? `<button class="winter-chip ${winterNext(save) ? '' : 'done'}" data-act="winter">${svg(BOOSTER_ICONS.snow, 'snow-icon')}<span><b>Micah\u2019s Winter</b><small>${winterNext(save) ? `${winterWon(save).length} of ${WINTER_COUNT} done` : 'All done. Ho ho woof!'}</small></span></button>`
         : ''}
+      </div>
       <nav class="dock" aria-label="Main">
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
@@ -299,16 +301,12 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     unwire = wireScenery(sceneEl, playScenerySound, (text) => toast(text));
   };
   const resizeWatch = new ResizeObserver(paintScenery);
-  // The welcome card and chips float just above the dock, and the map leaves room under
-  // level 1 for the welcome card, using their real heights (the dock grows by the home bar).
-  const dockEl = screen.querySelector<HTMLElement>('.dock')!;
+  // The map leaves room under level 1 for the welcome card, using its real height.
   const welcomeEl = screen.querySelector<HTMLElement>('.welcome');
   const measureChrome = () => {
-    screen.style.setProperty('--dock-h', `${Math.round(dockEl.offsetHeight)}px`);
     if (welcomeEl) screen.style.setProperty('--welcome-h', `${Math.round(welcomeEl.offsetHeight)}px`);
   };
   const chromeWatch = new ResizeObserver(measureChrome);
-  chromeWatch.observe(dockEl);
   if (welcomeEl) chromeWatch.observe(welcomeEl);
 
   // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
