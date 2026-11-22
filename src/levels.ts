@@ -5,6 +5,7 @@ export type Goal =
   | { type: 'mud' } // clean every muddy cell
   | { type: 'yarn' } // untangle every yarn-wrapped cell
   | { type: 'leaves' } // rake every fallen leaf (they spread on any move that rakes none)
+  | { type: 'bubbles' } // pop every soap bubble (a match on it or right next to it pops it)
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
 
@@ -20,6 +21,7 @@ export interface Level {
   mud?: string[]; // 8 rows, 'm' marks a muddy cell, 'M' deep mud that takes two washes
   yarn?: string[]; // 8 rows, 'y' marks a cell wrapped in yarn (its piece can't be swapped)
   leaves?: string[]; // 8 rows, 'l' marks a cell under fallen leaves
+  bubbles?: string[]; // 8 rows, 'b' marks a soapy cell (its piece can't be swapped; a match beside it pops it)
   /** Micah's Winter: mud is drawn as snow drifts to shovel. */
   snow?: boolean;
 }
@@ -48,6 +50,10 @@ export const ZONES: Zone[] = [
   { name: 'Noah\u2019s Arc Lane', blurb: 'The falling-down house is still standing. The raccoons say hi.', sky: '#d9d2c4', ground: '#7d8f5a' },
   { name: 'The Long Way Home', blurb: 'Every hydrant, every mailbox, every single sniff.', sky: '#f7c9a0', ground: '#a7834e' },
   { name: 'Front Porch', blurb: 'Almost home. One last pile of leaves, then dinner.', sky: '#f2b48a', ground: '#9c6b45' },
+  { name: 'Bath Day', blurb: 'Suds everywhere. Pop the bubbles with a match right beside them.', sky: '#c8ecf5', ground: '#8fc9c4' },
+  { name: 'Backyard Barbecue', blurb: 'Micah will eat anything. Keep an eye on the hot dogs.', sky: '#ffd8a8', ground: '#7fb35e' },
+  { name: 'Sprinkler Party', blurb: 'Run through, shake off, run through again.', sky: '#a8e0f5', ground: '#5fae6a' },
+  { name: 'Moonlight Walk', blurb: 'One last stroll under the moon, then the comfiest nap of all.', sky: '#9fa6d9', ground: '#4f5d8a' },
 ];
 
 const BONE = 0, BALL = 1, PAW = 2, BOWL = 3, LOBSTER = 4, CAP = 5;
@@ -98,6 +104,21 @@ const LEAF_SCATTER = ['l...l...', '........', '..l...l.', '........', 'l...l...'
 const LEAF_GATE = ['........', '........', '........', '........', '........', '........', '........', 'llllllll'];
 const LEAF_DUSK = ['........', '.....ll.', '.....ll.', '........', '........', '.....ll.', '.....ll.', '........'];
 
+// Soap bubbles ('b'): the piece inside is too slippery to swap. A match on it or right beside it pops it.
+const BUB_FEW = ['........', '........', '..b..b..', '........', '........', '..b..b..', '........', '........'];
+const BUB_ROW = ['........', '........', '........', 'bbbbbbbb', '........', '........', '........', '........'];
+const BUB_CORNERS = ['bb....bb', 'b......b', '........', '........', '........', '........', 'b......b', 'bb....bb'];
+const BUB_TUB = ['........', '........', '.bbbbbb.', '.b....b.', '.b....b.', '.bbbbbb.', '........', '........'];
+const BUB_DOTS = ['b.b.b.b.', '........', '.b.b.b.b', '........', 'b.b.b.b.', '........', '.b.b.b.b', '........'];
+const BUB_GRILL = ['........', 'b.b.b.b.', '........', '.b.b.b.b', '........', '........', '........', '........'];
+const BUB_COLS = ['.b....b.', '.b....b.', '.b....b.', '.b....b.', '.b....b.', '.b....b.', '.b....b.', '.b....b.'];
+const BUB_FOAM = ['bbbbbbbb', 'bbbbbbbb', 'b.b..b.b', '........', '........', '........', '........', '........'];
+const BUB_HEART = ['........', '.bb..bb.', 'bbbbbbbb', 'bbbbbbbb', '.bbbbbb.', '..bbbb..', '...bb...', '........'];
+const BUB_SIDES = ['........', 'b......b', 'b......b', 'b......b', 'b......b', 'b......b', 'b......b', '........'];
+const BUB_INSIDE = ['........', '........', '...bb...', '..bbbb..', '..bbbb..', '...bb...', '........', '........'];
+const BUB_LEFT = ['........', '........', 'bb......', 'bb......', 'bb......', 'bb......', '........', '........'];
+const BUB_MOON = ['....bb..', '.....bb.', '......b.', '......b.', '......b.', '......b.', '.....bb.', '....bb..'];
+
 const MUD_DRIVE = ['........', '........', '........', '...mm...', '...mm...', '...mm...', '...mm...', '...mm...'];
 const DEEP_GUTTER = ['M......M', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'm......m', 'M......M'];
 const YARN_FENCE = ['........', '........', '........', '........', 'y.y.y.y.', 'yyyyyyyy', '........', '........'];
@@ -113,6 +134,7 @@ const L = (
   mud?: string[],
   yarn?: string[],
   leaves?: string[],
+  bubbles?: string[],
 ): Level => ({
   id,
   zone: Math.floor((id - 1) / 5),
@@ -123,6 +145,7 @@ const L = (
   mud,
   yarn,
   leaves,
+  bubbles,
 });
 const Y: Goal = { type: 'yarn' };
 const M: Goal = { type: 'mud' };
@@ -130,6 +153,8 @@ const C = (kind: number, count: number): Goal => ({ type: 'collect', kind, count
 const P = (power: Power, count: number): Goal => ({ type: 'power', power, count });
 const S = (target: number): Goal => ({ type: 'score', target });
 const F: Goal = { type: 'leaves' };
+const B: Goal = { type: 'bubbles' };
+const _ = undefined;
 
 export const LEVELS: Level[] = [
   L(1, 20, 5, [{ type: 'collect', kind: BONE, count: 15 }], [1500, 3000, 4500]),
@@ -185,14 +210,14 @@ export const LEVELS: Level[] = [
   L(40, 39, 6, [Y, M, { type: 'collect', kind: LOBSTER, count: 30 }], [5000, 8500, 10500], MUD_TOP, YARN_CAKE),
 
   // Rainy Walk: deep mud takes two washes.
-  L(41, 18, 6, [M], [3000, 5500, 8000], DEEP_PUDDLE),
+  L(41, 22, 5, [M], [3000, 5500, 8000], DEEP_PUDDLE),
   L(42, 22, 6, [C(BALL, 24), C(BOWL, 24)], [3500, 6000, 7000]),
   L(43, 25, 6, [M], [3500, 5500, 7500], DEEP_RIVER),
   L(44, 38, 6, [M, Y], [5000, 8500, 10000], DEEP_PUDDLES, YARN_BAND),
   L(45, 25, 6, [M, C(PAW, 24)], [3500, 6000, 7500], DEEP_BOTTOM),
 
   // Camping Trip: goals that ask for power-ups.
-  L(46, 18, 6, [P('zoomies', 5)], [3000, 5500, 7500]),
+  L(46, 22, 5, [P('zoomies', 4)], [3000, 5500, 7500]),
   L(47, 39, 6, [P('bark', 3), C(BONE, 20)], [5000, 8000, 11000]),
   L(48, 24, 6, [Y, P('zoomies', 4)], [3500, 5500, 7000], undefined, YARN_TENT),
   L(49, 45, 6, [M, P('bark', 2)], [6000, 10000, 12500], DEEP_SIDES),
@@ -239,6 +264,34 @@ export const LEVELS: Level[] = [
   L(78, 45, 6, [Y, F], [5500, 9000, 11500], undefined, YARN_DIAMOND, LEAF_EDGES),
   L(79, 39, 6, [S(9000), F, P('micah', 1)], [9000, 10500, 12000], undefined, undefined, LEAF_PILE),
   L(80, 45, 6, [M, Y, F, P('micah', 1)], [6500, 10500, 13000], DEEP_MOON, YARN_DOOR, LEAF_DUSK),
+
+  // Bath Day: soap bubbles arrive.
+  L(81, 22, 5, [B], [2000, 3900, 5300], _, _, _, BUB_FEW),
+  L(82, 19, 6, [B, C(BONE, 22)], [2500, 4800, 6000], _, _, _, BUB_ROW),
+  L(83, 18, 6, [B, C(BOWL, 18)], [2000, 4200, 5500], _, _, _, BUB_CORNERS),
+  L(84, 18, 6, [B, M, C(PAW, 18)], [2000, 4300, 5700], DEEP_PUDDLE, _, _, BUB_TUB),
+  L(85, 18, 6, [B, P('zoomies', 5)], [2000, 4400, 5900], _, _, _, BUB_DOTS),
+
+  // Backyard Barbecue: Micah will eat anything.
+  L(86, 20, 6, [B, C(LOBSTER, 22)], [2500, 4800, 6000], _, _, _, BUB_GRILL),
+  L(87, 27, 6, [B, Y], [3000, 5600, 7200], _, YARN_DOOR, _, BUB_CORNERS),
+  L(88, 34, 6, [S(8000), B], [8000, 9200, 10200], _, _, _, BUB_COLS),
+  L(89, 22, 6, [B, F], [2500, 4900, 6400], _, _, LEAF_PILE, BUB_CORNERS),
+  L(90, 24, 6, [B, M, P('bark', 2)], [2500, 5300, 7200], DEEP_PUDDLE, _, _, BUB_TUB),
+
+  // Sprinkler Party: everything gets wet, then sudsy.
+  L(91, 21, 6, [B, C(BALL, 24)], [2500, 5000, 6500], _, _, _, BUB_FOAM),
+  L(92, 44, 6, [B, F], [5000, 9100, 12200], _, _, LEAF_GATE, BUB_DOTS),
+  L(93, 38, 6, [P('micah', 1), B], [3500, 6600, 9600], _, _, _, BUB_HEART),
+  L(94, 24, 6, [B, Y, C(PAW, 22)], [3000, 5800, 7300], _, YARN_DOOR, _, BUB_SIDES),
+  L(95, 45, 6, [M, B, F], [5000, 9600, 11600], DEEP_PUDDLES, _, LEAF_GATE, BUB_ROW),
+
+  // Moonlight Walk: the last stroll of the night.
+  L(96, 33, 6, [B, P('zoomies', 3), P('bark', 2)], [3500, 6700, 8600], _, _, _, BUB_MOON),
+  L(97, 21, 6, [B, C(CAP, 24)], [2500, 4900, 6400], _, _, _, BUB_HEART),
+  L(98, 35, 6, [Y, B], [4000, 7600, 10000], _, YARN_DIAMOND, _, BUB_INSIDE),
+  L(99, 42, 6, [S(9500), B, P('micah', 1)], [9500, 11100, 12500], _, _, _, BUB_DOTS),
+  L(100, 45, 6, [M, Y, F, B], [5500, 10300, 13300], MUD_DRIVE, YARN_CORNERS, LEAF_DUSK, BUB_LEFT),
 ];
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
@@ -254,6 +307,10 @@ export function mudCount(level: Level): number {
 
 export function leafCount(level: Level): number {
   return (level.leaves ?? []).join('').split('').filter((ch) => ch === 'l').length;
+}
+
+export function bubbleCount(level: Level): number {
+  return (level.bubbles ?? []).join('').split('').filter((ch) => ch === 'b').length;
 }
 
 export function yarnCount(level: Level): number {

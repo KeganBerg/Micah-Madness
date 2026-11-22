@@ -34,7 +34,7 @@ export function weeklyLevel(s: SaveData, now = new Date()): Level & { baseId: nu
   const shift = 1 + (h % (base.kinds - 1));
   const goals: Goal[] = base.goals.map((g) => (g.type === 'collect' ? { ...g, kind: (g.kind + shift) % base.kinds } : g));
   const mirror = (rows?: string[]) => rows?.map((r) => [...r].reverse().join(''));
-  return { ...base, id: WEEKLY_ID, baseId: base.id, goals, mud: mirror(base.mud), yarn: mirror(base.yarn) };
+  return { ...base, id: WEEKLY_ID, baseId: base.id, goals, mud: mirror(base.mud), yarn: mirror(base.yarn), leaves: mirror(base.leaves), bubbles: mirror(base.bubbles) };
 }
 
 /** Records a win. Returns what it paid, or null if this week's prize was already claimed. */
