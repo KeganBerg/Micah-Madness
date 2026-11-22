@@ -4,6 +4,8 @@
 // the path and level nodes so they stay easy to read and tap.
 // Props carry data-poke (how they react to a tap) and data-fx (a little burst they throw).
 
+import { YOSHI, YOSHI_LINES } from './yoshi';
+
 export interface Band { top: number; bottom: number; }
 interface Pt { x: number; y: number; }
 export interface SceneInput {
@@ -567,6 +569,10 @@ const moon = (): Prop => ({
 
 
 // ── Neighbourhood Walk: the streets on Micah's daily walk ──
+const yoshi = (): Prop => ({
+  r: 20, poke: 'hop', fx: 'heart', sfx: 'boing', say: YOSHI_LINES,
+  svg: `${shadow(16, 0.16)}<g transform="scale(.82)">${YOSHI}</g>`,
+});
 const house = (wall: string, roof: string, door = '#e8352f'): Prop => ({
   r: 36, poke: 'wobble', fx: 'leaf', sfx: 'knock',
   svg: `${shadow(34, 0.16)}
@@ -704,7 +710,7 @@ export const THEMES: Theme[] = [
     ground: '#5c9f5a', dark: '#4f914e', light: '#6aad66', path: '#e6dfcf', edge: '#ada38c', dots: '#3f7f40',
     texture: mix(tuft('#3f7f40'), tuft('#4a8c49'), dot('#7fbd78', 1.6)),
     props: (r) => [
-      [() => pond(), 1], [() => tree('#3f8f47', '#2f7a3a', 1.1), 4], [() => bench(), 2], [() => lamp(), 2], [() => hydrant(), 1],
+      [() => pond(), 1], [() => yoshi(), 1], [() => tree('#3f8f47', '#2f7a3a', 1.1), 4], [() => bench(), 2], [() => lamp(), 2], [() => hydrant(), 1],
       [() => dog('#c9893f', '#8a5a26'), 1], [() => dog('#f2f2f2', '#2b2b2b', true, '#2b2b2b'), 1], [() => dog('#6b6b6b', '#3d3d3d', true), 1], [() => dog('#e8c38a', '#c9893f'), 1],
       [() => ball(), 4], [() => frisbee(pick(r, ['#e8352f', '#2f8fe0', '#ffc12e'])), 2], [() => bush('#4a9a4a', '#3a823c'), 3],
       [() => bird('#5d6f7c'), 2], [() => butterfly('#fff'), 2], [() => signpost('PARK'), 1],
@@ -815,7 +821,7 @@ export const THEMES: Theme[] = [
     ground: '#8fae5e', dark: '#81a052', light: '#9dbc6b', path: '#d8d2c4', edge: '#a39a86', dots: '#e8892f',
     texture: mix(tuft('#6f8f45'), dot('#e8892f', 1.6), dot('#d9541f', 1.4), dot('#ffc12e', 1.2)),
     props: (r) => [
-      [() => house('#fbf4e6', '#5d6f7c'), 1], [() => house('#cfe6f5', '#8a5a26', '#23925a'), 1], [() => mailbox(), 2], [() => leafPile(), 3],
+      [() => house('#fbf4e6', '#5d6f7c'), 1], [() => yoshi(), 1], [() => house('#cfe6f5', '#8a5a26', '#23925a'), 1], [() => mailbox(), 2], [() => leafPile(), 3],
       [() => tree('#e8892f', '#c96a1f'), 3], [() => gnome(), 1], [() => hydrant(), 1], [() => fence(), 2], [() => bird(pick(r, ['#e8352f', '#5d6f7c'])), 2],
       [() => dog('#c9893f', '#8a5a26', true), 1],
     ],
@@ -843,7 +849,7 @@ export const THEMES: Theme[] = [
     ground: '#9c6b45', dark: '#8f603c', light: '#a97851', path: '#f1d9a8', edge: '#a8743a', dots: '#ffc12e',
     texture: mix(dot('#ffc12e', 1.4), dot('#d9541f', 1.6), dot('#fff3c4', 1.1)),
     props: () => [
-      [() => homePorch(), 1], [() => leafPile(), 4], [() => pumpkin(), 2], [() => tree('#d9541f', '#b8401a', 1.1), 3], [() => mailbox(), 1],
+      [() => homePorch(), 1], [() => yoshi(), 1], [() => leafPile(), 4], [() => pumpkin(), 2], [() => tree('#d9541f', '#b8401a', 1.1), 3], [() => mailbox(), 1],
       [() => gnome(), 1], [() => lamp(), 2], [() => bird('#e8352f'), 2],
     ],
   },

@@ -51,6 +51,7 @@ import {
   type SaveData,
 } from './save';
 import { DECOR, yardScene } from './yard';
+import { YOSHI_YARD } from './yoshi';
 import { runLaunch } from './launch';
 import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
@@ -435,7 +436,7 @@ function showYard(): void {
       </header>
       <div class="yard-body">
         <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume))}</div>
-        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'} <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.</p>
+        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'} Yoshi, Grace\u2019s chinchilla, is visiting too: tap her to say hi. <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
         </div>
@@ -485,6 +486,14 @@ function showYard(): void {
   let stopRoam: (() => void) | null = null;
   mount(screen, () => stopRoam?.());
   stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx, {
+    onYoshi: () => {
+      bump(save, 'yoshi');
+      const tags = awardBadges(save);
+      persist(save);
+      haptic.tick();
+      toast(YOSHI_YARD[((save.tally.yoshi ?? 1) - 1) % YOSHI_YARD.length]);
+      if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
+    },
     onSnack: (snack, saved) => {
       bump(save, saved ? 'saves' : 'gulps');
       if (saved) save.biscuits += 2;

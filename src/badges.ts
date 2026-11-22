@@ -5,7 +5,7 @@ import { LEVELS } from './levels';
 import { DECOR } from './yard';
 import type { SaveData } from './save';
 
-export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps';
+export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps' | 'yoshi';
 
 export interface Badge {
   id: string;
@@ -39,6 +39,7 @@ export const BADGES: Badge[] = [
   { id: 'loyal', name: 'Loyal Friend', desc: 'Claim all 7 daily treats in a row.', reward: 50, color: '#5c9f5a', progress: (s) => [s.daily.day, 7] },
   { id: 'drop', name: 'Drop It!', desc: 'Grab 25 falling things before Micah eats them.', reward: 40, color: '#2f8fe0', progress: (s) => [t(s, 'saves'), 25] },
   { id: 'gulp', name: 'Bottomless Pit', desc: 'Let Micah eat 10 things she shouldn\u2019t.', reward: 20, color: '#8a5a26', progress: (s) => [t(s, 'gulps'), 10] },
+  { id: 'yoshi', name: 'Yoshi\u2019s Bestie', desc: 'Visit Yoshi the chinchilla in Micah\u2019s Yard 10 times.', reward: 30, color: '#a9b3bc', progress: (s) => [t(s, 'yoshi'), 10] },
   { id: 'yard', name: 'Dream Yard', desc: 'Build everything in Micah’s Yard.', reward: 75, color: '#86a9d6', progress: (s) => [s.decor.length, DECOR.length] },
 ];
 
