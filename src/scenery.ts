@@ -402,9 +402,15 @@ export const noahsArc = (): Prop => ({
       <rect x="-40" y="-56" width="72" height="56" fill="#8c7b66" stroke="#4f4237" stroke-width="2"/>
       <path d="M-40 -46 H32 M-40 -36 H32 M-40 -26 H32 M-40 -16 H32 M-40 -6 H32" stroke="#6f604f" stroke-width="1" opacity=".7"/>
       <path d="M-22 -50 l6 3 -4 4 M18 -20 l5 2 -3 5" stroke="#5c4e41" stroke-width="1.2" fill="none"/>
-      <rect x="18" y="-82" width="9" height="20" fill="#7a5a48" stroke="#4f4237" stroke-width="1.5" transform="rotate(7 22 -72)"/>
-      <g class="critter c-chimney" transform="translate(23 -82)">${raccoonBit()}</g>
-      <rect x="16" y="-84" width="13" height="4" fill="#6a4a3a" stroke="#4f4237" stroke-width="1.2" transform="rotate(7 22 -82)"/>
+      <!-- The raccoon sits down inside the chimney: drawn first, then the chimney and its rim in front,
+           so only its head and tail show over the top (and it can duck right in). -->
+      <g transform="rotate(7 22 -72)">
+        <rect x="15" y="-84" width="15" height="22" fill="#3a2a22"/>
+        <g class="critter c-chimney" transform="translate(22.5 -83)">${raccoonBit()}</g>
+        <rect x="15" y="-82" width="15" height="20" fill="#7a5a48" stroke="#4f4237" stroke-width="1.5"/>
+        <path d="M15 -76 h15 M15 -70 h15 M22 -82 v6 M19 -76 v6 M26 -76 v6" stroke="#5f4538" stroke-width=".9"/>
+        <rect x="13" y="-85" width="19" height="4" fill="#6a4a3a" stroke="#4f4237" stroke-width="1.2"/>
+      </g>
       <path d="M-48 -54 L-4 -88 L40 -56 Q-4 -50 -48 -54 Z" fill="#4f4440" stroke="#2d2623" stroke-width="2" stroke-linejoin="round"/>
       <path d="M-30 -62 h8 M-16 -70 h8 M2 -66 h8 M14 -60 h8" stroke="#3b322e" stroke-width="2"/>
       <path d="M-6 -78 L4 -72 L-2 -66 L-12 -70 Z" fill="#1f1a17"/>
