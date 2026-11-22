@@ -1211,3 +1211,24 @@ h2.center { margin: 2px 0 6px; }
 /* Home Screen app on newer iPhones: the app is sized to the full screen (see viewport.ts),
    so the page itself must not scroll by the extra status-bar height. */
 html.full-app, html.full-app body { overflow: hidden; }
+
+/* ───── Micah's Album (sticker book) ───── */
+.dock { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; }
+.album-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); padding: var(--s2) 2px var(--s3); }
+.sticker {
+  margin: 0; padding: 8px 8px 10px; background: #fff; border-radius: 6px; transform: rotate(var(--tilt, 0deg));
+  box-shadow: 0 3px 0 #0001, 0 6px 16px #173a5226; display: flex; flex-direction: column; gap: 6px;
+}
+.sticker img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; display: block; background: #e6edf2; }
+.sticker figcaption { display: grid; gap: 2px; line-height: 1.2; text-align: center; }
+.sticker figcaption b { font-family: var(--font-display); font-weight: 400; font-size: 15px; color: #173a52; }
+.sticker figcaption span { font-size: 11px; color: #4b6375; }
+.sticker.locked, .sticker.soon { aspect-ratio: 4 / 5; align-items: center; justify-content: center; text-align: center; background: var(--panel-2); border: 2px dashed #c4d2dc; box-shadow: none; color: #7b93a5; }
+.sticker.locked .ui-icon { width: 26px; height: 26px; }
+.sticker.locked small, .sticker.soon small { font-size: 11px; font-weight: 800; padding: 0 6px; }
+.sticker-reveal { display: grid; place-items: center; padding: var(--s3) 0 var(--s4); }
+.sticker.big { width: min(78%, 300px); animation: sticker-slap .7s cubic-bezier(.3, 1.5, .5, 1) both; }
+.sticker.big figcaption b { font-size: 20px; }
+.sticker.big figcaption span { font-size: 13px; }
+@keyframes sticker-slap { 0% { transform: scale(1.8) rotate(-20deg); opacity: 0; } 100% { transform: rotate(var(--tilt)); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sticker.big { animation: none; } }
