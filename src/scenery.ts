@@ -331,16 +331,19 @@ const boards = (x: number, y: number, w: number, h: number) => `
     <circle cx="${x}" cy="${y + 2}" r=".7" fill="#555"/><circle cx="${x + w}" cy="${y + 3}" r=".7" fill="#555"/>`;
 
 /** The barn owl who lives over the garage. Perched, or (flying) with her wings out. */
-export const owlSVG = (flying = false) => flying
-  ? `<g class="owl-wings"><path d="M-3 -2 C-12 -12 -22 -10 -27 -3 C-21 -4 -15 -1 -10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/>
-      <path d="M3 -2 C12 -12 22 -10 27 -3 C21 -4 15 -1 10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/></g>
-    <ellipse cx="0" cy="0" rx="8" ry="9" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
+export const owlSVG = (flying = false, part: 'all' | 'wings' | 'body' = 'all') => {
+  if (!flying) return OWL_PERCHED;
+  return (part !== 'body' ? OWL_WINGS : '') + (part !== 'wings' ? OWL_BODY : '');
+};
+const OWL_WINGS = `<path d="M-3 -2 C-12 -12 -22 -10 -27 -3 C-21 -4 -15 -1 -10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/>
+    <path d="M3 -2 C12 -12 22 -10 27 -3 C21 -4 15 -1 10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/>`;
+const OWL_BODY = `<ellipse cx="0" cy="0" rx="8" ry="9" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
     <ellipse cx="0" cy="2.5" rx="5" ry="5.5" fill="#e6d3b0"/>
     <path d="M-7 -6 L-6 -11 L-3 -7 Z M7 -6 L6 -11 L3 -7 Z" fill="#9b7a56" stroke="#4f3a26" stroke-width=".8"/>
     <circle cx="-3.2" cy="-4" r="3.2" fill="#ffc12e" stroke="#4f3a26" stroke-width=".7"/><circle cx="3.2" cy="-4" r="3.2" fill="#ffc12e" stroke="#4f3a26" stroke-width=".7"/>
     <circle cx="-3" cy="-4" r="1.5" fill="#111"/><circle cx="3" cy="-4" r="1.5" fill="#111"/>
-    <path d="M-1.3 -1.2 L1.3 -1.2 L0 1.4 Z" fill="#e8892f"/>`
-  : `<ellipse cx="0" cy="-8" rx="6.5" ry="8.5" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
+    <path d="M-1.3 -1.2 L1.3 -1.2 L0 1.4 Z" fill="#e8892f"/>`;
+const OWL_PERCHED = `<ellipse cx="0" cy="-8" rx="6.5" ry="8.5" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
     <ellipse cx="0" cy="-5.5" rx="4" ry="5" fill="#e6d3b0"/>
     <path d="M-6 -8 Q-8 -3 -4 0 M6 -8 Q8 -3 4 0" fill="#8a6a4a" stroke="#4f3a26" stroke-width=".8"/>
     <path d="M-5.5 -13 L-5 -18 L-2.5 -14 Z M5.5 -13 L5 -18 L2.5 -14 Z" fill="#9b7a56" stroke="#4f3a26" stroke-width=".8"/>
@@ -349,19 +352,25 @@ export const owlSVG = (flying = false) => flying
     <path d="M-1.1 -9 L1.1 -9 L0 -6.8 Z" fill="#e8892f"/>
     <path d="M-2 0 V1.4 M2 0 V1.4" stroke="#e8892f" stroke-width="1"/>`;
 
-// The tidy white garage next door, joined to the house's top floor by a little deck.
-const garage = () => `<g transform="translate(54 0)">
-    <rect x="-24" y="-52" width="48" height="52" fill="#f4f1ea" stroke="#8d887d" stroke-width="2"/>
-    <path d="M-24 -42 H24 M-24 -32 H24" stroke="#dcd7cc" stroke-width="1"/>
-    <path d="M-29 -50 L0 -76 L29 -50 Z" fill="#6f7a80" stroke="#46505a" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M-17 -56 h8 M2 -62 h8 M8 -56 h8" stroke="#56616a" stroke-width="1.6"/>
-    <rect x="-20" y="-26" width="40" height="26" fill="#e7e2d6" stroke="#8d887d" stroke-width="1.5"/>
-    <path d="M-20 -19.5 H20 M-20 -13 H20 M-20 -6.5 H20" stroke="#bdb6a8" stroke-width="1.2"/>
-    <rect x="-22" y="-48" width="10" height="17" fill="#5d6f7c" stroke="#8d887d" stroke-width="1.5"/>
-    <circle cx="-14.4" cy="-39" r=".9" fill="#c9a24a"/>
-    <rect x="4" y="-47" width="13" height="11" fill="#cfe6f5" stroke="#8d887d" stroke-width="1.5"/>
-    <path d="M10.5 -47 V-36 M4 -41.5 H17" stroke="#8d887d" stroke-width="1"/>
-    <path d="M17 -47 l3 1 v11 l-3 -1 Z" fill="#5d6f7c" transform="rotate(8 17 -47)"/>
+// The white garage next door: as run-down as the house, with peeling paint, a sagging roof,
+// boarded windows and a door off its track. A little deck joins its top floor to the house.
+const garage = () => `<g transform="translate(54 0) rotate(2.5)">
+    <rect x="-24" y="-52" width="48" height="52" fill="#e4dfd2" stroke="#7d786c" stroke-width="2"/>
+    <path d="M-24 -42 H24 M-24 -32 H24" stroke="#c9c3b5" stroke-width="1"/>
+    <path d="M-23 -30 q4 -3 8 0 q-1 5 -5 6 q-4 -1 -3 -6 Z M12 -50 q5 -1 9 2 q-2 4 -6 4 q-3 -2 -3 -6 Z M-8 -50 q3 0 4 3 q-2 2 -4 1 Z M19 -28 q3 1 4 4 l-1 6 q-3 -2 -3 -10 Z" fill="#a89a84" opacity=".85"/>
+    <path d="M-18 -44 l4 3 -2 3 M20 -34 l-3 4 2 3" stroke="#6f6a5f" stroke-width="1" fill="none"/>
+    <path d="M-29 -50 L-1 -75 L29 -49 Q0 -45 -29 -50 Z" fill="#5d6268" stroke="#3a3f45" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M-17 -56 h8 M2 -62 h8 M10 -55 h7" stroke="#474c52" stroke-width="1.8"/>
+    <path d="M4 -60 L11 -57 L8 -52 L1 -55 Z" fill="#1f1a17"/><path d="M3 -59 L9 -53" stroke="#7a5a48" stroke-width="1.1"/>
+    <path d="M-20 -26 H20 V0 H-20 Z" fill="#1f1a17"/>
+    <path d="M-20 -26 H20 V-3 L-20 -8 Z" fill="#d6d0c2" stroke="#7d786c" stroke-width="1.5"/>
+    <path d="M-20 -19.5 H20 M-20 -13 H20 M-20 -8 L20 -5" stroke="#aaa395" stroke-width="1.2"/>
+    <path d="M-6 -22 q3 2 1 5" stroke="#8d8678" stroke-width="1.2" fill="none"/>
+    <path d="M-22 -48 V-31 H-12 V-48 Z" fill="#1f1a17" stroke="#7d786c" stroke-width="1.5"/>
+    <path d="M-24 -43 L-10 -38" stroke="#c49a66" stroke-width="3" stroke-linecap="round"/>
+    ${boards(4, -47, 13, 11)}
+    <path d="M-21 0 q-3 -10 1 -18 q3 -6 0 -12" stroke="#4f7a45" stroke-width="1.6" fill="none"/>
+    <circle cx="-20" cy="-14" r="1.8" fill="#5e9a45"/><circle cx="-19" cy="-24" r="1.6" fill="#5e9a45"/><circle cx="-21" cy="-6" r="1.7" fill="#5e9a45"/>
   </g>`;
 const deck = () => {
   let bal = '';
@@ -382,20 +391,26 @@ export const noahsArc = (): Prop => ({
     'A raccoon waves from the chimney. Rent is due Tuesday.',
     'Micah sniffs the porch. Verdict: very interesting.',
     'Two of every critter, as promised.',
-    'The white garage is the only thing here painted this century.',
+    'The garage was white once. Nobody remembers when.',
     'The owl over the garage keeps an eye on Micah. Who? Micah.',
   ],
   svg: `<g transform="scale(.86)">${shadow(80, 0.22)}
     <path d="M-80 0 q2 -9 5 -1 q2 -11 4 0 M72 0 q2 -10 5 -1 q2 -8 4 0 M-34 0 q1 -7 3 -1" stroke="#55705f" stroke-width="2" fill="none" stroke-linecap="round"/>
     ${garage()}
-    <g class="critter c-owl owl-perch" transform="translate(54 -75)"><g>${owlSVG()}</g></g>
+    <g class="critter c-owl owl-perch" transform="translate(56 -74)"><g>${owlSVG()}</g></g>
     <g transform="translate(-24 0) rotate(-3)">
       <rect x="-40" y="-56" width="72" height="56" fill="#8c7b66" stroke="#4f4237" stroke-width="2"/>
       <path d="M-40 -46 H32 M-40 -36 H32 M-40 -26 H32 M-40 -16 H32 M-40 -6 H32" stroke="#6f604f" stroke-width="1" opacity=".7"/>
       <path d="M-22 -50 l6 3 -4 4 M18 -20 l5 2 -3 5" stroke="#5c4e41" stroke-width="1.2" fill="none"/>
-      <rect x="18" y="-82" width="9" height="20" fill="#7a5a48" stroke="#4f4237" stroke-width="1.5" transform="rotate(7 22 -72)"/>
-      <g class="critter c-chimney" transform="translate(23 -82)">${raccoonBit()}</g>
-      <rect x="16" y="-84" width="13" height="4" fill="#6a4a3a" stroke="#4f4237" stroke-width="1.2" transform="rotate(7 22 -82)"/>
+      <!-- The raccoon sits down inside the chimney: drawn first, then the chimney and its rim in front,
+           so only its head and tail show over the top (and it can duck right in). -->
+      <g transform="rotate(7 22 -72)">
+        <rect x="15" y="-84" width="15" height="22" fill="#3a2a22"/>
+        <g class="critter c-chimney" transform="translate(22.5 -83)">${raccoonBit()}</g>
+        <rect x="15" y="-82" width="15" height="20" fill="#7a5a48" stroke="#4f4237" stroke-width="1.5"/>
+        <path d="M15 -76 h15 M15 -70 h15 M22 -82 v6 M19 -76 v6 M26 -76 v6" stroke="#5f4538" stroke-width=".9"/>
+        <rect x="13" y="-85" width="19" height="4" fill="#6a4a3a" stroke="#4f4237" stroke-width="1.2"/>
+      </g>
       <path d="M-48 -54 L-4 -88 L40 -56 Q-4 -50 -48 -54 Z" fill="#4f4440" stroke="#2d2623" stroke-width="2" stroke-linejoin="round"/>
       <path d="M-30 -62 h8 M-16 -70 h8 M2 -66 h8 M14 -60 h8" stroke="#3b322e" stroke-width="2"/>
       <path d="M-6 -78 L4 -72 L-2 -66 L-12 -70 Z" fill="#1f1a17"/>
