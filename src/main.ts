@@ -62,6 +62,7 @@ import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
 import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode, whenCloudIsNewer } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
+import { STICKERS, freshStickers, markStickersSeen, stickerEarned, stickerHint, stickersEarned, type Sticker } from './stickers';
 import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_LEVELS, claimWinter, isWinterLevel, winterNext, winterNumber, winterOpen, winterWon } from './winter';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
@@ -258,6 +259,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="dock-btn" data-act="daily">${UI.gift}<span>Daily</span>${dailyClaimable(save) ? '<em class="count dot">1</em>' : ''}</button>
         <button class="dock-btn" data-act="collar">${UI.award}<span>Collar</span><em class="tally">${save.badges.length}/${BADGES.length}</em></button>
         <button class="dock-btn" data-act="closet">${UI.shirt}<span>Closet</span></button>
+        <button class="dock-btn" data-act="album">${UI.album}<span>Album</span>${freshStickers(save).length ? '<em class="count dot">1</em>' : ''}</button>
         <button class="dock-btn" data-act="shop2">${UI.bag}<span>Shop</span></button>
       </nav>
     </div>`);
@@ -269,6 +271,13 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
+  screen.querySelector('[data-act="album"]')!.addEventListener('click', () => showAlbum());
+  // A freshly finished area shows off its sticker, once nothing else is on screen.
+  if (freshStickers(save).length) {
+    window.setTimeout(() => {
+      if (screen.isConnected && !document.querySelector('.modal')) revealSticker(freshStickers(save)[0]);
+    }, 1800);
+  }
   screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
@@ -936,6 +945,50 @@ function showCollar(): void {
       }).join('')}
     </ul>`, () => showMap());
   m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
+}
+
+// ───────────────────────────── Sticker book ─────────────────────────────
+
+const stickerCard = (st: Sticker, big = false) =>
+  `<figure class="sticker ${big ? 'big' : ''}" style="--tilt:${st.tilt}deg"><img src="${st.photo}" alt="Micah: ${st.title}" loading="lazy" draggable="false"><figcaption><b>${st.title}</b><span>${st.caption}</span></figcaption></figure>`;
+
+function showAlbum(): void {
+  const got = stickersEarned(save);
+  markStickersSeen(save, got);
+  persist(save);
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">${got.length} of ${STICKERS.length} stickers</p><h2>Micah\u2019s Album</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <p class="body">Real photos of the real Micah. Finish an area of the map to stick the next one in.</p>
+    <div class="album-grid">
+      ${STICKERS.map((st) => (stickerEarned(save, st) ? stickerCard(st) : `<div class="sticker locked" style="--tilt:${st.tilt}deg">${UI.lock}<small>${stickerHint(st)}</small></div>`)).join('')}
+      <div class="sticker soon"><small>More photos of Micah are on the way.</small></div>
+    </div>`, () => showMap());
+  m.querySelector('.close')!.addEventListener('click', () => (m.remove(), showMap()));
+}
+
+function revealSticker(st: Sticker): void {
+  markStickersSeen(save, [st]);
+  persist(save);
+  sfx.star(3);
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar cheer')}
+      <div><p class="eyebrow">Area ${st.area + 1} finished</p><h2>New sticker!</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <div class="sticker-reveal">${stickerCard(st, true)}</div>
+    <div class="actions">
+      <button class="btn" data-act="album">Open the album</button>
+      <button class="btn secondary" data-act="ok">Back to the map</button>
+    </div>`, () => showMap());
+  const done = () => (m.remove(), showMap());
+  m.querySelector('.close')!.addEventListener('click', done);
+  m.querySelector('[data-act="ok"]')!.addEventListener('click', done);
+  m.querySelector('[data-act="album"]')!.addEventListener('click', () => (m.remove(), showAlbum()));
 }
 
 /** Announce newly earned tags one after another. */
