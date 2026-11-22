@@ -617,6 +617,51 @@ const moon = (): Prop => ({
 });
 
 
+// ── Levels 81-100: bath day, a backyard barbecue, the sprinkler and a moonlit walk ──
+const bathtub = (): Prop => ({
+  r: 26, poke: 'wobble', fx: 'drop', sfx: 'splash',
+  say: ['Bath day! Micah is not a fan.', 'She’s already plotting her escape.', 'Lobster in the tub!'],
+  svg: `${shadow(26, 0.15)}<path d="M-20 -1 L-18 4 M18 -1 L20 4" stroke="#c9a03a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M-26 -20 H26 Q26 0 10 0 H-10 Q-26 0 -26 -20 Z" fill="#ffffff" stroke="#9fc3d6" stroke-width="2"/>
+    <g class="bob"><circle cx="-14" cy="-22" r="7" fill="#e8f8ff" stroke="#9fd8ec"/><circle cx="-3" cy="-26" r="8.5" fill="#e8f8ff" stroke="#9fd8ec"/><circle cx="10" cy="-23" r="7" fill="#e8f8ff" stroke="#9fd8ec"/><circle cx="19" cy="-30" r="3" fill="#e8f8ff" stroke="#9fd8ec"/><circle cx="-20" cy="-34" r="2.4" fill="#e8f8ff" stroke="#9fd8ec"/></g>
+    <path d="M-26 -20 H26" stroke="#9fc3d6" stroke-width="3" stroke-linecap="round"/>`,
+});
+
+const duckToy = (): Prop => ({
+  r: 10, poke: 'hop', fx: 'drop', sfx: 'boing',
+  svg: `${shadow(8, 0.12)}<g class="bob"><ellipse cx="0" cy="-5" rx="8" ry="5" fill="#ffd23f"/><circle cx="5" cy="-11" r="4" fill="#ffd23f"/><path d="M8.5 -11.5 L12 -10.5 L8.5 -9.5 Z" fill="#ff8a1f"/><circle cx="5.8" cy="-12" r=".9" fill="#1b1b1b"/></g>`,
+});
+
+const grill = (): Prop => ({
+  r: 20, poke: 'bounce', fx: 'sparkle', sfx: 'pop',
+  say: ['Hot dogs! Micah will eat anything.', 'She has been sitting by the grill for an hour.', 'Nobody drop a hot dog. Too late.'],
+  svg: `${shadow(16, 0.18)}<path d="M-10 0 L-6 -14 M10 0 L6 -14" stroke="#3a3f45" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M-17 -16 H17 Q17 -2 0 -2 Q-17 -2 -17 -16 Z" fill="#2b2f35"/>
+    <path d="M-14 -17 H14" stroke="#8f9aa0" stroke-width="2"/>
+    <rect x="-11" y="-21" width="9" height="3.6" rx="1.8" fill="#c96a3a"/><rect x="1" y="-21" width="9" height="3.6" rx="1.8" fill="#c96a3a"/>
+    <g class="flicker"><path d="M-6 -24 q2 -5 0 -9 M4 -24 q2 -5 0 -9" stroke="#d6dde2" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/></g>`,
+});
+
+const picnic = (): Prop => ({
+  r: 24, poke: 'wobble', fx: 'heart', sfx: 'knock',
+  svg: `${shadow(22, 0.12)}<path d="M-24 -8 L-16 -18 H20 L26 -8 Z" fill="#e8352f"/>
+    <path d="M-20 -13 H23 M-10 -18 L-14 -8 M2 -18 L1 -8 M14 -18 L16 -8" stroke="#fff" stroke-width="1.6" opacity=".85"/>
+    <circle cx="-6" cy="-15" r="3" fill="#fff"/><rect x="8" y="-17" width="7" height="4" rx="2" fill="#c96a3a"/>`,
+});
+
+const sprinkler = (): Prop => ({
+  r: 18, poke: 'splash', fx: 'drop', sfx: 'splash',
+  say: ['Run through! Shake off! Run through again!', 'Micah vs. the sprinkler: round 12.'],
+  svg: `${shadow(8, 0.12)}<rect x="-4" y="-6" width="8" height="6" rx="2" fill="#ffc12e"/><rect x="-1.5" y="-12" width="3" height="7" fill="#e8352f"/>
+    <g class="flicker" fill="none" stroke="#7fd0ec" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 4">
+    <path d="M0 -12 Q-14 -30 -22 -8"/><path d="M0 -12 Q14 -30 22 -8"/><path d="M0 -12 Q-4 -34 -10 -12"/><path d="M0 -12 Q4 -34 10 -12"/></g>`,
+});
+
+const firefly = (): Prop => ({
+  r: 12, poke: 'flyoff', fx: 'sparkle', sfx: 'chime',
+  svg: `${hit(12, -22)}<g class="bob"><circle cx="0" cy="-22" r="7" fill="#fff3a0" opacity=".3"/><circle cx="0" cy="-22" r="3" fill="#ffe14d"/></g>`,
+});
+
 // ── Neighbourhood Walk: the streets on Micah's daily walk ──
 const yoshi = (): Prop => ({
   r: 20, poke: 'hop', fx: 'heart', sfx: 'boing', say: YOSHI_LINES,
@@ -902,6 +947,42 @@ export const THEMES: Theme[] = [
       [() => gnome(), 1], [() => lamp(), 2], [() => bird('#e8352f'), 2],
     ],
   },
+  // 17 · Bath Day: a tub full of suds in the backyard, towels on the line and a rubber duck.
+  {
+    ground: '#8fc9c4', dark: '#82bdb8', light: '#9dd5d0', path: '#eaf6f4', edge: '#9fc3c0', dots: '#ffffff',
+    texture: mix(dot('#ffffff', 1.6), dot('#bfeaf7', 1.8), tuft('#6fb3a8')),
+    props: (r) => [
+      [() => bathtub(), 1], [() => duckToy(), 3], [() => towel('#e8352f', '#fff'), 2], [() => towel('#2f8fe0', '#fff'), 1], [() => hose(), 2],
+      [() => bucket(), 2], [() => bush('#6fb36a', '#5a9e57'), 3], [() => flowers(r, PETALS), 2], [() => fence(), 2],
+    ],
+  },
+  // 18 · Backyard Barbecue: the grill, a picnic blanket and a very hopeful dog.
+  {
+    ground: '#7fb35e', dark: '#72a653', light: '#8cc06a', path: '#e6d6b8', edge: '#b89a6a', dots: '#ffe9a8',
+    texture: mix(tuft('#5f9f4e'), tuft('#6aa95a'), dot('#ffe9a8', 1.2)),
+    props: (r) => [
+      [() => grill(), 1], [() => picnic(), 2], [() => fence(), 3], [() => tree('#5fae4f', '#4a9440'), 3], [() => ball(), 2],
+      [() => bone(), 2], [() => bird('#c9733a'), 2], [() => flowers(r, PETALS), 3], [() => doghouse(), 1],
+    ],
+  },
+  // 19 · Sprinkler Party: sprinklers, puddles and a paddling pond.
+  {
+    ground: '#5fae6a', dark: '#52a05d', light: '#6cbb77', path: '#dff2f8', edge: '#9fc3d6', dots: '#bfeaf7',
+    texture: mix(tuft('#3f8f4a'), dot('#bfeaf7', 1.6), dot('#ffffff', 1.1)),
+    props: (r) => [
+      [() => sprinkler(), 3], [() => pond(true), 1], [() => puddle(), 2], [() => beachball(), 2], [() => umbrella('#ffc12e', '#fff'), 1],
+      [() => tree('#4fa55a', '#3f8f4a'), 3], [() => butterfly(pick(r, ['#ffc12e', '#fff', '#ff8fb1'])), 3], [() => frisbee('#e8352f'), 1],
+    ],
+  },
+  // 20 · Moonlight Walk: the quiet street at night, fireflies and the moon.
+  {
+    ground: '#4f5d8a', dark: '#45527c', light: '#5a6896', path: '#8f97c9', edge: '#6f78a8', dots: '#ffffff',
+    texture: mix(dot('#ffffff', 1.1), dot('#fff3a0', 1.3), tuft('#3f4c72')),
+    props: () => [
+      [() => moon(), 1], [() => firefly(), 4], [() => lamp(), 3], [() => house('#c9cde8', '#3f4c72', '#ffe14d'), 1], [() => homePorch(), 1],
+      [() => pine('#2f3d66', '#26325a'), 3], [() => yoshi(), 1], [() => mailbox(), 1],
+    ],
+  },
 ];
 
 // ───────────────────────────── layout ─────────────────────────────
@@ -1124,6 +1205,10 @@ export function backdropProps(zone: number): { back: string[]; hurdle: string } 
     [[() => tree('#d9541f', '#b8401a'), () => catWindow(), () => noahsArc(), () => bin(), () => lamp()], () => leafPile()],
     [[() => house('#ffe0ea', '#a3201c', '#2f8fe0'), () => lamp(), () => hydrant(), () => tree('#e8892f', '#c96a1f'), () => bin()], () => hydrant()],
     [[() => tree('#d9541f', '#b8401a'), () => pumpkin(), () => homePorch(), () => mailbox(), () => lamp()], () => leafPile()],
+    [[() => bathtub(), () => towel('#e8352f', '#fff'), () => bush('#6fb36a', '#5a9e57'), () => hose(), () => fence()], () => duckToy()],
+    [[() => tree('#5fae4f', '#4a9440'), () => grill(), () => picnic(), () => fence(), () => doghouse()], () => bone()],
+    [[() => tree('#4fa55a', '#3f8f4a'), () => sprinkler(), () => umbrella('#ffc12e', '#fff'), () => pond(false), () => sprinkler()], () => puddle()],
+    [[() => pine('#2f3d66', '#26325a'), () => lamp(), () => house('#c9cde8', '#3f4c72', '#ffe14d'), () => firefly(), () => lamp()], () => mailbox()],
   ];
   const [back, hurdle] = sets[zone % sets.length];
   return { back: back.map((p) => p().svg), hurdle: hurdle().svg };

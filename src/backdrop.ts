@@ -8,7 +8,7 @@
 // repainting. The only SVG-internal animation is Micah's legs, a small area.
 import { backdropProps } from './scenery';
 
-type Chase = 'butterfly' | 'ball' | 'crab' | 'squirrel' | 'yarn' | 'snowball' | 'frisbee' | 'balloon' | 'frog' | 'firefly' | 'leaf' | 'star';
+type Chase = 'butterfly' | 'ball' | 'crab' | 'squirrel' | 'yarn' | 'snowball' | 'frisbee' | 'balloon' | 'frog' | 'firefly' | 'leaf' | 'star' | 'bubble';
 type Weather = 'snow' | 'rain' | 'confetti' | 'leaves' | 'stars' | '';
 type Outfit = 'bandana' | 'cap' | 'lobster' | 'mud' | 'party' | 'scarf' | 'rosette' | 'raincoat' | 'nightcap' | '';
 
@@ -44,6 +44,10 @@ export const LOOKS: Look[] = [
   { sky: '#c9c0b0', far: '#a7a08c', hill: '#7d8f5a', ground: '#7d8f5a', path: '#c9bfa8', speck: ['#c96a1f', '#ffc12e'], sun: '', cloud: '#e8e2d6', weather: 'leaves', chase: 'squirrel', outfit: 'scarf' },
   { sky: '#f0b07a', far: '#c98a5a', hill: '#a7834e', ground: '#a7834e', path: '#e3d7bd', speck: ['#e8892f', '#d9541f'], sun: 'sunset', cloud: '#ffd6b0', weather: 'leaves', chase: 'ball', outfit: 'scarf' },
   { sky: '#e89a6a', far: '#b9806a', hill: '#9c6b45', ground: '#9c6b45', path: '#f1d9a8', speck: ['#ffc12e', '#d9541f'], sun: 'sunset', cloud: '#ffd6b0', weather: 'leaves', chase: 'leaf', outfit: 'bandana' },
+  { sky: '#8fd2ea', far: '#bfe6c8', hill: '#7fc4b0', ground: '#8fc9c4', path: '#eaf6f4', speck: ['#ffffff', '#bfeaf7'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'bubble', outfit: 'lobster' },
+  { sky: '#f6b97a', far: '#b9cf8a', hill: '#5f9f4e', ground: '#7fb35e', path: '#e6d6b8', speck: ['#5f9f4e', '#ffe9a8'], sun: 'sun', cloud: '#fff1dc', weather: '', chase: 'ball', outfit: 'bandana' },
+  { sky: '#7fcdee', far: '#a9dc9a', hill: '#4fa55a', ground: '#5fae6a', path: '#dff2f8', speck: ['#3f8f4a', '#bfeaf7'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'frog', outfit: 'cap' },
+  { sky: '#2a3366', far: '#38427a', hill: '#3f4c82', ground: '#4f5d8a', path: '#8f97c9', speck: ['#ffffff', '#8f97c9'], sun: 'moon', cloud: '', weather: 'stars', chase: 'firefly', outfit: 'nightcap' },
 ];
 
 // ───────────────────────────── Micah, side on ─────────────────────────────
@@ -128,6 +132,7 @@ const CHASE: Record<Chase, { svg: string; move: 'hop' | 'flutter' | 'roll' | 'tu
   frog: { move: 'hop', air: false, svg: `<ellipse cx="0" cy="1" rx="9" ry="6" fill="#5fae4f"/><path d="M-9 4 Q-13 6 -9 7 M9 4 Q13 6 9 7" stroke="#4a9440" stroke-width="2.4" fill="none"/><circle cx="-4" cy="-5" r="3.4" fill="#5fae4f"/><circle cx="4" cy="-5" r="3.4" fill="#5fae4f"/><circle cx="-4" cy="-5.5" r="1.4" fill="#111"/><circle cx="4" cy="-5.5" r="1.4" fill="#111"/><path d="M-3 2 Q0 4 3 2" stroke="#2f6a2a" stroke-width="1" fill="none"/>` },
   firefly: { move: 'flutter', air: true, svg: `<circle r="10" fill="#fff3a0" opacity=".35" class="bd-glow"/><circle r="4.5" fill="#ffe14d"/><ellipse cx="-3" cy="-4" rx="3" ry="2" fill="#fff" opacity=".7"/>` },
   leaf: { move: 'tumble', air: true, svg: `<path d="M-9 0 Q-2 -9 9 0 Q-2 9 -9 0 Z" fill="#e8892f"/><path d="M-9 0 H9" stroke="#b85a1a" stroke-width="1.2"/>` },
+  bubble: { move: 'flutter', air: true, svg: `<circle r="8" fill="#d8f4ff" fill-opacity=".35" stroke="#7fd0ec" stroke-width="1.6"/><path d="M-4.5 -2.5 Q-3.5 -5.5 -0.5 -6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="12" cy="-8" r="3.5" fill="#d8f4ff" fill-opacity=".35" stroke="#7fd0ec" stroke-width="1"/>` },
   star: { move: 'glide', air: true, trail: '#fff3a0', svg: `<path d="M0 -9 L2.6 -2.8 L9 -2.6 L4 1.6 L5.6 8 L0 4.4 L-5.6 8 L-4 1.6 L-9 -2.6 L-2.6 -2.8 Z" fill="#ffe14d"/>` },
 };
 

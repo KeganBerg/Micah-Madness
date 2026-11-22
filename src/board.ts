@@ -402,3 +402,21 @@ export function spreadLeaf(leaf: boolean[][], blocked: (r: number, c: number) =>
   leaf[p[0]][p[1]] = true;
   return p;
 }
+
+/**
+ * Soap bubbles pop when a match clears their own cell or any cell right beside it
+ * (up, down, left or right). Pops them in place and returns where they were.
+ */
+export function popBubbles(bubble: boolean[][], cleared: Iterable<number>): Pos[] {
+  const popped: Pos[] = [];
+  for (const k of cleared) {
+    const [r, c] = unkey(k);
+    for (const [dr, dc] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const rr = r + dr, cc = c + dc;
+      if (rr < 0 || cc < 0 || rr >= bubble.length || cc >= bubble[0].length || !bubble[rr][cc]) continue;
+      bubble[rr][cc] = false;
+      popped.push([rr, cc]);
+    }
+  }
+  return popped;
+}

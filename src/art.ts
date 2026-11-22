@@ -134,6 +134,20 @@ BOOSTER_ICONS.snow = `<path d="M10 74 C12 54 30 46 42 52 C50 34 80 36 84 56 C94 
           <path d="M30 64 Q42 58 54 64 M60 60 Q70 56 78 62" fill="none" stroke="#cfe2ee" stroke-width="3" stroke-linecap="round"/>
           <path d="M66 14 V34 M57 19 L75 29 M57 29 L75 19" stroke="#8fb3cc" stroke-width="3" stroke-linecap="round"/>`;
 
+/** A soap bubble (the bubbles goal). */
+BOOSTER_ICONS.bubbles = `<circle cx="44" cy="54" r="30" fill="#bfeaf7" fill-opacity=".55" stroke="#5fb8d6" stroke-width="3"/>
+          <circle cx="74" cy="28" r="14" fill="#bfeaf7" fill-opacity=".55" stroke="#5fb8d6" stroke-width="3"/>
+          <path d="M28 42 Q32 32 42 30" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="70" cy="23" r="3" fill="#fff"/><circle cx="60" cy="70" r="4" fill="#ffb8d9" opacity=".7"/>`;
+
+/** A see-through soap bubble drawn over a soapy cell, so the piece inside still reads. */
+export const BUBBLE_OVERLAY = `<svg viewBox="0 0 100 100" class="soap-film" aria-hidden="true">
+  <circle cx="50" cy="50" r="44" fill="#d8f4ff" fill-opacity=".38" stroke="#5fc0e4" stroke-width="6"/>
+  <circle cx="50" cy="50" r="44" fill="none" stroke="#ffb8d9" stroke-width="2" stroke-dasharray="40 240" stroke-dashoffset="-120" opacity=".8"/>
+  <path d="M22 40 Q26 24 42 19" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+  <circle cx="70" cy="74" r="4" fill="#fff" opacity=".8"/>
+</svg>`;
+
 /** Loose strands drawn over a tangled cell; see-through so the piece underneath still reads. */
 export const YARN_OVERLAY = `<svg viewBox="0 0 100 100" class="yarn-strands" aria-hidden="true" preserveAspectRatio="none">
   <path d="M-4 22 C30 6 62 40 104 18 M-4 52 C26 34 70 70 104 46 M-4 82 C34 62 66 98 104 76" fill="none" stroke="#e86aa6" stroke-width="7" stroke-linecap="round"/>

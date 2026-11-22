@@ -129,6 +129,20 @@ const championMedal = `
   <circle cx="50" cy="75" r="9" fill="#ffd23f" stroke="#b58a00" stroke-width="2.5"/>
   <path d="M50 69.5 L51.8 73.2 L55.8 73.6 L52.8 76.3 L53.6 80.2 L50 78.2 L46.4 80.2 L47.2 76.3 L44.2 73.6 L48.2 73.2 Z" fill="#fff4c2"/>`;
 
+// Earned by clearing level 100: star-and-moon pyjamas and a floppy nightcap, for the comfiest nap of all.
+const pjSuit = `
+  <rect x="0" y="0" width="100" height="100" fill="#4f5fb3"/>
+  <path d="M50 58 V98" stroke="#3a478f" stroke-width="2"/>
+  <circle cx="46" cy="68" r="1.8" fill="#fff"/><circle cx="46" cy="78" r="1.8" fill="#fff"/><circle cx="46" cy="88" r="1.8" fill="#fff"/>
+  <path d="M34 72 a5 5 0 1 0 5 -6 a4 4 0 1 1 -5 6 Z" fill="#ffe14d"/>
+  <path d="M62 84 l1.6 3.2 l3.4 .4 l-2.6 2.2 l.8 3.4 l-3.2 -1.8 l-3.2 1.8 l.8 -3.4 l-2.6 -2.2 l3.4 -.4 Z" fill="#ffe14d"/>
+  <circle cx="64" cy="66" r="1.6" fill="#fff"/><circle cx="30" cy="88" r="1.4" fill="#fff"/>`;
+const nightcap = `
+  <path d="M26 26 C28 8 48 0 64 6 C74 10 82 22 84 40 L72 24 Z" fill="#4f5fb3" stroke="#2f3a7a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M44 6 l1.2 2.4 l2.6 .3 l-2 1.7 l.6 2.6 l-2.4 -1.4 l-2.4 1.4 l.6 -2.6 l-2 -1.7 l2.6 -.3 Z M66 12 l1 2 l2.2 .3 l-1.6 1.4 l.5 2.2 l-2.1 -1.2 l-2.1 1.2 l.5 -2.2 l-1.6 -1.4 l2.2 -.3 Z" fill="#ffe14d"/>
+  <circle cx="84" cy="41" r="6" fill="#fff" stroke="#d4e6f1" stroke-width="1.5"/>
+  <path d="M24 28 Q50 16 76 26 Q78 33 76 34 Q50 24 26 36 Q22 33 24 28 Z" fill="#fff" stroke="#d4e6f1" stroke-width="1.5"/>`;
+
 // Micah's Winter prizes: reindeer antlers (with a glowing nose) and a Santa hat.
 const antlers = `
   <path d="M38 22 C34 12 30 8 24 2 M33 14 L24 14 M30 9 L33 1" fill="none" stroke="#8a5a26" stroke-width="4" stroke-linecap="round"/>
@@ -159,7 +173,8 @@ export const COSTUMES: Costume[] = [
   { id: 'raincoat', name: 'Rain Slicker', desc: 'For the walker who goes out every week, rain or shine.', unlock: { weekly: 4 }, suit: raincoatSuit, front: raincoatHood },
   { id: 'antlers', name: 'Reindeer Antlers', desc: 'With a nose so bright she can find her treats in the dark.', unlock: { winter: 8 }, front: antlers },
   { id: 'santa', name: 'Santa Hat', desc: 'For finishing all of Micah\u2019s Winter. Ho ho woof.', unlock: { winter: 15 }, suit: winterScarf, front: santaHat },
-  { id: 'champion', name: 'Champion', desc: 'For walking every last level, all the way home. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
+  { id: 'champion', name: 'Champion', desc: 'For walking all the way home, from the backyard to the front porch. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
+  { id: 'pjs', name: 'Cozy Pyjamas', desc: 'For clearing level 100. Moons, stars and the comfiest nap of all.', unlock: { level: 100 }, suit: pjSuit, front: nightcap },
 ];
 
 export const DEFAULT_COSTUME = 'lobster';

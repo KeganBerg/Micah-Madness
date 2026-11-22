@@ -284,6 +284,11 @@ h2, h3, p { margin: 0; }
 .goal b { font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); line-height: 1; min-width: 20px; font-variant-numeric: tabular-nums; }
 .goal.done { color: var(--good); }
 .goal.done b .ui-icon { width: 20px; height: 20px; }
+/* Three or four goals: smaller chips in two columns, so Micah's tip keeps its room. */
+.goals.many { display: grid; grid-template-columns: repeat(2, auto); gap: 4px; }
+.goals.many .goal { height: 36px; grid-template-columns: 24px auto; padding: 0 var(--s2) 0 6px; }
+.goals.many .goal-icon, .goals.many .goal-score { width: 24px; height: 24px; }
+.goals.many .goal b { font-size: var(--fs-md, 1rem); }
 
 .board-wrap { flex: 1; min-height: 0; display: grid; place-items: center; }
 .board {
@@ -522,6 +527,15 @@ h2, h3, p { margin: 0; }
 @keyframes yarn-tug { 25% { transform: translateX(-6%) rotate(-4deg); } 75% { transform: translateX(6%) rotate(4deg); } }
 @keyframes yarn-snip { to { transform: scale(1.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .yarn.tug, .yarn.snip { animation: none; } }
+
+/* Soap bubbles: a see-through film over a soapy cell. Pieces inside can't be swapped. */
+.soap { position: absolute; width: 12.5%; height: 12.5%; z-index: 4; pointer-events: none; animation: soap-bob 2.8s ease-in-out infinite; }
+.soap .soap-film { width: 100%; height: 100%; display: block; }
+.soap.tug { animation: yarn-tug .35s; }
+.soap.pop { animation: soap-pop .32s forwards; }
+@keyframes soap-bob { 50% { transform: translateY(-3%) scale(1.03); } }
+@keyframes soap-pop { 40% { transform: scale(1.25); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .soap, .soap.tug, .soap.pop { animation: none; } }
 
 /* ───── Small phones (iPhone SE, compact Androids) ───── */
 html { touch-action: manipulation; }
