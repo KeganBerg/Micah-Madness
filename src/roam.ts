@@ -47,6 +47,8 @@ export const SNACKS: Snack[] = [
 export interface YardHooks {
   /** A falling thing was tapped away in time (saved) or Micah got to it first. */
   onSnack?: (snack: Snack, saved: boolean) => void;
+  /** Yoshi was tapped and Micah came over to see her. */
+  onYoshi?: () => void;
 }
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -82,12 +84,166 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
   const place = () => {
     const s = 0.8 + ((y - GRASS.y0) / (GRASS.y1 - GRASS.y0)) * 0.3; // a bit bigger nearer the front
     ym.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(3)})`);
-    // Draw her behind anything whose base is in front of her feet.
-    const ahead = items.find((it) => it.dataset.id !== onTop && Number(it.dataset.bottom) > y);
-    const above = onTop ? items.find((it) => it.dataset.id === onTop) : undefined;
-    const before = above ? (above.nextElementSibling as Element | null) : ahead ?? null;
-    if (ym.nextElementSibling !== before && before !== ym) layer.insertBefore(ym, before);
+    restack();
   };
+
+  // Yoshi, Grace's chinchilla, is visiting. She hops about on her own and takes dust baths.
+  const yy = svgEl.querySelector<SVGGElement>('.yy');
+  const yFlip = yy?.querySelector<SVGGElement>('.yy-flip');
+  const yPose = yy?.querySelector<SVGGElement>('.yy-pose');
+  const yDust = yy?.querySelector<SVGGElement>('.yy-dust');
+  const yEmote = yy?.querySelector<SVGTextElement>('.yy-emote');
+  let yx = 96;
+  let yy0 = 250;
+  let yToken = 0;
+  let yTimer = 0;
+  let yRaf = 0;
+  const ySetPose = (p: string) => yPose?.setAttribute('class', `yy-pose${p ? ` ${p}` : ''}`);
+  const yFace = (left: boolean) => yFlip?.setAttribute('transform', left ? 'scale(-1 1)' : '');
+  const ySay = (text: string) => {
+    if (!yEmote) return;
+    yEmote.textContent = text;
+    yEmote.classList.remove('show');
+    void yEmote.getBoundingClientRect();
+    if (text) yEmote.classList.add('show');
+  };
+  const yPlace = () => {
+    if (!yy) return;
+    const s = (0.8 + ((yy0 - GRASS.y0) / (GRASS.y1 - GRASS.y0)) * 0.3) * 0.9;
+    yy.setAttribute('transform', `translate(${yx.toFixed(1)} ${yy0.toFixed(1)}) scale(${s.toFixed(3)})`);
+    restack();
+  };
+
+  /** Keeps Micah, Yoshi and the yard items drawn back to front by where their feet are. */
+  function restack(): void {
+    const above = onTop ? items.find((it) => it.dataset.id === onTop) : undefined;
+    const depth = (el: Element): number => {
+      if (el === ym) return above ? Number(above.dataset.bottom) + 0.01 : y;
+      if (el === yy) return yy0;
+      return Number((el as SVGGElement).dataset.bottom);
+    };
+    const all: Element[] = [...items, ym, ...(yy ? [yy] : [])];
+    const now = [...layer.children].filter((c) => all.includes(c));
+    const want = [...all].sort((a, b) => depth(a) - depth(b));
+    if (want.every((el, i) => el === now[i])) return;
+    const firstSnack = layer.querySelector(':scope > .snack');
+    for (const el of want) layer.insertBefore(el, firstSnack);
+  }
+  const yWait = (ms: number, t: number) =>
+    new Promise<boolean>((res) => setTimeout(() => res(t === yToken && !stopped), ms));
+
+  function yMoveTo(tx: number, ty: number, t: number): Promise<boolean> {
+    tx = clamp(tx, GRASS.x0 + 10, GRASS.x1 - 10);
+    ty = clamp(ty, GRASS.y0 + 30, GRASS.y1);
+    const dist = Math.hypot(tx - yx, ty - yy0);
+    if (dist < 2) return Promise.resolve(t === yToken);
+    yFace(tx < yx);
+    ySetPose('hop');
+    const x0 = yx;
+    const y0 = yy0;
+    const dur = (dist / 45) * 1000;
+    const start = performance.now();
+    return new Promise((res) => {
+      const tick = (now: number) => {
+        if (t !== yToken || stopped) return res(false);
+        const k = Math.min(1, (now - start) / dur);
+        yx = x0 + (tx - x0) * k;
+        yy0 = y0 + (ty - y0) * k;
+        yPlace();
+        if (k < 1) yRaf = requestAnimationFrame(tick);
+        else {
+          ySetPose('');
+          res(true);
+        }
+      };
+      yRaf = requestAnimationFrame(tick);
+    });
+  }
+
+  function puffs(): void {
+    if (!yDust) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    for (let i = 0; i < 7; i++) {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('class', 'yy-puff');
+      c.setAttribute('cx', '0');
+      c.setAttribute('cy', '-4');
+      c.setAttribute('r', (3 + Math.random() * 3).toFixed(1));
+      const a = Math.PI + (i / 6) * Math.PI;
+      c.style.setProperty('--dx', `${(Math.cos(a) * 26).toFixed(0)}px`);
+      c.style.setProperty('--dy', `${(Math.sin(a) * 18 - 4).toFixed(0)}px`);
+      c.style.animationDelay = `${i * 60}ms`;
+      yDust.append(c);
+      setTimeout(() => c.remove(), 1400);
+    }
+  }
+
+  function yCommand(run: (t: number) => Promise<void>): void {
+    const t = ++yToken;
+    clearTimeout(yTimer);
+    cancelAnimationFrame(yRaf);
+    void run(t).then(() => {
+      if (t === yToken && !stopped && !reduced) yTimer = window.setTimeout(() => yCommand(yIdle), rand(2500, 5000));
+    });
+  }
+
+  /** Yoshi potters about: little hops, the odd popcorn jump, a groom. */
+  async function yIdle(t: number): Promise<void> {
+    while (t === yToken && !stopped) {
+      const r = Math.random();
+      if (r < 0.55) {
+        let tx = yx;
+        let ty = yy0;
+        for (let i = 0; i < 8; i++) {
+          tx = yx + rand(-70, 70);
+          ty = yy0 + rand(-40, 40);
+          if (Math.hypot(tx - x, ty - y) > 50) break;
+        }
+        if (!(await yMoveTo(tx, ty, t))) return;
+      } else if (r < 0.75) {
+        ySetPose('popcorn');
+        if (!(await yWait(900, t))) return;
+      } else {
+        ySetPose('groom');
+        if (!(await yWait(1400, t))) return;
+      }
+      ySetPose('sit');
+      if (!(await yWait(rand(2200, 5200), t))) return;
+    }
+  }
+
+  /** Tapped: Yoshi has a dust bath (or a popcorn jump) and Micah comes over to say hello. */
+  function meetYoshi(): void {
+    yCommand(async (t) => {
+      ySay('\u2665');
+      if (Math.random() < 0.5) {
+        ySetPose('roll');
+        puffs();
+        sfx.whoosh();
+        if (!(await yWait(1300, t))) return;
+      } else {
+        ySetPose('popcorn');
+        sfx.select();
+        if (!(await yWait(900, t))) return;
+      }
+      ySetPose('sit');
+      if (!(await yWait(2500, t))) return;
+    });
+    hooks.onYoshi?.();
+    command(async (t) => {
+      onTop = null;
+      const side = x < yx ? -48 : 48;
+      if (!(await moveTo(yx + side, yy0 + 2, t, 130))) return;
+      face(side > 0);
+      yFace(side < 0);
+      setPose('sniff');
+      if (!(await wait(900, t))) return;
+      say('\u2665');
+      sfx.bark();
+      setPose('sit');
+      if (!(await wait(1200, t))) return;
+    });
+  }
   const wait = (ms: number, t: number) =>
     new Promise<boolean>((res) => setTimeout(() => res(t === token && !stopped), ms));
 
@@ -226,6 +382,15 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
       const r = Math.random();
       if (built.length && r < 0.4) {
         await visit(built[Math.floor(Math.random() * built.length)].id, t);
+      } else if (yy && r < 0.52) {
+        // Goes to check on Yoshi.
+        onTop = null;
+        const side = x < yx ? -48 : 48;
+        if (!(await moveTo(yx + side, yy0 + 2, t))) return;
+        face(side > 0);
+        setPose('sniff');
+        if (!(await wait(1400, t))) return;
+        say('\u2665');
       } else if (r < 0.85) {
         onTop = null;
         if (!(await moveTo(x + rand(-110, 110), y + rand(-60, 60), t))) return;
@@ -257,6 +422,10 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
     const snackEl = target.closest<SVGGElement>('.snack');
     if (snackEl) {
       catchSnack(snackEl);
+      return;
+    }
+    if (target.closest('.yy')) {
+      meetYoshi();
       return;
     }
     if (target.closest('.ym')) {
@@ -373,14 +542,20 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
   scheduleDrop(true);
   place();
   setPose('sit');
+  yPlace();
+  ySetPose('sit');
   if (!reduced) idleTimer = window.setTimeout(() => command(idle), 1200);
+  if (!reduced && yy) yTimer = window.setTimeout(() => yCommand(yIdle), 2600);
 
   return () => {
     stopped = true;
     token++;
     clearTimeout(idleTimer);
     clearTimeout(dropTimer);
+    clearTimeout(yTimer);
     cancelAnimationFrame(raf);
+    cancelAnimationFrame(yRaf);
+    yToken++;
     svgEl.removeEventListener('click', onClick);
   };
 }

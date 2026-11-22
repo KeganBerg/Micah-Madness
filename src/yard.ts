@@ -1,5 +1,6 @@
 // Micah's Yard: a long-term goal. Stars earned in levels are spent on decorations.
 import { KINDS, ORTHO_BED } from './art';
+import { YOSHI } from './yoshi';
 
 export interface Decor {
   id: string;
@@ -81,6 +82,13 @@ export function yardScene(owned: string[], micahUrl: string): string {
     <g fill="#ffffff" opacity=".9">${Array.from({ length: 19 }, (_, i) => `<rect x="${i * 20 + 2}" y="40" width="12" height="34" rx="3"/>`).join('')}<rect x="0" y="52" width="360" height="6"/></g>
     <g class="yard-layer">
       ${items}
+      <g class="yy" transform="translate(96 250)" role="button" aria-label="Yoshi the chinchilla">
+        <ellipse cx="0" cy="0" rx="14" ry="4" fill="#000" opacity=".16"/>
+        <g class="yy-flip"><g class="yy-pose">${YOSHI}</g></g>
+        <g class="yy-dust"></g>
+        <text class="ym-emote yy-emote" x="0" y="-54" text-anchor="middle"></text>
+        <circle cx="0" cy="-22" r="26" fill="transparent"/>
+      </g>
       <g class="ym" transform="translate(228 168)" role="button" aria-label="Micah">
         <ellipse class="ym-shadow" cx="0" cy="-2" rx="20" ry="5" fill="#000" opacity=".18"/>
         <g class="ym-flip"><g class="ym-pose"><image href="${micahUrl}" x="-40" y="-78" width="80" height="80"/></g></g>
