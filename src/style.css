@@ -45,11 +45,18 @@
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
   color-scheme: light;
+
+  /* Safe areas (status bar and Dynamic Island on top, home bar at the bottom). Held in
+     variables so every screen uses the same numbers and tests can stand in for an iPhone. */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--sea); overscroll-behavior: none; }
 body { display: flex; justify-content: center; }
-#app { width: 100%; max-width: 520px; height: 100%; position: relative; overflow: hidden; background: var(--sea); }
+#app { width: 100%; max-width: 520px; height: 100%; height: var(--app-h, 100%); position: relative; overflow: hidden; background: var(--sea); }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
 button:disabled { cursor: default; opacity: .45; }
 /* Focus ring: gold on the dark sea, deep blue on white panels, so it always stands out at 3:1 or more. */
@@ -98,7 +105,9 @@ h2, h3, p { margin: 0; }
 
 /* ───── Map ───── */
 .topbar {
-  display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4); background: var(--sea-deep); color: #fff; z-index: 2;
+  display: flex; align-items: center; gap: var(--s2); background: var(--sea-deep); color: #fff; z-index: 2;
+  padding: calc(var(--s3) + var(--sat)) calc(var(--s4) + var(--sar)) var(--s3) calc(var(--s4) + var(--sal));
+  box-shadow: 0 2px 8px #0005; /* the map scrolls under it, so area signs slide behind a visible edge */
 }
 .brand { display: flex; align-items: center; gap: var(--s2); flex: 1; min-width: 0; font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: .02em; }
 .brand-face { width: 40px; height: 40px; flex: none; }
@@ -157,9 +166,9 @@ h2, h3, p { margin: 0; }
   grid-template-rows: 100%;
   grid-template-rows: min(100%, 100svh, var(--vvh, 100svh));
   grid-template-columns: 100%;
-  --mt: max(var(--s4), env(safe-area-inset-top));
-  --mb: max(var(--s4), env(safe-area-inset-bottom));
-  --mx: max(var(--s4), env(safe-area-inset-left), env(safe-area-inset-right));
+  --mt: max(var(--s4), var(--sat));
+  --mb: max(var(--s4), var(--sab));
+  --mx: max(var(--s4), var(--sal), var(--sar));
 }
 .modal {
   --pad: var(--s5);
@@ -236,7 +245,7 @@ h2, h3, p { margin: 0; }
 @keyframes starpop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } }
 
 /* ───── Game ───── */
-.game-screen { padding: var(--s3) var(--s3) calc(var(--s3) + env(safe-area-inset-bottom)); gap: var(--s3); }
+.game-screen { padding: calc(var(--s3) + var(--sat)) var(--s3) calc(var(--s3) + var(--sab)); gap: var(--s3); }
 .hud { display: grid; grid-template-columns: 40px 64px 72px 1fr; gap: var(--s2); align-items: stretch; }
 .hud .back { align-self: center; }
 .stat {
@@ -341,20 +350,20 @@ h2, h3, p { margin: 0; }
 }
 .save-warning { position: absolute; top: 72px; left: var(--s4); right: var(--s4); z-index: 3; padding: var(--s3); border-radius: var(--radius); background: var(--panel); color: var(--ink); font-size: var(--fs-sm); }
 .mascot-face img, .map-micah img { width: 100%; height: 100%; display: block; object-fit: contain; }
-.map-scroll.has-welcome .map { margin-bottom: 220px; }
+.map-scroll.has-welcome .map { margin-bottom: calc(var(--welcome-h, 220px) + var(--s3)); }
 .board-wrap { flex: none; }
 .game-screen { justify-content: center; }
 .map-scroll { background: #7db86a; }
 
 /* ───── Dock (map) ───── */
-.dock { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); padding: var(--s2) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--sea-deep); z-index: 4; }
+.dock { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); padding: var(--s2) var(--s3) calc(var(--s2) + var(--sab)); background: var(--sea-deep); z-index: 4; }
 .dock-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s2) 0; border-radius: var(--radius); color: #fff; font-size: var(--fs-xs); font-weight: 800; }
 .dock-btn .ui-icon { width: 24px; height: 24px; }
 .dock-btn:active { background: #ffffff1a; }
 .dock-btn .count { top: 2px; right: calc(50% - 30px); font-style: normal; }
 .dock-btn .count.dot { width: 14px; min-width: 14px; height: 14px; padding: 0; font-size: 0; top: 4px; right: calc(50% - 22px); }
-.welcome { bottom: calc(var(--s4) + 72px); }
-.map-screen .save-warning { top: 72px; }
+.welcome { bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); }
+.map-screen .save-warning { top: calc(72px + var(--sat)); }
 
 /* ───── Yard ───── */
 .yard-screen .topbar .brand { font-size: var(--fs-lg); }
@@ -478,7 +487,7 @@ h2, h3, p { margin: 0; }
 /* ───── Launch screen ───── */
 .launch {
   position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; justify-content: space-between;
-  padding: var(--s6) var(--s5) calc(var(--s6) + env(safe-area-inset-bottom)); background: var(--sea); color: #fff;
+  padding: calc(var(--s6) + var(--sat)) var(--s5) calc(var(--s6) + var(--sab)); background: var(--sea); color: #fff;
   transition: opacity .35s ease, transform .35s ease;
 }
 .launch.done { opacity: 0; transform: scale(1.04); pointer-events: none; }
@@ -547,7 +556,7 @@ html { touch-action: manipulation; }
 .btn.danger { color: var(--brand-deep); }
 .btn.danger.armed { background: var(--brand); color: #fff; box-shadow: var(--press) var(--brand-deep); }
 .toast {
-  position: fixed; left: 50%; bottom: calc(var(--s6) * 3); z-index: 60; transform: translateX(-50%); max-width: calc(100% - var(--s6));
+  position: fixed; left: 50%; bottom: calc(var(--s6) * 3 + var(--sab)); z-index: 60; transform: translateX(-50%); max-width: calc(100% - var(--s6));
   padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--sea-deep); color: #fff; font-weight: 700; font-size: var(--fs-sm);
   box-shadow: 0 8px 24px #0006; animation: popin .2s;
 }
@@ -814,19 +823,19 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .game-screen { isolation: isolate; }
 .backdrop {
   position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--sky);
-  --base: max(calc(var(--lane, 0px) - 84px), calc(10px + env(safe-area-inset-bottom)));
+  --base: max(calc(var(--lane, 0px) - 84px), calc(10px + var(--sab)));
 }
 .backdrop svg { overflow: visible; }
-.bd-sun { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 20px; width: 44px; height: 44px; border-radius: 50%; background: #ffd84a; box-shadow: 0 0 0 8px #ffd84a40; }
+.bd-sun { position: absolute; top: calc(var(--sat) + 10px); right: 20px; width: 44px; height: 44px; border-radius: 50%; background: #ffd84a; box-shadow: 0 0 0 8px #ffd84a40; }
 .bd-sunset { width: 64px; height: 64px; background: #ffcf6a; box-shadow: 0 0 0 12px #ffcf6a3a; }
 .bd-moon { background: #fff4c8; box-shadow: 0 0 0 10px #fff4c81f; }
 .bd-moon::after { content: ''; position: absolute; width: 36px; height: 36px; border-radius: 50%; top: -6px; left: -12px; background: var(--sky); }
-.bd-cloud { position: absolute; left: 0; width: 100%; top: calc(env(safe-area-inset-top) + 6px); animation: bd-drift 80s linear infinite; will-change: transform; }
+.bd-cloud { position: absolute; left: 0; width: 100%; top: calc(var(--sat) + 6px); animation: bd-drift 80s linear infinite; will-change: transform; }
 .bd-cloud svg { position: absolute; left: -96px; }
 .bd-cloud.c0 { animation-delay: -18s; }
-.bd-cloud.c1 { top: calc(env(safe-area-inset-top) + 34px); animation-duration: 110s; animation-delay: -74s; }
+.bd-cloud.c1 { top: calc(var(--sat) + 34px); animation-duration: 110s; animation-delay: -74s; }
 .bd-cloud.c1 svg { width: 62px; height: 28px; }
-.bd-cloud.c2 { top: calc(env(safe-area-inset-top) + 18px); animation-duration: 95s; animation-delay: -52s; }
+.bd-cloud.c2 { top: calc(var(--sat) + 18px); animation-duration: 95s; animation-delay: -52s; }
 .bd-cloud.c2 svg { width: 74px; height: 33px; }
 @keyframes bd-drift { from { transform: translateX(0); } to { transform: translateX(calc(100% + 100px)); } }
 
@@ -1097,7 +1106,7 @@ h2.center { margin: 2px 0 6px; }
 
 /* Weekly Walk: a chip floating over the map, and paw stamps */
 .weekly-chip {
-  position: absolute; left: var(--s3); bottom: calc(94px + env(safe-area-inset-bottom)); z-index: 3;
+  position: absolute; left: var(--s3); bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); z-index: 3;
   display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #ffd23f; color: #173a52; box-shadow: 0 4px 0 #b58a00, 0 8px 20px #0004; text-align: left;
 }
@@ -1123,11 +1132,11 @@ h2.center { margin: 2px 0 6px; }
 
 /* Micah's Winter */
 .winter-chip {
-  position: absolute; left: var(--s3); bottom: calc(94px + env(safe-area-inset-bottom)); z-index: 3;
+  position: absolute; left: var(--s3); bottom: calc(var(--dock-h, calc(80px + var(--sab))) + var(--s3)); z-index: 3;
   display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #fff; color: #173a52; box-shadow: 0 4px 0 #8fb3cc, 0 8px 20px #0004; text-align: left;
 }
-.weekly-chip ~ .winter-chip { bottom: calc(150px + env(safe-area-inset-bottom)); }
+.weekly-chip ~ .winter-chip { bottom: calc(var(--dock-h, calc(80px + var(--sab))) + 68px); }
 .winter-chip .snow-icon { width: 28px; height: 28px; }
 .winter-chip:not(.done) .snow-icon { animation: wiggle 1.8s ease-in-out infinite; }
 .winter-chip span { display: grid; line-height: 1.1; }
@@ -1153,7 +1162,7 @@ h2.center { margin: 2px 0 6px; }
 
 /* Collar tag card: one card, top of screen, tap to open the collar, x to dismiss. */
 .tag-card {
-  position: fixed; top: calc(env(safe-area-inset-top) + var(--s2)); left: 50%; transform: translateX(-50%); z-index: 70;
+  position: fixed; top: calc(var(--sat) + var(--s2)); left: 50%; transform: translateX(-50%); z-index: 70;
   width: min(380px, calc(100% - var(--s4))); display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center;
   border-radius: var(--radius); background: var(--sea-deep); color: #fff; box-shadow: 0 8px 24px #0006; animation: tag-card-in .25s ease-out;
 }
@@ -1170,3 +1179,7 @@ h2.center { margin: 2px 0 6px; }
 .tag-card-close .ui-icon { width: 18px; height: 18px; }
 @keyframes tag-card-in { from { opacity: 0; transform: translate(-50%, -16px); } }
 @media (prefers-reduced-motion: reduce) { .tag-card { animation: none; } .tag-card.leaving { transition: none; } }
+
+/* Home Screen app on newer iPhones: the app is sized to the full screen (see viewport.ts),
+   so the page itself must not scroll by the extra status-bar height. */
+html.full-app, html.full-app body { overflow: hidden; }
