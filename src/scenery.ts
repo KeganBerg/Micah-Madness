@@ -330,18 +330,66 @@ const boards = (x: number, y: number, w: number, h: number) => `
     <path d="M${x - 2} ${y + h - 3} L${x + w + 2} ${y + 3}" stroke="#c49a66" stroke-width="3.2" stroke-linecap="round"/>
     <circle cx="${x}" cy="${y + 2}" r=".7" fill="#555"/><circle cx="${x + w}" cy="${y + 3}" r=".7" fill="#555"/>`;
 
+/** The barn owl who lives over the garage. Perched, or (flying) with her wings out. */
+export const owlSVG = (flying = false) => flying
+  ? `<g class="owl-wings"><path d="M-3 -2 C-12 -12 -22 -10 -27 -3 C-21 -4 -15 -1 -10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/>
+      <path d="M3 -2 C12 -12 22 -10 27 -3 C21 -4 15 -1 10 3 Z" fill="#8a6a4a" stroke="#4f3a26" stroke-width="1"/></g>
+    <ellipse cx="0" cy="0" rx="8" ry="9" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
+    <ellipse cx="0" cy="2.5" rx="5" ry="5.5" fill="#e6d3b0"/>
+    <path d="M-7 -6 L-6 -11 L-3 -7 Z M7 -6 L6 -11 L3 -7 Z" fill="#9b7a56" stroke="#4f3a26" stroke-width=".8"/>
+    <circle cx="-3.2" cy="-4" r="3.2" fill="#ffc12e" stroke="#4f3a26" stroke-width=".7"/><circle cx="3.2" cy="-4" r="3.2" fill="#ffc12e" stroke="#4f3a26" stroke-width=".7"/>
+    <circle cx="-3" cy="-4" r="1.5" fill="#111"/><circle cx="3" cy="-4" r="1.5" fill="#111"/>
+    <path d="M-1.3 -1.2 L1.3 -1.2 L0 1.4 Z" fill="#e8892f"/>`
+  : `<ellipse cx="0" cy="-8" rx="6.5" ry="8.5" fill="#9b7a56" stroke="#4f3a26" stroke-width="1"/>
+    <ellipse cx="0" cy="-5.5" rx="4" ry="5" fill="#e6d3b0"/>
+    <path d="M-6 -8 Q-8 -3 -4 0 M6 -8 Q8 -3 4 0" fill="#8a6a4a" stroke="#4f3a26" stroke-width=".8"/>
+    <path d="M-5.5 -13 L-5 -18 L-2.5 -14 Z M5.5 -13 L5 -18 L2.5 -14 Z" fill="#9b7a56" stroke="#4f3a26" stroke-width=".8"/>
+    <circle cx="-2.8" cy="-11.5" r="2.8" fill="#ffc12e" stroke="#4f3a26" stroke-width=".6"/><circle cx="2.8" cy="-11.5" r="2.8" fill="#ffc12e" stroke="#4f3a26" stroke-width=".6"/>
+    <circle cx="-2.6" cy="-11.4" r="1.3" fill="#111"/><circle cx="2.6" cy="-11.4" r="1.3" fill="#111"/>
+    <path d="M-1.1 -9 L1.1 -9 L0 -6.8 Z" fill="#e8892f"/>
+    <path d="M-2 0 V1.4 M2 0 V1.4" stroke="#e8892f" stroke-width="1"/>`;
+
+// The tidy white garage next door, joined to the house's top floor by a little deck.
+const garage = () => `<g transform="translate(54 0)">
+    <rect x="-24" y="-52" width="48" height="52" fill="#f4f1ea" stroke="#8d887d" stroke-width="2"/>
+    <path d="M-24 -42 H24 M-24 -32 H24" stroke="#dcd7cc" stroke-width="1"/>
+    <path d="M-29 -50 L0 -76 L29 -50 Z" fill="#6f7a80" stroke="#46505a" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M-17 -56 h8 M2 -62 h8 M8 -56 h8" stroke="#56616a" stroke-width="1.6"/>
+    <rect x="-20" y="-26" width="40" height="26" fill="#e7e2d6" stroke="#8d887d" stroke-width="1.5"/>
+    <path d="M-20 -19.5 H20 M-20 -13 H20 M-20 -6.5 H20" stroke="#bdb6a8" stroke-width="1.2"/>
+    <rect x="-22" y="-48" width="10" height="17" fill="#5d6f7c" stroke="#8d887d" stroke-width="1.5"/>
+    <circle cx="-14.4" cy="-39" r=".9" fill="#c9a24a"/>
+    <rect x="4" y="-47" width="13" height="11" fill="#cfe6f5" stroke="#8d887d" stroke-width="1.5"/>
+    <path d="M10.5 -47 V-36 M4 -41.5 H17" stroke="#8d887d" stroke-width="1"/>
+    <path d="M17 -47 l3 1 v11 l-3 -1 Z" fill="#5d6f7c" transform="rotate(8 17 -47)"/>
+  </g>`;
+const deck = () => {
+  let bal = '';
+  for (let x = 12; x <= 30; x += 3) bal += `<path d="M${x} -36 V-45" stroke="#7a5233" stroke-width="1.1"/>`;
+  return `<g>
+    <path d="M14 -34 V0 M28 -34 V0" stroke="#6b4529" stroke-width="2.4"/>
+    <path d="M14 -18 L28 -32 M28 -18 L14 -32" stroke="#6b4529" stroke-width="1.2" opacity=".8"/>
+    <rect x="5" y="-37" width="27" height="4" fill="#9b7550" stroke="#5e3f25" stroke-width="1"/>
+    ${bal}<path d="M7 -45.5 H31" stroke="#7a5233" stroke-width="2" stroke-linecap="round"/>
+  </g>`;
+};
+
 export const noahsArc = (): Prop => ({
-  r: 64, poke: 'critters', fx: 'leaf', sfx: 'tweet',
+  r: 70, poke: 'critters', fx: 'leaf', sfx: 'tweet',
   say: [
-    'Noah\u2019s Arc. Still standing. Somehow.',
+    'Noah’s Arc. Still standing. Somehow.',
     'The squirrels have signed a long lease.',
     'A raccoon waves from the chimney. Rent is due Tuesday.',
     'Micah sniffs the porch. Verdict: very interesting.',
     'Two of every critter, as promised.',
+    'The white garage is the only thing here painted this century.',
+    'The owl over the garage keeps an eye on Micah. Who? Micah.',
   ],
-  svg: `${shadow(56, 0.22)}
-    <path d="M-52 0 q2 -9 5 -1 q2 -11 4 0 M44 0 q2 -10 5 -1 q2 -8 4 0 M-30 0 q1 -7 3 -1" stroke="#55705f" stroke-width="2" fill="none" stroke-linecap="round"/>
-    <g transform="rotate(-3)">
+  svg: `<g transform="scale(.86)">${shadow(80, 0.22)}
+    <path d="M-80 0 q2 -9 5 -1 q2 -11 4 0 M72 0 q2 -10 5 -1 q2 -8 4 0 M-34 0 q1 -7 3 -1" stroke="#55705f" stroke-width="2" fill="none" stroke-linecap="round"/>
+    ${garage()}
+    <g class="critter c-owl owl-perch" transform="translate(54 -75)"><g>${owlSVG()}</g></g>
+    <g transform="translate(-24 0) rotate(-3)">
       <rect x="-40" y="-56" width="72" height="56" fill="#8c7b66" stroke="#4f4237" stroke-width="2"/>
       <path d="M-40 -46 H32 M-40 -36 H32 M-40 -26 H32 M-40 -16 H32 M-40 -6 H32" stroke="#6f604f" stroke-width="1" opacity=".7"/>
       <path d="M-22 -50 l6 3 -4 4 M18 -20 l5 2 -3 5" stroke="#5c4e41" stroke-width="1.2" fill="none"/>
@@ -354,7 +402,7 @@ export const noahsArc = (): Prop => ({
       <path d="M-8 -76 L2 -68 M-4 -78 L-10 -68" stroke="#7a5a48" stroke-width="1.2"/>
       <g class="critter c-roof" transform="translate(-30 -60) rotate(-20)">${squirrelBit()}</g>
       ${boards(-33, -48, 16, 13)}
-      ${boards(10, -48, 16, 13)}
+      ${boards(8, -48, 14, 13)}
       <g class="critter c-window" transform="translate(-25 -36)">${squirrelBit(true)}</g>
       ${boards(-33, -27, 14, 11)}
       <path d="M-6 0 V-26 H8 V0 Z" fill="#2a221d"/>
@@ -363,14 +411,15 @@ export const noahsArc = (): Prop => ({
       <path d="M14 -24 h12 v10 h-12 Z" fill="#1f1a17"/><path d="M14 -24 L26 -14" stroke="#b08a5a" stroke-width="3" stroke-linecap="round"/>
       <path d="M-12 0 H16 L14 4 H-10 Z" fill="#6f5a45"/>
     </g>
-    <g transform="translate(34 2) rotate(-25)"><rect x="-6" y="-12" width="12" height="12" rx="2" fill="#7d8a90" stroke="#4d5a60" stroke-width="1.2"/><path d="M-7 -12 h14" stroke="#4d5a60" stroke-width="2"/></g>
-    <g class="critter c-porch" transform="translate(42 -1)">${raccoonBit()}</g>
-    <g transform="translate(-44 2) rotate(-6)">
+    ${deck()}
+    <g transform="translate(13 2) rotate(-25)"><rect x="-6" y="-12" width="12" height="12" rx="2" fill="#7d8a90" stroke="#4d5a60" stroke-width="1.2"/><path d="M-7 -12 h14" stroke="#4d5a60" stroke-width="2"/></g>
+    <g class="critter c-porch" transform="translate(22 -1)">${raccoonBit()}</g>
+    <g transform="translate(-68 2) rotate(-6)">
       <rect x="-1.6" y="-30" width="3.2" height="30" fill="#6b4529"/>
       <path d="M-27 -33 H23 L24 -20 H-28 Z" fill="#e3d5b5" stroke="#6b4529" stroke-width="1.3"/>
       <text x="-2" y="-23.6" text-anchor="middle" font-size="7.6" font-weight="900" fill="#a3201c" font-family="'Lilita One', sans-serif" textLength="44" lengthAdjust="spacingAndGlyphs" transform="rotate(-3 -2 -26)">NOAH&#8217;S ARC</text>
     </g>
-    ${hit(52, -40)}`,
+    <rect x="-90" y="-92" width="176" height="94" fill="transparent"/></g>`,
 });
 
 const signpost = (text: string): Prop => ({

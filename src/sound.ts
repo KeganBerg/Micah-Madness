@@ -357,6 +357,11 @@ const effects = {
     [0, 80, 160, 240].forEach((ms, i) => later(ms, () => tone(1400 + i * 120, 0.05, 'square', 0.05, 1800)));
     later(120, () => noise(0.35, 0.08, 'bandpass', 600, 2400));
   },
+  /** The owl over Noah's Arc garage: a soft "hoo-hoo". */
+  hoot() {
+    tone(440, 0.22, 'sine', 0.08, 392);
+    later(300, () => tone(415, 0.34, 'sine', 0.08, 349));
+  },
   /** Extra moves from the Long Leash. */
   whoosh() {
     noise(0.3, 0.1, 'bandpass', 400, 3000);
