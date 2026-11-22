@@ -1,3 +1,4 @@
+import { standaloneHeight } from './viewport';
 import './style.css';
 import {
   applyClear,
@@ -298,9 +299,22 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
     unwire = wireScenery(sceneEl, playScenerySound, (text) => toast(text));
   };
   const resizeWatch = new ResizeObserver(paintScenery);
+  // The welcome card and chips float just above the dock, and the map leaves room under
+  // level 1 for the welcome card, using their real heights (the dock grows by the home bar).
+  const dockEl = screen.querySelector<HTMLElement>('.dock')!;
+  const welcomeEl = screen.querySelector<HTMLElement>('.welcome');
+  const measureChrome = () => {
+    screen.style.setProperty('--dock-h', `${Math.round(dockEl.offsetHeight)}px`);
+    if (welcomeEl) screen.style.setProperty('--welcome-h', `${Math.round(welcomeEl.offsetHeight)}px`);
+  };
+  const chromeWatch = new ResizeObserver(measureChrome);
+  chromeWatch.observe(dockEl);
+  if (welcomeEl) chromeWatch.observe(welcomeEl);
+
   // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
   let idleTimer = 0;
-  mount(screen, () => (clearTimeout(idleTimer), resizeWatch.disconnect(), unwire()));
+  mount(screen, () => (clearTimeout(idleTimer), resizeWatch.disconnect(), chromeWatch.disconnect(), unwire()));
+  measureChrome();
   paintScenery();
   resizeWatch.observe(mapEl);
 
@@ -618,9 +632,24 @@ function showDaily(): void {
 
 // ───────────────────────────── Modals ─────────────────────────────
 
+const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+const appHeight = () =>
+  standaloneHeight({
+    standalone: isStandalone(),
+    portrait: window.matchMedia?.('(orientation: portrait)').matches ?? window.innerHeight >= window.innerWidth,
+    innerWidth: window.innerWidth, innerHeight: window.innerHeight, screenW: window.screen.width, screenH: window.screen.height,
+  });
+
 // The visible height on iPhone Safari changes as its toolbars show and hide; pop-ups size to it.
-const syncViewportHeight = () =>
-  document.documentElement.style.setProperty('--vvh', `${Math.round(window.visualViewport ? window.visualViewport.height * window.visualViewport.scale : window.innerHeight)}px`);
+const syncViewportHeight = () => {
+  const root = document.documentElement.style;
+  const full = appHeight();
+  if (full) root.setProperty('--app-h', `${full}px`);
+  else root.removeProperty('--app-h');
+  document.documentElement.classList.toggle('full-app', !!full);
+  root.setProperty('--vvh', `${full ?? Math.round(window.visualViewport ? window.visualViewport.height * window.visualViewport.scale : window.innerHeight)}px`);
+};
 syncViewportHeight();
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
 window.addEventListener('resize', syncViewportHeight);
