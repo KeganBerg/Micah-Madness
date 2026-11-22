@@ -1150,3 +1150,23 @@ h2.center { margin: 2px 0 6px; }
 .winter-prize b { font-size: 13px; }
 .winter-prize small { font-size: 11px; opacity: .75; }
 @media (prefers-reduced-motion: reduce) { .winter-chip .snow-icon, .winter-node.current { animation: none; } }
+
+/* Collar tag card: one card, top of screen, tap to open the collar, x to dismiss. */
+.tag-card {
+  position: fixed; top: calc(env(safe-area-inset-top) + var(--s2)); left: 50%; transform: translateX(-50%); z-index: 70;
+  width: min(380px, calc(100% - var(--s4))); display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center;
+  border-radius: var(--radius); background: var(--sea-deep); color: #fff; box-shadow: 0 8px 24px #0006; animation: tag-card-in .25s ease-out;
+}
+.tag-card.leaving { opacity: 0; transform: translate(-50%, -12px); transition: opacity .2s, transform .2s; }
+.tag-card-open { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; min-height: 56px; padding: var(--s2) 0 var(--s2) var(--s3); color: inherit; text-align: left; }
+.tag-card-icons { display: flex; }
+.tag-card-icons .tag-icon { width: 32px; height: 32px; }
+.tag-card-icons .tag-icon + .tag-icon { margin-left: -12px; }
+.tag-card-text { display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-sm); }
+.tag-card-text span { opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-card-reward { display: flex; align-items: center; gap: 2px; font-weight: 800; color: var(--gold); }
+.tag-card-reward .biscuit-icon { width: 18px; height: 18px; }
+.tag-card-close { width: 44px; height: 44px; display: grid; place-items: center; color: #fff; opacity: .8; }
+.tag-card-close .ui-icon { width: 18px; height: 18px; }
+@keyframes tag-card-in { from { opacity: 0; transform: translate(-50%, -16px); } }
+@media (prefers-reduced-motion: reduce) { .tag-card { animation: none; } .tag-card.leaving { transition: none; } }
