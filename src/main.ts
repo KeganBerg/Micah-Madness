@@ -65,7 +65,7 @@ import { YOSHI_YARD } from './yoshi';
 import { runLaunch } from './launch';
 import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
 import { BADGES, awardBadges, bump, isEarned, type Badge } from './badges';
-import { playMusic, setMusic, setSound, sfx } from './sound';
+import { playMusic, setHolidayMusic, setMusic, setSound, sfx } from './sound';
 import { callout, confetti, confettiRain, countUp, glow, hearts, hype, ring, shakeBoard } from './juice';
 import { canVibrate, haptic, setHaptics } from './haptics';
 import { shareCard } from './share';
@@ -134,6 +134,8 @@ const WINTER_PREVIEW = (() => {
     return false;
   }
 })();
+// Micah's Winter: the map and the Yard play the holiday track.
+setHolidayMusic(winterSnowing(new Date(), WINTER_PREVIEW));
 /** Weekly and winter levels sit outside the map. */
 const isSpecial = (lv: Level) => lv.id === WEEKLY_ID || isWinterLevel(lv) || isArkLevel(lv);
 const levelTitle = (lv: Level) =>
@@ -1261,7 +1263,7 @@ function showSettings(): void {
     </section>
     <section>
       <h3>Music by</h3>
-      <p class="body setting-hint">MintoDog (map, Fetch, Birthday Zoomies), haruta (Puddle Hop) and KiluaBoy (Rainy Day Sniffs), shared free on OpenGameArt.org. Thank you!</p>
+      <p class="body setting-hint">MintoDog (map, Fetch, Birthday Zoomies), haruta (Puddle Hop), KiluaBoy (Rainy Day Sniffs) and Tarush Singhal (winter), shared free on OpenGameArt.org. Thank you!</p>
     </section>
     <section>
       <h3>Start over</h3>

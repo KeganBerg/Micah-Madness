@@ -68,6 +68,12 @@ describe("Micah's Yard", () => {
     expect(winter).toContain('snow-cap');
     expect(winter).not.toContain('firefly');
     expect(winter).toContain('xmas-lights');
+    // Off by day, on from sunset.
+    const day = yardScene(all, 'm.png', { area: 'back', time: 'day', ate: [], snowy: true });
+    expect(day).toContain('bulb off');
+    expect(day).not.toContain('xmas-lights lit');
+    expect(yardScene(all, 'm.png', { area: 'back', time: 'dusk', ate: [], snowy: true })).toContain('xmas-lights lit');
+    expect(winter).toContain('bulb-glow');
     const summer = yardScene(all, 'm.png', { area: 'back', time: 'day', ate: [] });
     expect(summer).not.toContain('snowman');
     expect(summer).not.toContain('snow-cap');

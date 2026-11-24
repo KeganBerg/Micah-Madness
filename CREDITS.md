@@ -12,6 +12,7 @@ to mono 64 kbps MP3 and volume-matched; Candy Day has its 2.7 s silent tail trim
 | Puddle Hop (zones 2 and 6) | Candy Day | haruta | https://opengameart.org/content/candy-day |
 | Rainy Day Sniffs (zones 3 and 7) | School Day (rain version) | KiluaBoy | https://opengameart.org/content/school-day-rain-sun-loop |
 | Birthday Zoomies (zones 4 and 8) | Joyfully (loop version) | MintoDog | https://opengameart.org/content/joyfully |
+| Map and Yard during Micah's Winter (Dec 1 to Jan 6) | Cheerful Christmas Time | Tarush Singhal | https://opengameart.org/content/cheerful-christmas-time |
 
 If a track can't load (an old browser, or offline before it was ever cached), the game plays its own
 synthesized tunes from `src/sound.ts` instead.
