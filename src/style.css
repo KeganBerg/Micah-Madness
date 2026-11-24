@@ -656,10 +656,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 /* ───── Level map scenery (src/scenery.ts) ───── */
 .zone-layer, .path-layer { position: absolute; left: 0; width: 100%; overflow: visible; }
 .path-layer { top: 0; pointer-events: none; }
-.zone-layer :is(.p, .sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { transform-box: fill-box; }
+.zone-layer :is(.p, .sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow, .rise, .spin-slow) { transform-box: fill-box; }
 .zone-layer .p { transform-origin: 50% 100%; cursor: pointer; }
-.zone-layer :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { animation-play-state: paused; }
-.zone-layer.live :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow) { animation-play-state: running; }
+.zone-layer :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow, .rise, .spin-slow) { animation-play-state: paused; }
+.zone-layer.live :is(.sway, .bob, .wag, .flap, .flutter, .peck, .scuttle, .foam, .ripple, .flicker, .twinkle, .flake, .lamp-glow, .rise, .spin-slow) { animation-play-state: running; }
 .sway { transform-origin: 50% 100%; animation: sc-sway 3.6s ease-in-out infinite; }
 .bob { animation: sc-bob 2.8s ease-in-out infinite; }
 .wag { transform-origin: 100% 100%; animation: sc-wag .45s ease-in-out infinite alternate; }
@@ -673,6 +673,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .twinkle { transform-origin: 50% 50%; animation: sc-twinkle 2.4s ease-in-out infinite; }
 .flake { animation: sc-fall 7s linear infinite; }
 .lamp-glow { animation: sc-twinkle 4s ease-in-out infinite; }
+.rise { animation: sc-rise 6s linear infinite; }
+.spin-slow { transform-origin: 50% 50%; animation: sc-spin-slow 24s linear infinite; }
+@keyframes sc-rise { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .9; } 80% { opacity: .9; } 100% { transform: translate(-6px, -140px); opacity: 0; } }
+@keyframes sc-spin-slow { to { transform: rotate(360deg); } }
 @keyframes sc-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
 @keyframes sc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes sc-wag { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
@@ -819,7 +823,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
 .yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
 .yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
-.yard-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); flex: none; }
+.yard-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--s2); flex: none; }
 .yard-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border: 0; border-radius: var(--radius); background: #ffffff1a; color: #fff; font: inherit; cursor: pointer; }
 .yard-tab b { font-family: var(--font-display); font-size: var(--fs-sm); line-height: 1.1; }
 .yard-tab span { font-size: var(--fs-xs); opacity: .8; }

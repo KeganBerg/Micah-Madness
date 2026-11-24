@@ -141,6 +141,18 @@ BOOSTER_ICONS.bubbles = `<circle cx="44" cy="54" r="30" fill="#bfeaf7" fill-opac
           <circle cx="70" cy="23" r="3" fill="#fff"/><circle cx="60" cy="70" r="4" fill="#ffb8d9" opacity=".7"/>`;
 
 /** A see-through soap bubble drawn over a soapy cell, so the piece inside still reads. */
+/** A delivery parcel on the board. `taped` adds the red tape that takes a second tear. */
+export const parcelSVG = (taped: boolean) => `
+  <path d="M14 34 L50 20 L86 34 L86 78 L50 92 L14 78 Z" fill="#c98f52" stroke="#6e4a26" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M14 34 L50 48 L86 34 M50 48 V92" fill="none" stroke="#6e4a26" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M14 34 L50 48 L50 92 L14 78 Z" fill="#b07a42"/>
+  <path d="M32 27 L68 41 V52 L62 49 V43 L32 31 Z" fill="#e6c08a"/>
+  <path d="M60 64 l4 -2 l2 3 l-4 2 Z M68 60 l4 -2 l2 3 l-4 2 Z" fill="#6e4a26" opacity=".55"/>
+  <ellipse cx="68" cy="70" rx="6" ry="5" fill="#6e4a26" opacity=".55"/>
+  ${taped ? `<path d="M14 52 L50 66 L86 52 M30 28 L66 42 L66 86" fill="none" stroke="#e8352f" stroke-width="7" stroke-linejoin="round" opacity=".95"/>
+  <path d="M14 52 L50 66 L86 52" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 5" opacity=".7"/>` : ''}`;
+BOOSTER_ICONS.boxes = parcelSVG(false);
+
 export const BUBBLE_OVERLAY = `<svg viewBox="0 0 100 100" class="soap-film" aria-hidden="true">
   <circle cx="50" cy="50" r="44" fill="#d8f4ff" fill-opacity=".38" stroke="#5fc0e4" stroke-width="6"/>
   <circle cx="50" cy="50" r="44" fill="none" stroke="#ffb8d9" stroke-width="2" stroke-dasharray="40 240" stroke-dashoffset="-120" opacity=".8"/>

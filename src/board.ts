@@ -10,6 +10,12 @@ export const MICAH_KIND = -1;
  * a power-up blasts it loose. Which item it is lives in Tile.junk.
  */
 export const JUNK_KIND = -2;
+/**
+ * Kind value for a delivery parcel: a cardboard box that sits on the board like a piece,
+ * falls like one, but never matches and can't be swapped. A match right beside it, or a
+ * blast through it, tears off one layer (Tile.box: 1 plain, 2 taped up).
+ */
+export const BOX_KIND = -3;
 
 export type Special = 'none' | 'zoomRow' | 'zoomCol' | 'bark' | 'micah';
 
@@ -19,6 +25,8 @@ export interface Tile {
   special: Special;
   /** Which piece of junk this is (only when kind is JUNK_KIND). */
   junk?: number;
+  /** Layers of cardboard left on a parcel (only when kind is BOX_KIND). */
+  box?: number;
 }
 
 export type Cell = Tile | null;
@@ -35,6 +43,61 @@ export function newJunk(item: number): Tile {
   return { id: nextId++, kind: JUNK_KIND, special: 'none', junk: item };
 }
 export const isJunk = (t: Cell | undefined): boolean => !!t && t.kind === JUNK_KIND;
+
+export function newBox(layers = 1): Tile {
+  return { id: nextId++, kind: BOX_KIND, special: 'none', box: layers };
+}
+export const isBox = (t: Cell | undefined): boolean => !!t && t.kind === BOX_KIND;
+
+/** Put parcels on a new board from an 8-row layout: 'x' a parcel, 'X' a taped parcel (two layers). */
+export function placeBoxes(grid: Grid, layout?: string[]): void {
+  layout?.forEach((row, r) =>
+    [...row].forEach((ch, c) => {
+      if ((ch === 'x' || ch === 'X') && grid[r]?.[c] !== undefined) grid[r][c] = newBox(ch === 'X' ? 2 : 1);
+    }),
+  );
+}
+
+/** How many parcels are on the board. */
+export function boxCount(grid: Grid): number {
+  return grid.reduce((n, row) => n + row.filter((t) => isBox(t)).length, 0);
+}
+
+/**
+ * Parcels caught by a step: every parcel a blast reached (it's in `cleared`) or that sits
+ * right beside (up, down, left, right) a cleared piece loses one layer. Each parcel is hit
+ * at most once a step. Parcels torn open stay in `cleared` so they are removed; parcels
+ * with a layer left are taken out of it. Returns where each kind ended up.
+ */
+export function hitBoxes(grid: Grid, cleared: Set<number>): { broken: Pos[]; dented: Pos[] } {
+  const hit = new Set<number>();
+  for (const k of cleared) {
+    const [r, c] = unkey(k);
+    if (isBox(grid[r]?.[c])) {
+      hit.add(k);
+      continue;
+    }
+    for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const rr = r + dr, cc = c + dc;
+      if (inBounds(grid, rr, cc) && isBox(grid[rr][cc])) hit.add(key(rr, cc));
+    }
+  }
+  const broken: Pos[] = [];
+  const dented: Pos[] = [];
+  for (const k of hit) {
+    const [r, c] = unkey(k);
+    const t = grid[r][c]!;
+    t.box = (t.box ?? 1) - 1;
+    if (t.box <= 0) {
+      cleared.add(k);
+      broken.push([r, c]);
+    } else {
+      cleared.delete(k);
+      dented.push([r, c]);
+    }
+  }
+  return { broken, dented };
+}
 
 export function randomKind(rng: Rng, kinds = KIND_COUNT): number {
   return Math.floor(rng() * kinds);
@@ -492,6 +555,7 @@ export function placeJunk(grid: Grid, count: number, items: number, rng: Rng = M
   for (let i = 0; i < count && cols.length; i++) {
     const c = cols.splice(Math.floor(rng() * cols.length), 1)[0];
     const r = Math.floor(rng() * 3);
+    if ((grid[r][c]?.kind ?? 0) < 0) continue; // a parcel is already there
     grid[r][c] = newJunk(Math.floor(rng() * items));
   }
 }

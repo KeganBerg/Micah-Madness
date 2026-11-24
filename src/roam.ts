@@ -42,10 +42,17 @@ const SPOTS: Record<string, { x: number; y: number; on?: boolean }> = {
   lamp: { x: 86, y: 94 },
   rocker: { x: 50, y: 62, on: true },
   swing: { x: 50, y: 58, on: true },
+  lantern: { x: 90, y: 96 },
+  dock: { x: 50, y: 74, on: true },
+  chair: { x: 50, y: 64, on: true },
+  canoe: { x: 50, y: 70, on: true },
+  tent: { x: 50, y: 96 },
+  firepit: { x: 96, y: 86 },
+  floaty: { x: 50, y: 62, on: true },
 };
 
 /** Things Micah naps on. At night she heads for these. */
-const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing']);
+const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing', 'floaty', 'tent']);
 
 export { SNACKS } from './snacks';
 export type { Snack } from './snacks';
