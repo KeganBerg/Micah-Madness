@@ -1113,7 +1113,7 @@ h2.center { margin: 2px 0 6px; }
 @keyframes confetti-fall { to { transform: translateY(240px) rotate(720deg); } }
 @media (prefers-reduced-motion: reduce) { .finale-confetti, .finale-micah { animation: none; } .finale-confetti i { display: none; } .map-end-sign.done { animation: none; } }
 
-/* Noah's Arc: tap the house and the tenants pop out to say hello */
+/* Noah's Ark: tap the house and the tenants pop out to say hello */
 .critter { transform-box: fill-box; transform-origin: 50% 100%; }
 .poke-critters { animation: sc-wobble .55s ease-in-out; }
 .poke-critters .critter > g, .poke-critters .critter > * { animation: critter-pop .9s ease-out; }
@@ -1124,7 +1124,7 @@ h2.center { margin: 2px 0 6px; }
 .live .c-chimney > g { animation: chimney-peek 6s ease-in-out infinite; }
 @keyframes chimney-peek { 0%, 70%, 100% { transform: translateY(6px); } 78%, 92% { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .live .c-chimney > g { animation: none; } }
-/* The owl over the garage, swooping around Micah when she stands near Noah's Arc */
+/* The owl over the garage, swooping around Micah when she stands near Noah's Ark */
 .map-owl { position: absolute; left: 0; top: 0; width: 60px; height: 26px; margin: -13px 0 0 -30px; pointer-events: none; will-change: transform; }
 /* Every moving part is a plain HTML layer with a transform animation, so the compositor runs it. */
 .map-owl .owl-face { position: absolute; inset: 0; will-change: transform; }

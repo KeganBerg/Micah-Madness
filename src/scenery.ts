@@ -305,7 +305,7 @@ const fern = (c: string): Prop => {
   return { r: 14, poke: 'rustle', fx: 'leaf', sfx: 'rustle', svg: `${shadow(10, 0.12)}<g class="sway">${p}</g>` };
 };
 
-// Noah's Arc: the falling-down house Micah's family laughs at on every walk.
+// Noah's Ark: the falling-down house Micah's family laughs at on every walk.
 // Boarded windows, a sagging roof, and a full house of squirrels and raccoons.
 const squirrelBit = (flip = false) => `<g><g transform="scale(${flip ? -1 : 1} 1)">
     <path d="M4 2 C14 0 15 -12 8 -15 C4 -16 2 -12 5 -10 C9 -8 8 -3 3 -2" fill="#b06a2c" stroke="#6e3e14" stroke-width="1"/>
@@ -383,10 +383,10 @@ const deck = () => {
   </g>`;
 };
 
-export const noahsArc = (): Prop => ({
+export const noahsArk = (): Prop => ({
   r: 70, poke: 'critters', fx: 'leaf', sfx: 'tweet',
   say: [
-    'Noah’s Arc. Still standing. Somehow.',
+    'Noah’s Ark. Still standing. Somehow.',
     'The squirrels have signed a long lease.',
     'A raccoon waves from the chimney. Rent is due Tuesday.',
     'Micah sniffs the porch. Verdict: very interesting.',
@@ -432,7 +432,7 @@ export const noahsArc = (): Prop => ({
     <g transform="translate(-68 2) rotate(-6)">
       <rect x="-1.6" y="-30" width="3.2" height="30" fill="#6b4529"/>
       <path d="M-27 -33 H23 L24 -20 H-28 Z" fill="#e3d5b5" stroke="#6b4529" stroke-width="1.3"/>
-      <text x="-2" y="-23.6" text-anchor="middle" font-size="7.6" font-weight="900" fill="#a3201c" font-family="'Lilita One', sans-serif" textLength="44" lengthAdjust="spacingAndGlyphs" transform="rotate(-3 -2 -26)">NOAH&#8217;S ARC</text>
+      <text x="-2" y="-23.6" text-anchor="middle" font-size="7.6" font-weight="900" fill="#a3201c" font-family="'Lilita One', sans-serif" textLength="44" lengthAdjust="spacingAndGlyphs" transform="rotate(-3 -2 -26)">NOAH&#8217;S ARK</text>
     </g>
     <rect x="-90" y="-92" width="176" height="94" fill="transparent"/></g>`,
 });
@@ -892,7 +892,7 @@ export const THEMES: Theme[] = [
     ground: '#6f8a7a', dark: '#627d6d', light: '#7f9a8a', path: '#b9a888', edge: '#7d6a4f', dots: '#9fc3d6',
     texture: mix(tuft('#55705f'), dot('#9fc3d6', 1.3), dot('#5b4330', 1.6)),
     props: (r) => [
-      [() => noahsArc(), 1], [() => puddle(), 7], [() => wellies(pick(r, ['#e8352f', '#ffc12e', '#2f8fe0'])), 3], [() => umbrella('#2f8fe0', '#ffc12e'), 1],
+      [() => noahsArk(), 1], [() => puddle(), 7], [() => wellies(pick(r, ['#e8352f', '#ffc12e', '#2f8fe0'])), 3], [() => umbrella('#2f8fe0', '#ffc12e'), 1],
       [() => tree('#4f8f5a', '#3e7a49'), 3], [() => mushroom(), 3], [() => pawTrail(r), 3], [() => bird('#5d6f7c'), 2], [() => rock('#7d8a90'), 2],
     ],
   },
@@ -935,12 +935,12 @@ export const THEMES: Theme[] = [
       [() => dog('#c9893f', '#8a5a26', true), 1],
     ],
   },
-  // 14 · Noah's Arc Lane: the famous falling-down house, the neighbour's cat, and more leaves.
+  // 14 · Noah's Ark Lane: the famous falling-down house, the neighbour's cat, and more leaves.
   {
     ground: '#7d8f5a', dark: '#71834f', light: '#8a9c66', path: '#c9bfa8', edge: '#8f8470', dots: '#c96a1f',
     texture: mix(tuft('#5f7040'), dot('#c96a1f', 1.6), dot('#ffc12e', 1.2)),
     props: (r) => [
-      [() => noahsArc(), 1], [() => catWindow(), 1], [() => leafPile(), 3], [() => tree('#d9541f', '#b8401a'), 3], [() => bin(), 2],
+      [() => noahsArk(), 1], [() => catWindow(), 1], [() => leafPile(), 3], [() => tree('#d9541f', '#b8401a'), 3], [() => bin(), 2],
       [() => mailbox(), 1], [() => lamp(), 2], [() => mushroom(), 2], [() => bird(pick(r, ['#2b2b2b', '#5d6f7c'])), 2],
     ],
   },
@@ -1217,7 +1217,7 @@ export function backdropProps(zone: number): { back: string[]; hurdle: string } 
     [[() => tree('#e8892f', '#c96a1f'), () => pumpkin(1.3), () => hay(), () => pumpkin(), () => tree('#d9541f', '#b8401a', 0.9)], () => pumpkin(0.8)],
     [[() => tent('#8e5bd6', '#5a3392'), () => pillow('#f6b8c8'), () => lamp(), () => pine('#3d4a7a', '#30395f'), () => pillow('#fff3c4')], () => pillow('#b38df0')],
     [[() => house('#fbf4e6', '#5d6f7c'), () => tree('#e8892f', '#c96a1f'), () => mailbox(), () => house('#cfe6f5', '#8a5a26', '#23925a'), () => fence()], () => leafPile()],
-    [[() => tree('#d9541f', '#b8401a'), () => catWindow(), () => noahsArc(), () => bin(), () => lamp()], () => leafPile()],
+    [[() => tree('#d9541f', '#b8401a'), () => catWindow(), () => noahsArk(), () => bin(), () => lamp()], () => leafPile()],
     [[() => house('#ffe0ea', '#a3201c', '#2f8fe0'), () => lamp(), () => hydrant(), () => tree('#e8892f', '#c96a1f'), () => bin()], () => hydrant()],
     [[() => tree('#d9541f', '#b8401a'), () => pumpkin(), () => homePorch(), () => mailbox(), () => lamp()], () => leafPile()],
     [[() => bathtub(), () => towel('#e8352f', '#fff'), () => bush('#6fb36a', '#5a9e57'), () => hose(), () => fence()], () => duckToy()],
