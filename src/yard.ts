@@ -8,7 +8,7 @@ import { SNACKS } from './snacks';
 import { moundSVG } from './dig';
 import { presentSVG } from './advent';
 
-export type YardArea = 'back' | 'yoshi' | 'garden' | 'porch' | 'lake';
+export type YardArea = 'back' | 'yoshi' | 'garden' | 'porch' | 'lake' | 'treehouse';
 export type YardTime = 'day' | 'dusk' | 'night';
 
 export interface Decor {
@@ -37,6 +37,7 @@ export const AREAS: AreaInfo[] = [
   { id: 'garden', name: 'Garden', opensAt: 30 },
   { id: 'porch', name: 'Front Porch', opensAt: 60 },
   { id: 'lake', name: 'Lakeside', opensAt: 150 },
+  { id: 'treehouse', name: 'Treehouse', opensAt: 200 },
 ];
 
 export const areaOpen = (a: AreaInfo, stars: Record<number, number>): boolean => !a.opensAt || (stars[a.opensAt] ?? 0) > 0;
@@ -263,6 +264,54 @@ const lamp = `
 <path d="M50 14 V38 M38 26 H62" stroke="#3b3f46" stroke-width="2"/>
 <path d="M32 14 L50 2 L68 14 Z" fill="#3b3f46"/>`;
 
+// ───────────────────────────── Treehouse (opens after level 200) ─────────────────────────────
+
+const fortArt = `
+<path d="M22 100 V62 M78 100 V62" stroke="#6b4529" stroke-width="6" stroke-linecap="round"/>
+<path d="M8 60 H92 V68 H8 Z" fill="#a7784a" stroke="#6b4529" stroke-width="2.4"/>
+<path d="M14 60 V30 H86 V60 Z" fill="#c9893f" stroke="#6b4529" stroke-width="2.4"/>
+<path d="M14 38 H86 M14 46 H86 M14 54 H86" stroke="#a7784a" stroke-width="1.4"/>
+<path d="M6 32 L50 6 L94 32 Z" fill="#e8352f" stroke="#a3201c" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="24" y="36" width="18" height="16" fill="#bfe6ff" stroke="#fff" stroke-width="2.4"/><path d="M33 36 V52" stroke="#fff" stroke-width="1.6"/>
+<path d="M56 60 V40 Q66 32 76 40 V60 Z" fill="#4a3220"/>
+<text x="50" y="66.5" text-anchor="middle" font-size="5.5" font-weight="900" fill="#fff4e0" font-family="sans-serif">NO CATS</text>`;
+
+const ladderArt = `
+<path d="M30 0 Q26 50 32 100 M70 0 Q74 50 68 100" stroke="#c9a066" stroke-width="3.4" fill="none"/>
+${[14, 32, 50, 68, 86].map((y) => `<rect x="28" y="${y}" width="44" height="6" rx="2" fill="#a7784a" stroke="#6b4529" stroke-width="1.4"/>`).join('')}`;
+
+const slideArt = `
+<path d="M10 20 Q46 30 66 70 Q76 90 96 92" stroke="#e8352f" stroke-width="16" fill="none" stroke-linecap="round"/>
+<path d="M10 20 Q46 30 66 70 Q76 90 96 92" stroke="#ff8a7a" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/>
+<path d="M44 34 V96 M74 82 V98" stroke="#5d6f7c" stroke-width="4" stroke-linecap="round"/>`;
+
+const pulleyArt = `
+<path d="M50 0 V58" stroke="#c9a066" stroke-width="2"/><circle cx="50" cy="4" r="5" fill="#5d6f7c"/>
+<path d="M30 58 H70 L64 92 H36 Z" fill="#2f8fe0" stroke="#1f5f9e" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M30 58 Q50 44 70 58" stroke="#5d6f7c" stroke-width="2" fill="none"/>
+<circle cx="42" cy="56" r="5" fill="#c9893f"/><circle cx="54" cy="54" r="5" fill="#a7784a"/><circle cx="62" cy="57" r="4" fill="#c9893f"/>
+<text x="50" y="80" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="sans-serif">SNACKS</text>`;
+
+const tireSwingArt = `
+<path d="M0 6 Q50 -2 100 8" stroke="#6b4529" stroke-width="9" fill="none" stroke-linecap="round"/>
+<g class="yard-sway"><path d="M50 4 V56" stroke="#c9a066" stroke-width="2.6"/><ellipse cx="50" cy="72" rx="24" ry="18" fill="#2b2b2b"/><ellipse cx="50" cy="72" rx="12" ry="8" fill="none" stroke="#454545" stroke-width="2"/><ellipse cx="50" cy="72" rx="9" ry="5" fill="#5f9c55" opacity=".8"/></g>`;
+
+const birdhouseArt = `
+<path d="M50 40 V100" stroke="#6b4529" stroke-width="6" stroke-linecap="round"/>
+<path d="M28 40 V16 L50 2 L72 16 V40 Z" fill="#ffc12e" stroke="#c49a1a" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M22 18 L50 -2 L78 18" stroke="#e8352f" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="50" cy="24" r="6" fill="#4a3220"/><path d="M44 34 H56" stroke="#6b4529" stroke-width="2.4"/>`;
+
+const telescopeArt = `
+<path d="M50 60 L30 98 M50 60 L70 98 M50 60 V98" stroke="#5d6f7c" stroke-width="3.4" stroke-linecap="round"/>
+<g transform="rotate(-28 50 56)"><rect x="14" y="48" width="64" height="16" rx="4" fill="#e8352f" stroke="#a3201c" stroke-width="2.4"/><rect x="76" y="45" width="12" height="22" rx="3" fill="#ffc12e" stroke="#c49a1a" stroke-width="2"/><rect x="6" y="51" width="10" height="10" rx="2" fill="#3b3f46"/></g>`;
+
+const beanbagArt = `
+<path d="M10 88 Q4 52 30 42 Q52 34 72 42 Q96 52 90 88 Q50 100 10 88 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+<path d="M26 60 Q50 72 76 60" stroke="#a3201c" stroke-width="2.4" fill="none"/>
+<ellipse cx="38" cy="52" rx="10" ry="4" fill="#ff8a7a" opacity=".6"/>`;
+
+
 // ───────────────────────────── Lakeside (opens after level 150) ─────────────────────────────
 
 const dockArt = `
@@ -354,6 +403,15 @@ export const DECOR: Decor[] = [
   { id: 'tent', area: 'lake', name: 'Camping Tent', desc: 'Her name is on the door.', cost: 16, x: 8, y: 186, w: 96, svg: tentArt },
   { id: 'firepit', area: 'lake', name: 'Fire Pit', desc: 'No marshmallow is safe.', cost: 16, x: 156, y: 176, w: 74, svg: firepitArt },
   { id: 'floaty', area: 'lake', name: 'Lobster Floaty', desc: 'She naps on it. On land.', cost: 18, x: 250, y: 200, w: 104, svg: floatyArt },
+  // Treehouse (opens after level 200)
+  { id: 'fort', area: 'treehouse', name: 'The Treehouse', desc: 'A sign on the door: NO CATS.', cost: 20, x: 14, y: 6, w: 132, svg: fortArt },
+  { id: 'ladder', area: 'treehouse', name: 'Rope Ladder', desc: 'Micah takes the slide down.', cost: 14, x: 104, y: 92, w: 52, svg: ladderArt },
+  { id: 'slide', area: 'treehouse', name: 'Red Slide', desc: 'Up the ladder, down the slide, again.', cost: 17, x: 140, y: 70, w: 96, svg: slideArt },
+  { id: 'pulley', area: 'treehouse', name: 'Snack Pulley', desc: 'Snacks go up. Micah goes up faster.', cost: 16, x: 2, y: 104, w: 56, svg: pulleyArt },
+  { id: 'tireswing', area: 'treehouse', name: 'Tire Swing', desc: 'Whee! Micah is not a fan.', cost: 15, x: 262, y: 34, w: 92, svg: tireSwingArt },
+  { id: 'birdhouse', area: 'treehouse', name: 'Bird House', desc: 'Tenants: two sparrows, one squirrel.', cost: 13, x: 234, y: 112, w: 52, svg: birdhouseArt },
+  { id: 'telescope', area: 'treehouse', name: 'Telescope', desc: 'For spotting the Ark from up high.', cost: 16, x: 40, y: 194, w: 66, svg: telescopeArt },
+  { id: 'beanbag', area: 'treehouse', name: 'Bean Bag', desc: 'It used to be round.', cost: 17, x: 206, y: 204, w: 92, svg: beanbagArt },
 ];
 
 // ───────────────────────────── the scene ─────────────────────────────
@@ -413,6 +471,17 @@ const lakeShore = (time: YardTime, snowy = false) => {
     <g opacity=".5" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M30 100 h24 M120 112 h30 M240 98 h20 M300 120 h26 M70 132 h18"/></g>
     ${grass(150, time, snowy)}
     <path d="M0 150 Q90 140 180 152 T360 146 V164 Q270 172 180 164 T0 166 Z" fill="${snowy ? '#f4f8fb' : time === 'night' ? '#8f8466' : '#e6d3a0'}"/>`;
+};
+
+/** Treehouse: a giant oak on the left, its canopy across the top, and open lawn. */
+const bigOak = (time: YardTime, snowy = false) => {
+  const leaf = snowy ? '#e6f0f8' : time === 'night' ? '#244a32' : '#3f7d4a';
+  const leaf2 = snowy ? '#f4f8fb' : time === 'night' ? '#2c5a3a' : '#4a8d55';
+  const bark = time === 'night' ? '#4a3220' : '#6b4529';
+  return `<path d="M56 300 Q64 200 66 120 Q60 70 40 40 H110 Q96 80 100 120 Q104 200 118 300 Z" fill="${bark}"/>
+    <path d="M78 290 Q82 200 80 130 M96 260 Q94 210 92 160" stroke="#4a3220" stroke-width="3" fill="none" opacity=".5"/>
+    <path d="M100 74 Q180 60 300 44" stroke="${bark}" stroke-width="12" fill="none" stroke-linecap="round"/>
+    ${[[30, 18, 50], [90, 6, 56], [160, 14, 46], [230, 6, 44], [300, 18, 46], [10, 60, 34], [130, 44, 30], [350, 46, 30]].map(([x, y, r], i) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${i % 2 ? leaf2 : leaf}"/>`).join('')}`;
 };
 
 const trail = (d: string, snowy = false) => `<path d="${d}" stroke="${snowy ? '#9fb6ca' : '#a57c52'}" stroke-width="12" fill="none" stroke-linecap="round" opacity="${snowy ? '.35' : '.38'}"/>`;
@@ -615,6 +684,7 @@ export const GROUND: Record<YardArea, { x0: number; x1: number; y0: number; y1: 
   garden: { x0: 24, x1: 336, y0: 104, y1: 292 },
   porch: { x0: 24, x1: 336, y0: 128, y1: 292 },
   lake: { x0: 24, x1: 336, y0: 140, y1: 292 },
+  treehouse: { x0: 24, x1: 336, y0: 150, y1: 292 },
 };
 
 /** Where Micah and Yoshi start in each part of the yard. */
@@ -624,6 +694,7 @@ export const START: Record<YardArea, { micah: [number, number]; yoshi: [number, 
   garden: { micah: [180, 250], yoshi: [150, 284] },
   porch: { micah: [180, 190], yoshi: [110, 270] },
   lake: { micah: [200, 230], yoshi: [130, 276] },
+  treehouse: { micah: [180, 250], yoshi: [130, 280] },
 };
 
 /** Where the advent present sits in the Backyard, by the snowman. */
@@ -672,6 +743,9 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
   } else if (area === 'garden') {
     back = `${sky(time)}${grass(88, time, snowy)}${hedge(time, snowy)}
       ${trail('M60 160 C110 150 150 220 200 220 S 280 180 330 196 M200 220 C 196 250 210 270 230 290', snowy)}`;
+  } else if (area === 'treehouse') {
+    back = `${sky(time)}${grass(104, time, snowy)}${bigOak(time, snowy)}
+      ${trail('M40 290 C90 260 150 250 190 230 S 260 200 310 190', snowy)}`;
   } else if (area === 'lake') {
     back = `${sky(time)}${lakeShore(time, snowy)}
       ${trail('M40 290 C80 250 140 250 180 236 S 260 220 300 196', snowy)}`;

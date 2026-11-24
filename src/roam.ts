@@ -55,6 +55,14 @@ const SPOTS: Record<string, { x: number; y: number; on?: boolean }> = {
   ledges: { x: 104, y: 96 },
   wheel: { x: -24, y: 116 },
   blanket: { x: 76, y: 80, on: true },
+  fort: { x: 50, y: 100 },
+  ladder: { x: 50, y: 100 },
+  slide: { x: 94, y: 96 },
+  pulley: { x: 50, y: 98 },
+  tireswing: { x: 50, y: 100 },
+  birdhouse: { x: 20, y: 100 },
+  telescope: { x: 86, y: 98 },
+  beanbag: { x: 50, y: 66, on: true },
 };
 
 /** Where Yoshi goes to use each of her things, in the item's 100x100 art box. */
@@ -70,7 +78,7 @@ const YOSHI_USE: Record<string, { x: number; y: number }> = {
 const LEDGES: [number, number][] = [[34, 68], [66, 44], [34, 20]];
 
 /** Things Micah naps on. At night she heads for these. */
-const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing', 'blanket', 'floaty', 'tent']);
+const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing', 'blanket', 'floaty', 'tent', 'beanbag']);
 
 export { SNACKS } from './snacks';
 export type { Snack } from './snacks';
