@@ -263,15 +263,17 @@ const sky = (time: YardTime): string => {
     <g fill="#ffffff" opacity=".85"><rect x="20" y="16" width="64" height="10" rx="5"/><rect x="36" y="10" width="30" height="10" rx="5"/><rect x="220" y="28" width="80" height="10" rx="5"/></g>`;
 };
 
-const grass = (y0: number, time: YardTime) => {
-  const [a, b] = time === 'night' ? ['#3c6d48', '#42764e'] : ['#5f9c55', '#68a75d'];
+const grass = (y0: number, time: YardTime, snowy = false) => {
+  const [a, b] = snowy
+    ? time === 'night' ? ['#b9cad9', '#c2d2e0'] : ['#e6f0f8', '#eff5fb']
+    : time === 'night' ? ['#3c6d48', '#42764e'] : ['#5f9c55', '#68a75d'];
   let s = `<rect y="${y0}" width="360" height="${300 - y0}" fill="${a}"/>`;
   for (let i = 0; i < 9; i += 2) s += `<rect x="${i * 40}" y="${y0}" width="40" height="${300 - y0}" fill="${b}"/>`;
   return s;
 };
 
 /** A worn wooden fence with one loose plank, and the hole Micah dug under it. */
-const fence = () => {
+const fence = (snowy = false) => {
   let s = '';
   for (let i = 0; i < 19; i++) {
     const x = i * 19 + 1;
@@ -281,20 +283,23 @@ const fence = () => {
     }
     const h = 22 + ((i * 7) % 4);
     s += `<rect x="${x}" y="${84 - h}" width="15" height="${h}" fill="#c8a57a" stroke="#8a6a45" stroke-width="1.4"/><path d="M${x + 3} ${88 - h} v8 M${x + 10} ${92 - h} v10" stroke="#a3845c" stroke-width="1"/>`;
+    if (snowy) s += `<rect x="${x - 1.5}" y="${81 - h}" width="18" height="6" rx="3" fill="#ffffff"/>`;
   }
   const hx = 142;
   return `<rect x="0" y="66" width="360" height="4" fill="#a3845c"/><rect x="0" y="74" width="360" height="5" fill="#a3845c"/>${s}
+    ${snowy ? '<rect x="0" y="80" width="360" height="8" rx="4" fill="#ffffff"/>' : ''}
     <ellipse cx="${hx}" cy="86" rx="14" ry="5" fill="#4a3220"/><g fill="#8a6239"><circle cx="${hx - 18}" cy="88" r="3.5"/><circle cx="${hx + 18}" cy="87" r="4.5"/><circle cx="${hx + 24}" cy="90" r="2.6"/></g>`;
 };
 
-const trail = (d: string) => `<path d="${d}" stroke="#a57c52" stroke-width="12" fill="none" stroke-linecap="round" opacity=".38"/>`;
+const trail = (d: string, snowy = false) => `<path d="${d}" stroke="${snowy ? '#9fb6ca' : '#a57c52'}" stroke-width="12" fill="none" stroke-linecap="round" opacity="${snowy ? '.35' : '.38'}"/>`;
 
 /** A trimmed hedge with a rose arch for the Garden. */
-const hedge = (time: YardTime) => {
+const hedge = (time: YardTime, snowy = false) => {
   const g = time === 'night' ? '#2c5a3a' : '#3f7d4a';
   const l = time === 'night' ? '#35694a' : '#4a8d55';
   let s = `<rect x="0" y="58" width="360" height="34" fill="${g}"/>`;
   for (let x = 0; x <= 360; x += 24) s += `<circle cx="${x}" cy="60" r="14" fill="${g}"/><circle cx="${x + 8}" cy="66" r="6" fill="${l}"/>`;
+  if (snowy) for (let x = 0; x <= 360; x += 24) s += `<ellipse cx="${x}" cy="49" rx="12" ry="5" fill="#ffffff"/>`;
   s += `<path d="M232 92 V54 A26 26 0 0 1 284 54 V92" stroke="#ffffff" stroke-width="5" fill="none"/>
     <path d="M232 92 V54 A26 26 0 0 1 284 54 V92" stroke="#c9d3da" stroke-width="5" fill="none" stroke-dasharray="1 8"/>
     ${[[234, 60], [240, 44], [252, 34], [266, 34], [278, 44], [283, 62], [234, 78], [283, 80]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.5" fill="#e8352f"/><circle cx="${x}" cy="${y}" r="1.6" fill="#a3201c"/>`).join('')}`;
@@ -302,7 +307,7 @@ const hedge = (time: YardTime) => {
 };
 
 /** The front of the house: siding, two windows, a lobster-red door and porch boards. */
-const house = (time: YardTime) => {
+const house = (time: YardTime, snowy = false) => {
   const lit = time === 'night';
   const win = (x: number) => `<rect x="${x}" y="28" width="56" height="52" fill="${lit ? '#ffd56a' : '#bfe6ff'}" stroke="#ffffff" stroke-width="5"/>
     <path d="M${x + 28} 28 V80 M${x} 54 H${x + 56}" stroke="#ffffff" stroke-width="3"/>
@@ -319,8 +324,40 @@ const house = (time: YardTime) => {
     <circle cx="196" cy="68" r="2.6" fill="#ffd23f"/>
     <rect x="0" y="108" width="360" height="98" fill="#c79a66"/>${boards}
     <rect x="0" y="108" width="360" height="5" fill="#a87b4f"/>
-    <rect x="142" y="200" width="76" height="10" fill="#b5884f"/><rect x="134" y="208" width="92" height="10" fill="#a87b4f"/>`;
+    <rect x="142" y="200" width="76" height="10" fill="#b5884f"/><rect x="134" y="208" width="92" height="10" fill="#a87b4f"/>
+    ${snowy ? `<rect width="360" height="7" fill="#ffffff"/>${Array.from({ length: 18 }, (_, i) => `<path d="M${i * 20 + 8} 11 l3 ${6 + (i % 3) * 3} l3 ${-6 - (i % 3) * 3} Z" fill="#dff1fb"/>`).join('')}
+      <rect x="134" y="206" width="92" height="4" rx="2" fill="#ffffff"/>` : ''}`;
 };
+
+/** Snow that settles on things in winter, in each item's 100x100 box. */
+const SNOW_CAPS: Record<string, string> = {
+  doghouse: '<path d="M10 44 L50 10 L90 44 Q86 49 82 44 L50 17 L18 44 Q14 49 10 44 Z" fill="#fff"/>',
+  tree: '<ellipse cx="50" cy="11" rx="20" ry="6"/><ellipse cx="28" cy="33" rx="11" ry="5"/><ellipse cx="72" cy="31" rx="11" ry="5"/>',
+  hydrant: '<ellipse cx="50" cy="20" rx="17" ry="6"/>',
+  ballpit: '<ellipse cx="38" cy="14" rx="16" ry="4"/><ellipse cx="66" cy="18" rx="12" ry="3.5"/>',
+  sprinkler: '<ellipse cx="50" cy="52" rx="10" ry="4"/>',
+  shelf: '<rect x="4" y="2" width="92" height="6" rx="3"/>',
+  barrow: '<ellipse cx="40" cy="40" rx="30" ry="7"/>',
+  compost: '<ellipse cx="50" cy="27" rx="38" ry="7"/>',
+  birdbath: '<ellipse cx="50" cy="41" rx="33" ry="4" fill="#dff1fb"/>',
+  hammock: '<ellipse cx="50" cy="54" rx="22" ry="5"/>',
+  pumpkin: '<ellipse cx="50" cy="41" rx="22" ry="5"/>',
+  mailbox: '<ellipse cx="50" cy="16" rx="34" ry="6"/>',
+  lamp: '<ellipse cx="50" cy="4" rx="18" ry="4"/>',
+  veggies: '<rect x="4" y="52" width="92" height="8" rx="4"/>',
+};
+
+/** A snowman for Micah's Winter, missing his carrot nose. Base centred on (0,0). */
+export const SNOWMAN = `<ellipse cx="0" cy="0" rx="18" ry="4" fill="#000" opacity=".12"/>
+  <circle cx="0" cy="-14" r="15" fill="#ffffff" stroke="#b7cbdc" stroke-width="2"/>
+  <circle cx="0" cy="-35" r="11" fill="#ffffff" stroke="#b7cbdc" stroke-width="2"/>
+  <circle cx="0" cy="-52" r="8" fill="#ffffff" stroke="#b7cbdc" stroke-width="2"/>
+  <path d="M-10 -42 Q0 -38 10 -42 L11 -38 Q0 -34 -11 -38 Z" fill="#e8352f"/><path d="M6 -39 l4 10 l-5 1 Z" fill="#e8352f"/>
+  <circle cx="-3" cy="-54" r="1.4" fill="#173a52"/><circle cx="3" cy="-54" r="1.4" fill="#173a52"/>
+  <circle cx="0" cy="-50" r="1.6" fill="#c9d6e2"/>
+  <circle cx="0" cy="-32" r="1.4" fill="#173a52"/><circle cx="0" cy="-26" r="1.4" fill="#173a52"/>
+  <path d="M-10 -36 L-24 -46 M-20 -43 l-3 -5 M10 -36 L24 -44 M20 -41 l2 -6" stroke="#7a4f25" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="0" cy="-30" r="22" fill="transparent"/>`;
 
 const fireflies = (n: number) =>
   `<g class="fireflies" pointer-events="none">${Array.from({ length: n }, (_, i) => {
@@ -349,19 +386,22 @@ export interface SceneOptions {
   ate: string[];
   /** Micah's dig mound (Backyard only): where it is and whether it is ready to dig up. */
   dig?: { x: number; y: number; ready: boolean };
+  /** Micah's Winter: snow on the ground and on things, and a snowman in the Backyard. */
+  snowy?: boolean;
 }
 
 /** One part of the yard, with bought items drawn and the rest shown as empty spots.
  * Built items are tappable groups; roam.ts moves Micah (the .ym group) between them. */
 export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions = { area: 'back', time: 'day', ate: [] }): string {
   const { area, time } = opts;
+  const snowy = !!opts.snowy;
   const here = DECOR.filter((d) => d.area === area);
   const items = here.map((d) => {
     const has = owned.includes(d.id);
     const s = d.w / 100;
     const art = d.id === 'shelf' ? museum(opts.ate) : d.svg;
     if (has)
-      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${art}</g></g></g>`;
+      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${art}${snowy && SNOW_CAPS[d.id] ? `<g class="snow-cap" fill="#fff">${SNOW_CAPS[d.id]}</g>` : ''}</g></g></g>`;
     const cx = d.x + d.w / 2;
     const cy = d.y + d.w / 2;
     return `<g opacity=".7"><circle cx="${cx}" cy="${cy}" r="${Math.min(22, d.w / 3)}" fill="#00000014" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 5"/>
@@ -372,13 +412,13 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
     back = `${sky(time)}
       <g class="yard-ark live" role="button" aria-label="Noah's Ark, over the back fence" transform="translate(214 84) scale(.7)">${noahsArk().svg}</g>
       ${time === 'night' ? '<rect x="189" y="34" width="6" height="6" fill="#ffd56a" opacity=".9"/>' : ''}
-      ${grass(80, time)}${fence()}
-      ${trail('M70 170 C100 200 160 186 190 214 S 250 258 300 252 M190 214 C 210 194 236 196 258 212 M70 170 C 76 206 66 228 60 248')}`;
+      ${grass(80, time, snowy)}${fence(snowy)}
+      ${trail('M70 170 C100 200 160 186 190 214 S 250 258 300 252 M190 214 C 210 194 236 196 258 212 M70 170 C 76 206 66 228 60 248', snowy)}`;
   } else if (area === 'garden') {
-    back = `${sky(time)}${grass(88, time)}${hedge(time)}
-      ${trail('M60 160 C110 150 150 220 200 220 S 280 180 330 196 M200 220 C 196 250 210 270 230 290')}`;
+    back = `${sky(time)}${grass(88, time, snowy)}${hedge(time, snowy)}
+      ${trail('M60 160 C110 150 150 220 200 220 S 280 180 330 196 M200 220 C 196 250 210 270 230 290', snowy)}`;
   } else {
-    back = `${house(time)}${grass(206, time)}`;
+    back = `${house(time, snowy)}${grass(206, time, snowy)}`;
   }
   const [mx, my] = START[area].micah;
   const [yx, yy] = START[area].yoshi;
@@ -386,7 +426,9 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
   const built = here.filter((d) => owned.includes(d.id)).length;
   return `<svg viewBox="0 0 360 300" class="yard-scene yard-${area} yard-${time}" role="img" aria-label="Micah's ${label} with ${built} of ${here.length} things built">
     ${back}
+    <g class="paws"></g>
     <g class="yard-layer">
+      ${snowy && area === 'back' ? `<g class="yard-item snowman" data-id="snowman" data-bottom="146" role="button" aria-label="Snowman"><g transform="translate(282 146)"><g class="yard-item-art">${SNOWMAN}</g></g></g>` : ''}
       ${opts.dig && area === 'back' ? `<g class="dig-mound${opts.dig.ready ? ' ready' : ''}" transform="translate(${opts.dig.x} ${opts.dig.y})" role="button" aria-label="${opts.dig.ready ? 'Micah’s dig spot: something is buried here, tap to dig it up' : 'Micah’s dig spot: freshly buried, come back tomorrow'}">${moundSVG(opts.dig.ready)}</g>` : ''}
       ${items}
       <g class="yy" transform="translate(${yx} ${yy})" role="button" aria-label="Yoshi the chinchilla">
@@ -402,6 +444,6 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
         <text class="ym-emote" x="0" y="-82" text-anchor="middle"></text>
       </g>
     </g>
-    ${time === 'night' ? `<rect class="yard-dark" width="360" height="300" fill="#081826" opacity=".26" pointer-events="none"/>${owned.includes('lamp') && area === 'porch' ? '<circle cx="40" cy="176" r="44" fill="#ffe27a" opacity=".22" pointer-events="none"/>' : ''}${fireflies(12)}` : time === 'dusk' ? `<rect width="360" height="300" fill="#ff8a5c" opacity=".07" pointer-events="none"/>${fireflies(4)}` : ''}
+    ${time === 'night' ? `<rect class="yard-dark" width="360" height="300" fill="#081826" opacity=".26" pointer-events="none"/>${owned.includes('lamp') && area === 'porch' ? '<circle cx="40" cy="176" r="44" fill="#ffe27a" opacity=".22" pointer-events="none"/>' : ''}${snowy ? '' : fireflies(12)}` : time === 'dusk' ? `<rect width="360" height="300" fill="#ff8a5c" opacity=".07" pointer-events="none"/>${snowy ? '' : fireflies(4)}` : ''}
   </svg>`;
 }

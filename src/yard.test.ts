@@ -60,4 +60,16 @@ describe("Micah's Yard", () => {
     expect(porch).toContain('firefly');
     expect(yardScene(all, 'm.png', { area: 'porch', time: 'day', ate: [] })).not.toContain('firefly');
   });
+
+  it('snows in winter: a snowman in the Backyard, snow on things, no fireflies', () => {
+    const all = DECOR.map((d) => d.id);
+    const winter = yardScene(all, 'm.png', { area: 'back', time: 'night', ate: [], snowy: true });
+    expect(winter).toContain('data-id="snowman"');
+    expect(winter).toContain('snow-cap');
+    expect(winter).not.toContain('firefly');
+    const summer = yardScene(all, 'm.png', { area: 'back', time: 'day', ate: [] });
+    expect(summer).not.toContain('snowman');
+    expect(summer).not.toContain('snow-cap');
+    expect(yardScene(all, 'm.png', { area: 'garden', time: 'day', ate: [], snowy: true })).not.toContain('snowman');
+  });
 });

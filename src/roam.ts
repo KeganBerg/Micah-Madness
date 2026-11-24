@@ -67,6 +67,8 @@ export interface YardHooks {
 export interface YardOptions {
   area: YardArea;
   time: YardTime;
+  /** Winter: Micah leaves paw prints in the snow. */
+  snowy?: boolean;
 }
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -290,6 +292,27 @@ export function startYard(
   const wait = (ms: number, t: number) =>
     new Promise<boolean>((res) => setTimeout(() => res(t === token && !stopped), ms));
 
+  // Winter: paw prints in the snow that fade after a while.
+  const paws = opts.snowy && !reduced ? svgEl.querySelector<SVGGElement>('.paws') : null;
+  let pawSide = 1;
+  let pawFrom = { x, y };
+  function pawPrint(): void {
+    if (!paws || onTop) return;
+    if (Math.hypot(x - pawFrom.x, y - pawFrom.y) < 11) return;
+    const a = Math.atan2(y - pawFrom.y, x - pawFrom.x);
+    pawFrom = { x, y };
+    pawSide = -pawSide;
+    const px = x + Math.cos(a + Math.PI / 2) * 4 * pawSide;
+    const py = y + Math.sin(a + Math.PI / 2) * 2 * pawSide;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'paw-print');
+    g.setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${((a * 180) / Math.PI + 90).toFixed(0)})`);
+    g.innerHTML = '<ellipse cx="0" cy="1" rx="2.2" ry="1.8"/><circle cx="-2" cy="-1.8" r=".8"/><circle cx="0" cy="-2.6" r=".8"/><circle cx="2" cy="-1.8" r=".8"/>';
+    paws.append(g);
+    if (paws.childElementCount > 80) paws.firstElementChild?.remove();
+    setTimeout(() => g.remove(), 9000);
+  }
+
   function moveTo(tx: number, ty: number, t: number, speed = 70): Promise<boolean> {
     tx = clamp(tx, GRASS.x0, GRASS.x1);
     ty = clamp(ty, GRASS.y0, GRASS.y1);
@@ -310,6 +333,7 @@ export function startYard(
         x = x0 + (tx - x0) * e;
         y = y0 + (ty - y0) * e;
         place();
+        pawPrint();
         if (now - lastStep > (speed > 100 ? 180 : 300)) {
           lastStep = now;
           if (speed > 100) sfx.step();
@@ -334,6 +358,16 @@ export function startYard(
 
   /** Walk to an item and do the thing Micah does with it. */
   async function visit(id: string, t: number, hurry = false): Promise<void> {
+    if (id === 'snowman') {
+      onTop = null;
+      if (!(await moveTo(256, 150, t, hurry ? 150 : 70))) return;
+      face(false);
+      setPose('sniff');
+      if (!(await wait(1400, t))) return;
+      say('?');
+      setPose('sit');
+      return;
+    }
     const d = DECOR.find((v) => v.id === id);
     if (!d) return;
     const spot = SPOTS[id] ?? { x: 50, y: 100 };

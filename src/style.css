@@ -827,6 +827,11 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-tab:disabled b::before { content: '\1F512\FE0E  '; font-size: .8em; }
 .yard-ark { cursor: pointer; }
 .dig-mound { cursor: pointer; }
+.yard-frame { position: relative; }
+.yard-snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.paws { fill: #9fb6ca; pointer-events: none; }
+.paw-print { animation: paw-fade 9s ease-in forwards; }
+@keyframes paw-fade { 0%, 60% { opacity: .85; } 100% { opacity: 0; } }
 .dig-mound .dig-sparkle { transform-box: fill-box; transform-origin: 50% 50%; animation: dig-sparkle 1.4s ease-in-out infinite; }
 @keyframes dig-sparkle { 0%, 100% { opacity: .4; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
 @media (prefers-reduced-motion: reduce) { .dig-mound .dig-sparkle { animation: none; } }
