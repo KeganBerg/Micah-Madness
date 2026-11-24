@@ -221,6 +221,20 @@ const toolOpen = (id: keyof typeof TOOL_UNLOCK, levelId: number) => Math.max(lev
 
 // ───────────────────────────── Map screen ─────────────────────────────
 
+type EventChip = { cls: string; act: string; done: boolean; icon: string; name: string; short: string; note: string };
+
+/** The map's event buttons (Weekly Walk, Noah's Ark, Micah's Winter) share one row at the bottom of the map.
+ *  One event gets a full chip with its note; two or more shrink to short names so they fit side by side. */
+function eventTray(list: (EventChip | false)[]): string {
+  const chips = list.filter((c): c is EventChip => !!c);
+  if (!chips.length) return '';
+  return `<div class="event-tray ${chips.length > 1 ? 'multi' : ''}">${chips
+    .map(
+      (c) => `<button class="event-chip ${c.cls} ${c.done ? 'done' : ''}" data-act="${c.act}" aria-label="${c.name}. ${c.note}">${c.icon}<span><b><span class="full">${c.name}</span><span class="short">${c.short}</span></b><small>${c.note}</small></span></button>`,
+    )
+    .join('')}</div>`;
+}
+
 function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void {
   playMusic('map');
   const unlocked = Math.min(unlockedUpTo(save), LEVELS.length);
@@ -281,15 +295,20 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
             <button class="btn" data-act="start">Start level 1</button>
           </div>`
         : ''}
-      ${weeklyOpen(save) && Object.keys(save.stars).length > 0
-        ? `<button class="weekly-chip ${weeklyWonThisWeek(save) ? 'done' : ''}" data-act="weekly">${UI.paw}<span><b>Weekly Walk</b><small>${weeklyWonThisWeek(save) ? 'Done. New one Monday' : 'New this week'}</small></span></button>`
-        : ''}
-      ${arkOpen(save)
-        ? `<button class="ark-chip ${arkNext(save) ? '' : 'done'}" data-act="ark">${svg(ARK_ICON, 'ark-icon')}<span><b>Noah\u2019s Ark</b><small>${arkNext(save) ? (save.ark.length ? `${save.ark.length} of ${ARK_COUNT} done` : 'The raccoons are throwing junk!') : 'Every raccoon fed. Well, Micah fed.'}</small></span></button>`
-        : ''}
-      ${winterOpen(save, new Date(), WINTER_PREVIEW)
-        ? `<button class="winter-chip ${winterNext(save) ? '' : 'done'}" data-act="winter">${svg(BOOSTER_ICONS.snow, 'snow-icon')}<span><b>Micah\u2019s Winter</b><small>${winterNext(save) ? `${winterWon(save).length} of ${WINTER_COUNT} done` : 'All done. Ho ho woof!'}</small></span></button>`
-        : ''}
+      ${eventTray([
+        weeklyOpen(save) && Object.keys(save.stars).length > 0 && {
+          cls: 'weekly-chip', act: 'weekly', done: weeklyWonThisWeek(save), icon: UI.paw, name: 'Weekly Walk', short: 'Weekly',
+          note: weeklyWonThisWeek(save) ? 'Done. New one Monday' : 'New this week',
+        },
+        arkOpen(save) && {
+          cls: 'ark-chip', act: 'ark', done: !arkNext(save), icon: svg(ARK_ICON, 'ark-icon'), name: 'Noah\u2019s Ark', short: 'Ark',
+          note: arkNext(save) ? (save.ark.length ? `${save.ark.length} of ${ARK_COUNT} done` : 'The raccoons are throwing junk!') : 'Every raccoon fed. Well, Micah fed.',
+        },
+        winterOpen(save, new Date(), WINTER_PREVIEW) && {
+          cls: 'winter-chip', act: 'winter', done: !winterNext(save), icon: svg(BOOSTER_ICONS.snow, 'snow-icon'), name: 'Micah\u2019s Winter', short: 'Winter',
+          note: winterNext(save) ? `${winterWon(save).length} of ${WINTER_COUNT} done` : 'All done. Ho ho woof!',
+        },
+      ])}
       </div>
       <nav class="dock" aria-label="Main">
         <button class="dock-btn" data-act="yard">${UI.home}<span>Yard</span>${starsToSpend(save) ? `<em class="count">${starsToSpend(save)}</em>` : ''}</button>
