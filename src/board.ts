@@ -4,6 +4,12 @@
 export const KIND_COUNT = 6;
 /** Kind value used by the Micah (rainbow) special, which matches nothing. */
 export const MICAH_KIND = -1;
+/**
+ * Kind value for junk the Noah's Ark raccoons throw onto the board (a sock, a boot...).
+ * Junk never matches. Micah eats it when it reaches the bottom row, or catches it when
+ * a power-up blasts it loose. Which item it is lives in Tile.junk.
+ */
+export const JUNK_KIND = -2;
 
 export type Special = 'none' | 'zoomRow' | 'zoomCol' | 'bark' | 'micah';
 
@@ -11,6 +17,8 @@ export interface Tile {
   id: number;
   kind: number;
   special: Special;
+  /** Which piece of junk this is (only when kind is JUNK_KIND). */
+  junk?: number;
 }
 
 export type Cell = Tile | null;
@@ -22,6 +30,11 @@ let nextId = 1;
 export function newTile(kind: number, special: Special = 'none'): Tile {
   return { id: nextId++, kind: special === 'micah' ? MICAH_KIND : kind, special };
 }
+
+export function newJunk(item: number): Tile {
+  return { id: nextId++, kind: JUNK_KIND, special: 'none', junk: item };
+}
+export const isJunk = (t: Cell | undefined): boolean => !!t && t.kind === JUNK_KIND;
 
 export function randomKind(rng: Rng, kinds = KIND_COUNT): number {
   return Math.floor(rng() * kinds);
@@ -84,9 +97,9 @@ export function findRuns(grid: Grid): Run[] {
         const at = (j: number) => (dir === 'h' ? grid[o][j] : grid[j][o]);
         const prev = at(start);
         const cur = i < inner ? at(i) : null;
-        const same = cur && prev && cur.kind === prev.kind && cur.kind !== MICAH_KIND;
+        const same = cur && prev && cur.kind === prev.kind && cur.kind >= 0;
         if (!same) {
-          if (prev && prev.kind !== MICAH_KIND && i - start >= 3) {
+          if (prev && prev.kind >= 0 && i - start >= 3) {
             const cells: Pos[] = [];
             for (let j = start; j < i; j++) cells.push(dir === 'h' ? [o, j] : [j, o]);
             runs.push({ dir, cells, kind: prev.kind });
@@ -115,6 +128,13 @@ export function isLegalSwap(grid: Grid, a: Pos, b: Pos): boolean {
   const ta = grid[a[0]][a[1]];
   const tb = grid[b[0]][b[1]];
   if (!ta || !tb) return false;
+  // Micah won't fetch junk: swapping her onto it is just an ordinary swap.
+  if ((ta.special === 'micah' && isJunk(tb)) || (tb.special === 'micah' && isJunk(ta))) {
+    swap(grid, a, b);
+    const ok = findRuns(grid).length > 0;
+    swap(grid, a, b);
+    return ok;
+  }
   if (ta.special === 'micah' || tb.special === 'micah') return true;
   if (isPowered(ta) && isPowered(tb)) return true;
   swap(grid, a, b);
@@ -419,4 +439,94 @@ export function popBubbles(bubble: boolean[][], cleared: Iterable<number>): Pos[
     }
   }
   return popped;
+}
+
+/** How many of the cleared cells held junk (blasted loose, so Micah catches it). */
+export function junkIn(grid: Grid, cleared: Iterable<number>): number {
+  let n = 0;
+  for (const k of cleared) {
+    const [r, c] = unkey(k);
+    if (isJunk(grid[r][c])) n++;
+  }
+  return n;
+}
+
+/** How many pieces of junk are on the board. */
+export function junkCount(grid: Grid): number {
+  return grid.reduce((n, row) => n + row.filter((t) => isJunk(t)).length, 0);
+}
+
+/** Junk sitting in the bottom row, ready for Micah to eat. */
+export function junkAtBottom(grid: Grid): Pos[] {
+  const r = grid.length - 1;
+  const out: Pos[] = [];
+  grid[r].forEach((t, c) => isJunk(t) && out.push([r, c]));
+  return out;
+}
+
+/**
+ * The raccoons throw more junk: turns freshly fallen pieces (from the top) into junk
+ * until `want` pieces are on the board. Returns the tiles it changed.
+ */
+export function throwJunk(grid: Grid, drops: Drop[], want: number, items: number, rng: Rng = Math.random): Tile[] {
+  // The raccoons aim for the deepest gap, so new junk lands as low as a fresh piece can.
+  const fresh = drops.filter((d) => d.from[0] < 0 && d.tile.special === 'none' && d.to[0] < grid.length - 1);
+  const thrown: Tile[] = [];
+  let have = junkCount(grid);
+  while (have < want && fresh.length) {
+    const low = Math.max(...fresh.map((d) => d.to[0]));
+    const deepest = fresh.filter((d) => d.to[0] === low);
+    const d = deepest[Math.floor(rng() * deepest.length)];
+    fresh.splice(fresh.indexOf(d), 1);
+    d.tile.kind = JUNK_KIND;
+    d.tile.junk = Math.floor(rng() * items);
+    thrown.push(d.tile);
+    have++;
+  }
+  return thrown;
+}
+
+/** Put junk on a new board: `count` pieces in the top three rows, on different columns. */
+export function placeJunk(grid: Grid, count: number, items: number, rng: Rng = Math.random): void {
+  const cols = [...grid[0].keys()];
+  for (let i = 0; i < count && cols.length; i++) {
+    const c = cols.splice(Math.floor(rng() * cols.length), 1)[0];
+    const r = Math.floor(rng() * 3);
+    grid[r][c] = newJunk(Math.floor(rng() * items));
+  }
+}
+
+/**
+ * The hint on a Noah's Ark level: the legal move that drops junk the furthest
+ * (each cleared cell under a piece of junk drops it one row), or null if none moves any.
+ */
+export function junkMove(grid: Grid, locked: Locked = none): [Pos, Pos] | null {
+  let best: [Pos, Pos] | null = null;
+  let bestDrop = 0;
+  const rows = grid.length, cols = grid[0].length;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      for (const [dr, dc] of [[0, 1], [1, 0]]) {
+        const a: Pos = [r, c], b: Pos = [r + dr, c + dc];
+        if (b[0] >= rows || b[1] >= cols || locked(...a) || locked(...b) || !isLegalSwap(grid, a, b)) continue;
+        swap(grid, a, b);
+        const cleared = new Set<number>();
+        for (const run of findRuns(grid)) for (const [rr, cc] of run.cells) cleared.add(key(rr, cc));
+        let drop = 0;
+        for (let cc = 0; cc < cols; cc++) {
+          let below = 0;
+          for (let rr = rows - 1; rr >= 0; rr--) {
+            if (isJunk(grid[rr][cc])) drop += below;
+            if (cleared.has(key(rr, cc))) below++;
+          }
+        }
+        swap(grid, a, b);
+        if (drop > bestDrop) {
+          bestDrop = drop;
+          best = [a, b];
+        }
+      }
+    }
+  }
+  return best;
 }

@@ -26,6 +26,12 @@ import {
   type Pos,
   type Special,
   type Tile,
+  isJunk,
+  junkAtBottom,
+  junkIn,
+  junkMove,
+  placeJunk,
+  throwJunk,
 } from './board';
 import { BOOSTER_ICONS, BUBBLE_OVERLAY, KINDS, UI, YARN_OVERLAY, svg } from './art';
 import { backdropHTML } from './backdrop';
@@ -65,6 +71,7 @@ import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, up
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { STICKERS, freshStickers, markStickersSeen, stickerEarned, stickerHint, stickersEarned, type Sticker } from './stickers';
 import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_LEVELS, claimWinter, isWinterLevel, winterNext, winterNumber, winterOpen, winterWon } from './winter';
+import { ARK_BISCUITS, ARK_COUNT, ARK_LEVELS, ARK_TIPS, ARK_UNLOCK_LEVEL, JUNK_ITEMS, MASK_AT, arkNext, arkNumber, arkOpen, claimArk, isArkLevel } from './ark';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -125,8 +132,9 @@ const WINTER_PREVIEW = (() => {
   }
 })();
 /** Weekly and winter levels sit outside the map. */
-const isSpecial = (lv: Level) => lv.id === WEEKLY_ID || isWinterLevel(lv);
-const levelTitle = (lv: Level) => (lv.id === WEEKLY_ID ? 'Weekly Walk' : isWinterLevel(lv) ? `Winter ${winterNumber(lv)}` : `Level ${lv.id}`);
+const isSpecial = (lv: Level) => lv.id === WEEKLY_ID || isWinterLevel(lv) || isArkLevel(lv);
+const levelTitle = (lv: Level) =>
+  lv.id === WEEKLY_ID ? 'Weekly Walk' : isWinterLevel(lv) ? `Winter ${winterNumber(lv)}` : isArkLevel(lv) ? `Noah\u2019s Ark ${arkNumber(lv)}` : `Level ${lv.id}`;
 
 /** Set while a winter level is on screen: mud is drawn and described as snow. */
 let snowy = false;
@@ -136,6 +144,7 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'leaves') return svg(BOOSTER_ICONS.leaves, 'goal-icon');
   if (goal.type === 'yarn') return svg(BOOSTER_ICONS.yarn, 'goal-icon');
   if (goal.type === 'bubbles') return svg(BOOSTER_ICONS.bubbles, 'goal-icon');
+  if (goal.type === 'junk') return svg(JUNK_ITEMS[0].svg, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
@@ -151,6 +160,7 @@ function goalText(goal: Goal): string {
   if (goal.type === 'leaves') return 'Rake up every fallen leaf';
   if (goal.type === 'yarn') return 'Untangle every ball of yarn';
   if (goal.type === 'bubbles') return 'Pop every soap bubble';
+  if (goal.type === 'junk') return `Let Micah eat ${goal.count} pieces of junk`;
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
@@ -184,6 +194,7 @@ const TIPS: Record<number, string> = {
   61: 'Fallen leaves! Match on top of them to rake them up. If a move rakes none, the wind blows one more in, so keep at them.',
   66: 'That\u2019s Noah\u2019s Ark up ahead. Rake the leaves before they bury the porch.',
   76: 'The last street before home. Every trick you know, all at once.',
+  ...ARK_TIPS,
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
 
@@ -257,6 +268,9 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       ${weeklyOpen(save) && Object.keys(save.stars).length > 0
         ? `<button class="weekly-chip ${weeklyWonThisWeek(save) ? 'done' : ''}" data-act="weekly">${UI.paw}<span><b>Weekly Walk</b><small>${weeklyWonThisWeek(save) ? 'Done. New one Monday' : 'New this week'}</small></span></button>`
         : ''}
+      ${arkOpen(save)
+        ? `<button class="ark-chip ${arkNext(save) ? '' : 'done'}" data-act="ark">${svg(ARK_ICON, 'ark-icon')}<span><b>Noah\u2019s Ark</b><small>${arkNext(save) ? (save.ark.length ? `${save.ark.length} of ${ARK_COUNT} done` : 'The raccoons are throwing junk!') : 'Every raccoon fed. Well, Micah fed.'}</small></span></button>`
+        : ''}
       ${winterOpen(save, new Date(), WINTER_PREVIEW)
         ? `<button class="winter-chip ${winterNext(save) ? '' : 'done'}" data-act="winter">${svg(BOOSTER_ICONS.snow, 'snow-icon')}<span><b>Micah\u2019s Winter</b><small>${winterNext(save) ? `${winterWon(save).length} of ${WINTER_COUNT} done` : 'All done. Ho ho woof!'}</small></span></button>`
         : ''}
@@ -275,6 +289,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="finale"]')?.addEventListener('click', () => showFinale());
   screen.querySelector('[data-act="weekly"]')?.addEventListener('click', () => showWeekly());
   screen.querySelector('[data-act="winter"]')?.addEventListener('click', () => showWinter());
+  screen.querySelector('[data-act="ark"]')?.addEventListener('click', () => showArk());
   screen.querySelector('[data-act="daily"]')!.addEventListener('click', () => showDaily());
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
@@ -848,7 +863,7 @@ function showLevelIntro(level: Level): void {
     `
     <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">${isWinterLevel(level) ? 'Micah\u2019s Winter' : zone.name}</p><h2>${levelTitle(level)}</h2></div>
+      <div><p class="eyebrow">${isWinterLevel(level) ? 'Micah\u2019s Winter' : isArkLevel(level) ? 'Noah\u2019s Ark' : zone.name}</p><h2>${levelTitle(level)}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <section>
@@ -871,7 +886,7 @@ function showLevelIntro(level: Level): void {
         .join('')}
       </div>
     </section>
-    <button class="btn play">${level.id === WEEKLY_ID ? 'Start the walk' : `Start ${levelTitle(level).toLowerCase()}`}</button>`,
+    <button class="btn play">${level.id === WEEKLY_ID ? 'Start the walk' : isArkLevel(level) ? `Start ${levelTitle(level)}` : `Start ${levelTitle(level).toLowerCase()}`}</button>`,
     () => {},
   );
   m.querySelector('.close')!.addEventListener('click', () => m.remove());
@@ -1337,6 +1352,39 @@ function showWinter(): void {
   m.querySelector('[data-act="go"]')?.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[next - 1])));
 }
 
+// ───────────────────────────── Noah's Ark ─────────────────────────────
+
+/** The falling-down house, small enough for a button. */
+const ARK_ICON = `<path d="M10 48 L50 14 L90 48 Z" fill="#8a7a66" stroke="#3b2a1e" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L58 22" stroke="#3b2a1e" stroke-width="5"/><rect x="20" y="46" width="60" height="42" fill="#c9b79c" stroke="#3b2a1e" stroke-width="5" transform="rotate(3 50 67)"/><rect x="28" y="54" width="16" height="14" fill="#3b2a1e"/><path d="M25 58 L47 64 M25 64 L47 58" stroke="#d9a35a" stroke-width="4"/><rect x="56" y="60" width="14" height="28" fill="#5e4532"/><circle cx="62" cy="78" r="5" fill="#9aa0a8"/><circle cx="60" cy="77" r="1.4" fill="#111"/><circle cx="64" cy="77" r="1.4" fill="#111"/>`;
+
+function showArk(): void {
+  const next = arkNext(save);
+  const prize = (id: string, at: number, name: string) => {
+    const have = save.wardrobe.includes(id);
+    return `<div class="winter-prize ${have ? 'have' : ''}"><img src="${costumeUrl(id)}" alt=""><span><b>${name}</b><small>${have ? 'In your Closet' : `Win ${at} levels`}</small></span></div>`;
+  };
+  const m = modal(`
+    <div class="modal-head">
+      ${micahImg('modal-avatar micah-idle')}
+      <div><p class="eyebrow">Up the lane from level ${ARK_UNLOCK_LEVEL}</p><h2>Noah\u2019s Ark</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <p class="body">The raccoons living in Noah\u2019s Ark are throwing junk out the windows. Get it down to the bottom row and Micah will eat it, because Micah will eat anything. Each level you win pays <b>${ARK_BISCUITS} biscuits</b>.</p>
+    <div class="winter-grid ark-grid">${ARK_LEVELS.map((lv) => {
+      const n = arkNumber(lv);
+      const done = save.ark.includes(n);
+      const open = done || n === next;
+      return `<button class="winter-node ${done ? 'done' : n === next ? 'current' : 'locked'}" data-n="${n}" ${open ? '' : 'disabled'} aria-label="Noah\u2019s Ark level ${n}${done ? ', won' : open ? '' : ', locked'}">${done ? UI.check : open ? n : UI.lock}</button>`;
+    }).join('')}</div>
+    <div class="winter-prizes">${prize('bandit', MASK_AT, 'Bandit Mask')}${prize('hardhat', ARK_COUNT, 'Hard Hat')}</div>
+    ${next ? `<button class="btn" data-act="go">Play Noah\u2019s Ark ${next}</button>` : '<p class="notice">Every level won. The raccoons are out of junk, for now. Tap any number to play it again.</p>'}`, () => {});
+  m.querySelector('.close')!.addEventListener('click', () => m.remove());
+  m.querySelectorAll<HTMLButtonElement>('.winter-node').forEach((b) =>
+    b.addEventListener('click', () => (m.remove(), showLevelIntro(ARK_LEVELS[Number(b.dataset.n) - 1]))),
+  );
+  m.querySelector('[data-act="go"]')?.addEventListener('click', () => (m.remove(), showLevelIntro(ARK_LEVELS[next - 1])));
+}
+
 // ───────────────────────────── Sharing and the finale ─────────────────────────────
 
 async function shareWin(card: { title: string; subtitle: string; stars: number; lines: [string, string][] }): Promise<void> {
@@ -1443,9 +1491,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.target,
+    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.target,
   );
   const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
+  // Noah's Ark: the raccoons keep junk on the board until Micah has eaten enough.
+  const junkGoal = level.goals.findIndex((g) => g.type === 'junk');
+  const junkWant = () => (junkGoal < 0 ? 0 : Math.min(level.junk ?? 2, Math.max(0, remaining[junkGoal])));
+  if (junkGoal >= 0) placeJunk(grid, junkWant(), JUNK_ITEMS.length);
+  let junkSaid = 0;
 
   // Pre-level boosters: drop specials onto random cells.
   const randomCell = (): Pos => [2 + Math.floor(Math.random() * 4), Math.floor(Math.random() * COLS)];
@@ -1471,7 +1524,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       ${backdropHTML(level.zone)}
       <header class="hud">
         <button class="round-btn back" aria-label="Back to map">${UI.back}</button>
-        <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : isWinterLevel(level) ? 'Winter' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : isWinterLevel(level) ? winterNumber(level) : level.id}</b></div>
+        <div class="stat"><small>${level.id === WEEKLY_ID ? 'Weekly' : isWinterLevel(level) ? 'Winter' : isArkLevel(level) ? 'Ark' : 'Level'}</small><b>${level.id === WEEKLY_ID ? UI.paw : isWinterLevel(level) ? winterNumber(level) : isArkLevel(level) ? arkNumber(level) : level.id}</b></div>
         <div class="stat moves"><small>Moves</small><b class="moves-val">${moves}</b></div>
         <div class="stat score"><div class="score-line"><small>Score</small><b class="score-val">0</b></div>
           <div class="star-bar"><div class="star-fill"></div>${level.stars
@@ -1563,11 +1616,11 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
   // Micah keeps her picture even after a combo spends her power (kind -1 has no regular art).
   const tileInner = (t: Tile) =>
-    t.special === 'micah' || !KINDS[t.kind] ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
+    isJunk(t) ? svg(JUNK_ITEMS[t.junk ?? 0].svg, 'piece') : t.special === 'micah' || !KINDS[t.kind] ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
 
   function makeTileEl(t: Tile): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = `tile ${specialClass(t.special)}`;
+    el.className = `tile ${specialClass(t.special)} ${isJunk(t) ? 'junk' : ''}`;
     el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
     el.dataset.special = t.special;
     el.dataset.kind = String(t.kind);
@@ -1662,7 +1715,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -1698,7 +1751,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     clearHint();
     hintTimer = window.setTimeout(() => {
       if (busy || over) return;
-      const mv = findMove(grid, locked);
+      // On a Noah's Ark level the hint points at a move that drops junk toward Micah.
+      const mv = (junkGoal >= 0 && remaining[junkGoal] > 0 ? junkMove(grid, locked) : null) ?? findMove(grid, locked);
       if (!mv) return;
       for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('hint');
       // Left alone a while longer, Micah dozes off.
@@ -1796,12 +1850,23 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     let forcedNow = forced;
     for (;;) {
       const res = computeClear(grid, preferredNow, forcedNow);
-      if (res.cleared.size === 0) break;
+      if (res.cleared.size === 0) {
+        // Once the board settles, Micah eats any junk that reached the bottom row.
+        if (!(await gulpJunk())) break;
+        continue;
+      }
       const points = res.cleared.size * 20 * chain + res.created.length * 100;
       score += points;
       let washed = false;
       let untangled = false;
       let raked = false;
+      // Junk caught in a blast flies straight to Micah.
+      const caught = junkGoal >= 0 ? junkIn(grid, res.cleared) : 0;
+      if (caught) {
+        remaining[junkGoal] -= caught;
+        bump(save, 'junk', caught);
+        setTimeout(() => (sfx.crunch(), say(caught > 1 ? `Micah caught ${caught} pieces of junk mid-air!` : 'Micah caught it mid-air. Gulp!', 'big')), 150);
+      }
       level.goals.forEach((g, i) => {
         if (g.type === 'collect') remaining[i] -= res.collected[g.kind];
         if (g.type === 'power') remaining[i] -= res.created.filter((cr) => powerOf(cr.tile.special) === g.power).length;
@@ -1904,22 +1969,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         el.classList.add('born');
       }
 
-      const drops = applyGravity(grid, Math.random, kinds);
-      for (const d of drops) {
-        let el = tileEls.get(d.tile.id);
-        if (!el) {
-          el = makeTileEl(d.tile);
-          el.classList.add('no-anim');
-          placeEl(el, d.from[0], d.from[1]);
-        }
-      }
-      void boardEl.offsetWidth;
-      for (const d of drops) {
-        const el = tileEls.get(d.tile.id)!;
-        el.classList.remove('no-anim');
-        placeEl(el, d.to[0], d.to[1]);
-      }
-      await wait(300);
+      await fall();
       chain++;
       preferredNow = [];
       forcedNow = [];
@@ -1931,6 +1981,61 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       renderAll();
       await wait(350);
     }
+  }
+
+  /** Let pieces fall into the gaps (the raccoons may throw junk in with them) and animate the drop. */
+  async function fall() {
+    const drops = applyGravity(grid, Math.random, kinds);
+    throwJunk(grid, drops, junkWant(), JUNK_ITEMS.length);
+    for (const d of drops) {
+      let el = tileEls.get(d.tile.id);
+      if (!el) {
+        el = makeTileEl(d.tile);
+        el.classList.add('no-anim');
+        placeEl(el, d.from[0], d.from[1]);
+      }
+    }
+    void boardEl.offsetWidth;
+    for (const d of drops) {
+      const el = tileEls.get(d.tile.id)!;
+      el.classList.remove('no-anim');
+      placeEl(el, d.to[0], d.to[1]);
+    }
+    await wait(300);
+  }
+
+  /** Micah eats every piece of junk in the bottom row. Returns how many she ate. */
+  async function gulpJunk(): Promise<number> {
+    const eat = junkAtBottom(grid);
+    if (!eat.length) return 0;
+    sfx.crunch();
+    haptic.pop(1);
+    for (const [r, c] of eat) {
+      const t = grid[r][c]!;
+      tileEls.get(t.id)?.classList.add('gulp');
+      ring(boardEl, ((c + 0.5) / COLS) * 100, ((r + 0.5) / ROWS) * 100, '#ffc12e', 1);
+    }
+    const item = JUNK_ITEMS[grid[eat[0][0]][eat[0][1]]!.junk ?? 0];
+    say(junkSaid++ === 0 || Math.random() < 0.6 ? item.line : eat.length > 1 ? `Micah ate ${eat.length} things at once!` : 'Gulp!', 'big');
+    hearts(mascot, 2);
+    score += eat.length * 150;
+    remaining[junkGoal] -= eat.length;
+    bump(save, 'junk', eat.length);
+    renderHud();
+    await wait(380);
+    for (const [r, c] of eat) {
+      const t = grid[r][c]!;
+      tileEls.get(t.id)?.remove();
+      tileEls.delete(t.id);
+      grid[r][c] = null;
+    }
+    const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
+    if (doneNow > goalsDone) {
+      goalsDone = doneNow;
+      sfx.goal();
+    }
+    await fall();
+    return eat.length;
   }
 
   /** Put the board back in a playable state: fill any holes and redraw every piece. */
@@ -2185,6 +2290,23 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     await runLocked(async () => {
       sfx.crunch();
       say('Nom nom nom!', 'big');
+      if (isJunk(grid[p[0]][p[1]])) {
+        // A treat lets Micah reach up and eat junk wherever it is.
+        const t = grid[p[0]][p[1]]!;
+        say(JUNK_ITEMS[t.junk ?? 0].line, 'big');
+        tileEls.get(t.id)?.classList.add('gulp');
+        remaining[junkGoal]--;
+        bump(save, 'junk');
+        score += 150;
+        renderHud();
+        await wait(380);
+        tileEls.get(t.id)?.remove();
+        tileEls.delete(t.id);
+        grid[p[0]][p[1]] = null;
+        await fall();
+        await cascade([]);
+        return;
+      }
       await cascade([], [key(p[0], p[1])]);
     });
     renderHud();
@@ -2212,7 +2334,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
           const r = Math.floor(Math.random() * ROWS);
           const c = Math.floor(Math.random() * COLS);
           const t = grid[r][c];
-          if (!t || t.special !== 'none') continue;
+          if (!t || t.special !== 'none' || t.kind < 0) continue;
           t.special = Math.random() < 0.5 ? 'zoomRow' : 'zoomCol';
           forced.push(key(r, c));
           moves--;
@@ -2279,6 +2401,50 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap()));
       m.querySelector('.share-btn')!.addEventListener('click', () =>
         shareWin({ title: 'Weekly Walk done', subtitle: ZONES[level.zone].name, stars, lines: [['Score', score.toLocaleString()], ['Paw stamps', String(save.weekly.stamps)], ['Win streak', String(save.winStreak)]] }),
+      );
+      return;
+    }
+    if (won && isArkLevel(level)) {
+      const n = arkNumber(level);
+      const stars = level.stars.filter((s) => score >= s).length || 1;
+      save.winStreak = streakAtStart + 1;
+      bump(save, 'wins');
+      save.tally.bestStreak = Math.max(save.tally.bestStreak ?? 0, save.winStreak);
+      const prize = claimArk(save, n);
+      const tags = awardBadges(save);
+      persist(save);
+      setTimeout(() => celebrate(tags), 1400);
+      confettiRain(stars * 18 + 10);
+      for (let st = 1; st <= stars; st++) setTimeout(() => sfx.star(st), 300 + st * 200);
+      const next = arkNext(save);
+      const outfit = prize?.hat ? 'hardhat' : prize?.mask ? 'bandit' : '';
+      const m = modal(`
+        <div class="modal-head">
+          ${outfit ? `<img class="modal-avatar cheer" src="${costumeUrl(outfit)}" alt="">` : micahImg('modal-avatar cheer')}
+          <div><p class="eyebrow">Noah\u2019s Ark</p><h2>Ark ${n} cleared</h2></div>
+          <button class="round-btn share-btn" aria-label="Share this win">${UI.share}</button>
+        </div>
+        <div class="result-stars" role="img" aria-label="${stars} of 3 stars">${[1, 2, 3].map((s) => `<i class="${s <= stars ? 'on' : ''}" style="animation-delay:${s * 0.2}s">${UI.star}</i>`).join('')}</div>
+        <dl class="stat-rows">
+          <dt>Score</dt><dd>${score.toLocaleString()}</dd>
+          <dt>Ark levels won</dt><dd>${save.ark.length} of ${ARK_COUNT}</dd>
+          <dt>Junk eaten, all time</dt><dd>${save.tally.junk ?? 0}</dd>
+          ${prize ? `<dt>Biscuits earned</dt><dd>${icon('biscuit', 'biscuit-icon')}${prize.biscuits}</dd>` : ''}
+        </dl>
+        ${prize?.hat ? '<p class="notice">Every Noah\u2019s Ark level done! The <b>Hard Hat</b> is waiting in Micah\u2019s Closet. Safety first, snacks second.</p>' : prize?.mask ? '<p class="notice">The raccoons made Micah one of their own. The <b>Bandit Mask</b> is waiting in Micah\u2019s Closet!</p>' : ''}
+        <div class="actions">
+          ${next ? `<button class="btn next">Play Noah\u2019s Ark ${next}</button>` : ''}
+          <div class="pair">
+            <button class="btn secondary to-map">Back to map</button>
+            <button class="btn secondary replay">Play again</button>
+          </div>
+        </div>`);
+      m.querySelectorAll<HTMLElement>('.result-stars i.on').forEach((st, i) => setTimeout(() => confetti(st, 50, 50, 14, 2.5), 380 + i * 200));
+      m.querySelector('.replay')!.addEventListener('click', () => (m.remove(), showLevelIntro(level)));
+      m.querySelector('.to-map')!.addEventListener('click', () => (m.remove(), showMap()));
+      m.querySelector('.next')?.addEventListener('click', () => (m.remove(), showLevelIntro(ARK_LEVELS[next - 1])));
+      m.querySelector('.share-btn')!.addEventListener('click', () =>
+        shareWin({ title: `Ark ${n} cleared`, subtitle: 'Noah\u2019s Ark', stars, lines: [['Score', score.toLocaleString()], ['Junk eaten', String(save.tally.junk ?? 0)], ['Win streak', String(save.winStreak)]] }),
       );
       return;
     }
@@ -2502,7 +2668,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const SPECIAL_NAMES: Record<Special, string> = { none: '', zoomRow: ' Zoomies, clears its row', zoomCol: ' Zoomies, clears its column', bark: ' Big Bark', micah: '' };
   const describe = ([r, c]: Pos) => {
     const t = grid[r][c];
-    const what = !t ? 'empty' : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
+    const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
     const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : '', soap[r][c] ? 'in a soap bubble' : ''].filter(Boolean).join(', ');
     return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
   };

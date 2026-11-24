@@ -2,7 +2,7 @@
 // is drawn over a hand-drawn Micah (a black dog with a grey muzzle) in a 100x100 box.
 import micahPhoto from './assets/micah.png';
 
-export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number } | { winter: number };
+export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number } | { winter: number } | { ark: number };
 
 export interface Costume {
   id: string;
@@ -110,6 +110,24 @@ const pumpkinSuit = `
   <path d="M40 64 L44 61 L46 66 Z M60 64 L56 61 L54 66 Z M42 70 L46 73 L50 70 L54 73 L58 70 L54 76 L50 74 L46 76 Z" fill="#1a1a1a"/>`;
 const pumpkinHat = `<path d="M47 18 Q46 10 52 6" stroke="#3f8a3a" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M52 10 Q60 6 64 12 Q58 14 52 10 Z" fill="#5fae57"/>`;
 
+// Noah's Ark prizes. An honorary raccoon: a grey bandit mask and a ringed tail.
+const banditMask = `
+  <path d="M27 36 C30 29 40 30 50 34 C60 30 70 29 73 36 C74 42 66 45 60 42 C55 40 52 41 50 42 C48 41 45 40 40 42 C34 45 26 42 27 36 Z" fill="#c9ccd1" stroke="#8a8f98" stroke-width="1.5"/>
+  <ellipse cx="40.5" cy="37.5" rx="5.6" ry="4.6" fill="#15171b"/><ellipse cx="59.5" cy="37.5" rx="5.6" ry="4.6" fill="#15171b"/>
+  <circle cx="41.5" cy="36.5" r="1.6" fill="#fff"/><circle cx="60.5" cy="36.5" r="1.6" fill="#fff"/>
+  <path d="M33 29 Q40 25 46 29 M54 29 Q60 25 67 29" fill="none" stroke="#f2f2f2" stroke-width="2.5" stroke-linecap="round"/>`;
+const banditTail = `
+  <g transform="rotate(-28 30 84)">
+    <rect x="4" y="76" width="30" height="13" rx="6.5" fill="#8a8f98" stroke="#4a4e55" stroke-width="2"/>
+    <path d="M10 76 V89 M18 76 V89 M26 76 V89" stroke="#2a2d33" stroke-width="4"/>
+  </g>`;
+// A hard hat, for walking into a house that is mostly held up by hope.
+const hardHat = `
+  <path d="M27 28 C27 10 73 10 73 28 Z" fill="#ffc12e" stroke="#b58a00" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M50 11 V28 M40 13 C38 18 38 24 39 28 M60 13 C62 18 62 24 61 28" fill="none" stroke="#e0a400" stroke-width="2.5"/>
+  <rect x="22" y="26" width="56" height="6" rx="3" fill="#ffd34d" stroke="#b58a00" stroke-width="2"/>
+  <path d="M33 16 Q38 12 44 13" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`;
+
 // Earned by winning Weekly Walks: a yellow raincoat with a hood, for walks in any weather.
 const raincoatSuit = `
   <rect x="0" y="0" width="100" height="100" fill="#ffc12e"/>
@@ -173,6 +191,8 @@ export const COSTUMES: Costume[] = [
   { id: 'raincoat', name: 'Rain Slicker', desc: 'For the walker who goes out every week, rain or shine.', unlock: { weekly: 4 }, suit: raincoatSuit, front: raincoatHood },
   { id: 'antlers', name: 'Reindeer Antlers', desc: 'With a nose so bright she can find her treats in the dark.', unlock: { winter: 8 }, front: antlers },
   { id: 'santa', name: 'Santa Hat', desc: 'For finishing all of Micah\u2019s Winter. Ho ho woof.', unlock: { winter: 15 }, suit: winterScarf, front: santaHat },
+  { id: 'bandit', name: 'Bandit Mask', desc: 'An honorary Noah\u2019s Ark raccoon. She fits right in.', unlock: { ark: 5 }, back: banditTail, front: banditMask },
+  { id: 'hardhat', name: 'Hard Hat', desc: 'For surviving every level at Noah\u2019s Ark. Safety first, snacks second.', unlock: { ark: 10 }, front: hardHat },
   { id: 'champion', name: 'Champion', desc: 'For walking all the way home, from the backyard to the front porch. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
   { id: 'pjs', name: 'Cozy Pyjamas', desc: 'For clearing level 100. Moons, stars and the comfiest nap of all.', unlock: { level: 100 }, suit: pjSuit, front: nightcap },
 ];
@@ -213,5 +233,6 @@ export function unlockText(c: Costume): string {
   if ('level' in c.unlock) return `Clear level ${c.unlock.level}`;
   if ('weekly' in c.unlock) return `Win ${c.unlock.weekly} Weekly Walks`;
   if ('winter' in c.unlock) return c.unlock.winter >= 15 ? 'Finish Micah\u2019s Winter (December)' : `Win ${c.unlock.winter} levels of Micah\u2019s Winter`;
+  if ('ark' in c.unlock) return c.unlock.ark >= 10 ? 'Win every Noah\u2019s Ark level' : `Win ${c.unlock.ark} Noah\u2019s Ark levels`;
   return `${c.unlock.biscuits} biscuits`;
 }

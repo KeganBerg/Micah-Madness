@@ -36,13 +36,15 @@ export interface SaveData {
   weekly: { won: string; stamps: number };
   /** Micah's Winter: which winter (its December's year) and the winter levels won in it. */
   winter: { season: number; won: number[] };
+  /** Noah's Ark: the Ark levels won (1-based numbers). */
+  ark: number[];
   /** Cloud save: the secret code this save syncs under ('' when off). */
   cloud: string;
   /** When this save was last written (ms), to tell which copy is newer. */
   savedAt: number;
 }
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 const KEY = 'micah-madness-save';
 const LEGACY_KEYS = ['micah-madness-save-v1'];
 /** A copy of the stored save from before it was upgraded or found damaged, so nothing is ever lost outright. */
@@ -79,6 +81,7 @@ export function freshSave(): SaveData {
     seen: [],
     weekly: { won: '', stamps: 0 },
     winter: { season: 0, won: [] },
+    ark: [],
     cloud: '',
     savedAt: 0,
   };
@@ -155,6 +158,7 @@ export function migrate(raw: unknown): SaveData {
       const won = Array.isArray(w.won) ? w.won.map((x) => num(x, 1, 99)).filter((x): x is number => x !== undefined) : [];
       return { season: num(w.season, 0, 9999) ?? 0, won: [...new Set(won)].sort((a, b) => a - b) };
     })(),
+    ark: Array.isArray(d.ark) ? [...new Set(d.ark.map((x) => num(x, 1, 99)).filter((x): x is number => x !== undefined))].sort((a, b) => a - b) : [],
     cloud: typeof d.cloud === 'string' && /^[A-HJ-NP-Z2-9]{10}$/.test(d.cloud) ? d.cloud : '',
     savedAt: num(d.savedAt) ?? 0,
   };
@@ -356,6 +360,7 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
     seen: union(local.seen, remote.seen),
     weekly: { won: later(local.weekly.won, remote.weekly.won), stamps: Math.max(local.weekly.stamps, remote.weekly.stamps) },
     winter,
+    ark: [...new Set([...local.ark, ...remote.ark])].sort((a, b) => a - b),
     cloud: local.cloud || remote.cloud,
     savedAt: Math.max(local.savedAt, remote.savedAt),
   };

@@ -6,6 +6,7 @@ export type Goal =
   | { type: 'yarn' } // untangle every yarn-wrapped cell
   | { type: 'leaves' } // rake every fallen leaf (they spread on any move that rakes none)
   | { type: 'bubbles' } // pop every soap bubble (a match on it or right next to it pops it)
+  | { type: 'junk'; count: number } // let Micah eat this much junk (it has to reach the bottom row)
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
 
@@ -22,6 +23,8 @@ export interface Level {
   yarn?: string[]; // 8 rows, 'y' marks a cell wrapped in yarn (its piece can't be swapped)
   leaves?: string[]; // 8 rows, 'l' marks a cell under fallen leaves
   bubbles?: string[]; // 8 rows, 'b' marks a soapy cell (its piece can't be swapped; a match beside it pops it)
+  /** Noah's Ark: most pieces of junk on the board at once (the raccoons throw more as Micah eats). */
+  junk?: number;
   /** Micah's Winter: mud is drawn as snow drifts to shovel. */
   snow?: boolean;
 }
