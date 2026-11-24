@@ -6,6 +6,7 @@ import { YOSHI } from './yoshi';
 import { noahsArk } from './scenery';
 import { SNACKS } from './snacks';
 import { moundSVG } from './dig';
+import { presentSVG } from './advent';
 
 export type YardArea = 'back' | 'garden' | 'porch';
 export type YardTime = 'day' | 'dusk' | 'night';
@@ -453,6 +454,9 @@ export const START: Record<YardArea, { micah: [number, number]; yoshi: [number, 
   porch: { micah: [180, 190], yoshi: [110, 270] },
 };
 
+/** Where the advent present sits in the Backyard, by the snowman. */
+export const GIFT_AT: [number, number] = [320, 138];
+
 export interface SceneOptions {
   area: YardArea;
   time: YardTime;
@@ -460,6 +464,8 @@ export interface SceneOptions {
   ate: string[];
   /** Micah's dig mound (Backyard only): where it is and whether it is ready to dig up. */
   dig?: { x: number; y: number; ready: boolean };
+  /** Advent calendar (Backyard, 1 to 24 December): today's unopened present and its day. */
+  gift?: number | null;
   /** Micah's Winter: snow on the ground and on things, and a snowman in the Backyard. */
   snowy?: boolean;
 }
@@ -505,6 +511,7 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
     <g class="yard-layer">
       ${snowy && area === 'back' ? `<g class="yard-item snowman" data-id="snowman" data-bottom="146" role="button" aria-label="Snowman"><g transform="translate(282 146)"><g class="yard-item-art">${SNOWMAN}</g></g></g>` : ''}
       ${opts.dig && area === 'back' ? `<g class="dig-mound${opts.dig.ready ? ' ready' : ''}" transform="translate(${opts.dig.x} ${opts.dig.y})" role="button" aria-label="${opts.dig.ready ? 'Micah’s dig spot: something is buried here, tap to dig it up' : 'Micah’s dig spot: freshly buried, come back tomorrow'}">${moundSVG(opts.dig.ready)}</g>` : ''}
+      ${opts.gift && area === 'back' ? `<g class="advent-gift" transform="translate(${GIFT_AT[0]} ${GIFT_AT[1]})" role="button" aria-label="A present for Micah, day ${opts.gift}. Tap to open">${presentSVG(opts.gift)}</g>` : ''}
       ${items}
       <g class="yy" transform="translate(${yx} ${yy})" role="button" aria-label="Yoshi the chinchilla">
         <ellipse cx="0" cy="0" rx="14" ry="4" fill="#000" opacity=".16"/>

@@ -577,6 +577,7 @@ html { touch-action: manipulation; }
   padding: var(--s3) var(--s4); border-radius: var(--radius); background: var(--sea-deep); color: #fff; font-weight: 700; font-size: var(--fs-sm);
   box-shadow: 0 8px 24px #0006; animation: popin .2s;
 }
+.toast .biscuit-icon { display: inline-block; width: 20px; height: 20px; vertical-align: -5px; margin-right: 2px; }
 
 /* ───── Micah's Collar (achievements) ───── */
 .dock { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -843,6 +844,15 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .dig-mound .dig-sparkle { transform-box: fill-box; transform-origin: 50% 50%; animation: dig-sparkle 1.4s ease-in-out infinite; }
 @keyframes dig-sparkle { 0%, 100% { opacity: .4; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
 @media (prefers-reduced-motion: reduce) { .dig-mound .dig-sparkle { animation: none; } }
+.advent-gift { cursor: pointer; }
+.advent-gift .present-art { transform-box: fill-box; transform-origin: 50% 100%; animation: gift-wiggle 3s ease-in-out infinite; }
+.advent-gift.tearing .present-art { animation: gift-shake .16s linear infinite; }
+.advent-gift.opened { pointer-events: none; }
+.advent-gift.opened .present-art { animation: gift-pop .5s ease-in forwards; }
+@keyframes gift-wiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-6deg); } 90% { transform: rotate(5deg); } 95% { transform: rotate(-3deg); } }
+@keyframes gift-shake { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes gift-pop { to { transform: scale(1.4) translateY(-10px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .advent-gift .present-art, .advent-gift.tearing .present-art { animation: none; } .advent-gift.opened { display: none; } }
 .firefly { animation: firefly 3.2s ease-in-out infinite; }
 @keyframes firefly { 0%, 100% { opacity: .2; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(3px, -5px); } }
 @media (prefers-reduced-motion: reduce) { .firefly { animation: none; } }

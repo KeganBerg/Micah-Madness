@@ -62,6 +62,8 @@ export interface YardHooks {
   onArk?: () => void;
   /** Micah reached her dig spot and dug. Returns where she buries the next one if she found something. */
   onDig?: () => { x: number; y: number } | null;
+  /** Micah tore open today's advent present. */
+  onGift?: () => void;
 }
 
 export interface YardOptions {
@@ -583,6 +585,29 @@ export function startYard(
         setPose('jump');
         await wait(700, t);
         setPose('sit');
+      });
+      return;
+    }
+    const gift = target.closest<SVGGElement>('.advent-gift');
+    if (gift && !gift.classList.contains('opened')) {
+      command(async (t) => {
+        onTop = null;
+        const m = gift.transform.baseVal.consolidate()?.matrix;
+        if (!(await moveTo((m?.e ?? x) + 24, (m?.f ?? y) + 6, t, 150))) return;
+        face(true);
+        setPose('dig');
+        sfx.whoosh();
+        gift.classList.add('tearing');
+        if (!(await wait(1300, t))) return;
+        if (gift.classList.contains('opened')) return;
+        gift.classList.add('opened');
+        hooks.onGift?.();
+        setPose('jump');
+        say('!');
+        sfx.bark();
+        if (!(await wait(1000, t))) return;
+        setPose('sit');
+        say('♥');
       });
       return;
     }
