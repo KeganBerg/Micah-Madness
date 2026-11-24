@@ -60,6 +60,7 @@ import {
 } from './save';
 import { AREAS, DECOR, areaOpen, museum, yardScene, yardTime, type YardArea, type YardTime } from './yard';
 import { SNACKS } from './snacks';
+import { claimDig, digSpot, digState, ensureBuried, moundSVG, prizeText } from './dig';
 import { YOSHI_YARD } from './yoshi';
 import { runLaunch } from './launch';
 import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
@@ -620,6 +621,9 @@ function showYard(): void {
   const builtHere = here.filter((d) => owned.includes(d.id)).length;
   const done = owned.length === DECOR.length;
   const ate = ateList();
+  if (ensureBuried(save)) persist(save);
+  const digAt = digSpot(save.dig);
+  const digReady = digState(save) === 'ready';
   const nextLocked = AREAS.find((a) => !areaOpen(a, save.stars));
   const tabs = AREAS.map((a) => {
     const open = areaOpen(a, save.stars);
@@ -630,7 +634,8 @@ function showYard(): void {
   }).join('');
   const hint =
     area.id === 'back'
-      ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over. Noah\u2019s Ark is right over the back fence: tap it. <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.'
+      ? `Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over. Noah\u2019s Ark is right over the back fence: tap it. ${digReady ? '<b>Micah buried something!</b> Tap the dirt mound and she\u2019ll dig it up. ' : 'Micah buries something every day: come back tomorrow and dig it up. '}`
+        + '<b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.'
       : area.id === 'garden'
         ? 'The Garden. Micah thinks every bit of it is food. Tap things to send her over, and keep watching the sky.'
         : 'The Front Porch, for watching the street. Tap things to send her over, and keep watching the sky.';
@@ -644,7 +649,7 @@ function showYard(): void {
       </header>
       <div class="yard-body">
         <div class="yard-tabs" role="tablist" aria-label="Parts of the yard">${tabs}</div>
-        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate })}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady } })}</div>
         <p class="yard-hint">${hint}${timeNote}</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
@@ -715,6 +720,31 @@ function showYard(): void {
       haptic.tick();
       toast(YOSHI_YARD[((save.tally.yoshi ?? 1) - 1) % YOSHI_YARD.length]);
       if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
+    },
+    onDig: () => {
+      const prize = claimDig(save);
+      if (!prize) {
+        toast('Micah buried something here today. Come back tomorrow and she\u2019ll dig it up.');
+        return null;
+      }
+      const tags = awardBadges(save);
+      persist(save);
+      sfx.build();
+      haptic.tick();
+      toast(prize.kind === 'booster' ? prizeText(prize) : `${icon('biscuit', 'biscuit-icon')} ${prizeText(prize)}`);
+      if (tags.length) window.setTimeout(() => celebrate(tags), 1400);
+      const [nx, ny] = digSpot(save.dig);
+      const mound = sceneEl.querySelector<SVGGElement>('.dig-mound');
+      if (mound) {
+        // The old hole is filled in and a fresh mound appears where she buries tomorrow's.
+        window.setTimeout(() => {
+          mound.classList.remove('ready');
+          mound.setAttribute('transform', `translate(${nx} ${ny})`);
+          mound.setAttribute('aria-label', 'Micah\u2019s dig spot: freshly buried, come back tomorrow');
+          mound.innerHTML = moundSVG(false);
+        }, 2600);
+      }
+      return { x: nx, y: ny };
     },
     onArk: () => {
       haptic.tick();
