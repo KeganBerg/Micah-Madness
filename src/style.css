@@ -818,6 +818,17 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
 .yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
 .yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
+.yard-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); flex: none; }
+.yard-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border: 0; border-radius: var(--radius); background: #ffffff1a; color: #fff; font: inherit; cursor: pointer; }
+.yard-tab b { font-family: var(--font-display); font-size: var(--fs-sm); line-height: 1.1; }
+.yard-tab span { font-size: var(--fs-xs); opacity: .8; }
+.yard-tab.on { background: var(--brand); box-shadow: 0 3px 0 #a3201c; }
+.yard-tab:disabled { opacity: .55; cursor: default; }
+.yard-tab:disabled b::before { content: '\1F512\FE0E  '; font-size: .8em; }
+.yard-ark { cursor: pointer; }
+.firefly { animation: firefly 3.2s ease-in-out infinite; }
+@keyframes firefly { 0%, 100% { opacity: .2; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(3px, -5px); } }
+@media (prefers-reduced-motion: reduce) { .firefly { animation: none; } }
 .wardrobe { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
 .wardrobe li { display: contents; }
 .wardrobe button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); border: 3px solid transparent; font: inherit; text-align: center; min-width: 0; }
