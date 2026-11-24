@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { freshSave } from './save';
-import { ANTLERS_AT, WINTER_COUNT, WINTER_LEVELS, claimWinter, winterNext, winterOpen, winterSeason, winterWon } from './winter';
+import { costumeById } from './costumes';
+import { ANTLERS_AT, WINTER_COUNT, WINTER_GIFT, giveWinterGift, winterHello, winterSnowing, WINTER_LEVELS, claimWinter, winterNext, winterOpen, winterSeason, winterWon } from './winter';
 
 const dec = new Date(2026, 11, 10);
 const jan = new Date(2027, 0, 3);
@@ -53,5 +54,39 @@ describe("Micah's Winter", () => {
     expect(winterWon(s, next)).toEqual([]);
     expect(winterNext(s, next)).toBe(1);
     expect(s.wardrobe).toContain('santa');
+  });
+});
+
+
+describe('winter hello and gift', () => {
+  const dec1 = new Date(2026, 11, 1, 9);
+  const nov = new Date(2026, 10, 24, 9);
+  const withStars = (n: number) => { const s = freshSave(); for (let i = 1; i <= n; i++) s.stars[i] = 1; return s; };
+
+  it('snows only in season or when previewing', () => {
+    expect(winterSnowing(nov)).toBe(false);
+    expect(winterSnowing(nov, true)).toBe(true);
+    expect(winterSnowing(dec1)).toBe(true);
+    expect(winterSnowing(new Date(2027, 0, 6))).toBe(true);
+    expect(winterSnowing(new Date(2027, 0, 7))).toBe(false);
+  });
+
+  it('says hello once a season, and only after a first clear', () => {
+    expect(winterHello(withStars(0), dec1)).toBeNull();
+    expect(winterHello(withStars(3), nov)).toBeNull();
+    const s = withStars(3);
+    const key = winterHello(s, dec1)!;
+    expect(key).toBe('winter-hello:2026');
+    s.seen.push(key);
+    expect(winterHello(s, dec1)).toBeNull();
+    expect(winterHello(s, new Date(2027, 11, 2))).toBe('winter-hello:2027');
+  });
+
+  it('gives the holiday knits once', () => {
+    const s = withStars(1);
+    expect(giveWinterGift(s)).toBe(true);
+    expect(giveWinterGift(s)).toBe(false);
+    expect(s.wardrobe.filter((w) => w === WINTER_GIFT)).toHaveLength(1);
+    expect(costumeById(WINTER_GIFT).id).toBe(WINTER_GIFT);
   });
 });
