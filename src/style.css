@@ -788,6 +788,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .ym-pose.dig { animation: ym-dig .18s linear infinite; }
 .ym-pose.jump { animation: micah-cheer .8s ease-in-out; }
 .ym-pose.scratch { animation: ym-scratch .14s linear 6; }
+/* The treehouse tire swing rocks gently from its rope. */
+.yard-sway { transform-box: fill-box; transform-origin: 50% 0; animation: yard-sway 3.2s ease-in-out infinite; }
+@keyframes yard-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@media (prefers-reduced-motion: reduce) { .yard-sway { animation: none; } }
 @keyframes ym-run { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
 @keyframes ym-sniff { 50% { transform: rotate(14deg) translateY(4px) scale(1, .94); } }
 @keyframes ym-nap { 0%, 100% { transform: rotate(80deg) translate(-6px, 10px) scale(.92, .82); } 50% { transform: rotate(80deg) translate(-6px, 10px) scale(.94, .86); } }
@@ -836,7 +840,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
 .yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
 .yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
-.yard-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--s2); flex: none; }
+.yard-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s1) var(--s2); flex: none; }
 .yard-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border: 0; border-radius: var(--radius); background: #ffffff1a; color: #fff; font: inherit; cursor: pointer; }
 .yard-tab b { font-family: var(--font-display); font-size: var(--fs-sm); line-height: 1.1; }
 .yard-tab span { font-size: var(--fs-xs); opacity: .8; }

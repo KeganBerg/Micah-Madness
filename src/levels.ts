@@ -84,7 +84,17 @@ export const ZONES: Zone[] = [
   { name: 'Construction Site', blurb: 'Diggers, dirt piles and a hard hat that fits.', sky: '#cfe4f2', ground: '#b08a5a' },
   { name: 'Train Station', blurb: 'All aboard. Micah has the window seat.', sky: '#c9d8e8', ground: '#8f97a3' },
   { name: 'Kite Hill', blurb: 'Windy, green and full of kites to chase.', sky: '#a8dcff', ground: '#6fbf5a' },
-  { name: 'Fireworks Night', blurb: 'Big bangs, bright sparks, one brave dog.', sky: '#1a1440', ground: '#3a2f6a' },
+  { name: 'Fireworks Night', blurb: 'Big bangs, bright sparks, one brave dog.', sky: '#1a1440', ground: '#3a2f6a' },  // Levels 201-250
+  { name: 'Hot Air Balloons', blurb: 'Up above the clouds. Micah is not a fan of heights.', sky: '#cfeaff', ground: '#e8f2fa' },
+  { name: 'Moon Dream', blurb: 'Micah dreams she\u2019s the first dog on the moon.', sky: '#1b1d3a', ground: '#9a98a8' },
+  { name: 'Lavender Fields', blurb: 'Purple rows, sleepy bees and a stone windmill.', sky: '#e6dcff', ground: '#8f7cc4' },
+  { name: 'Bayou Boardwalk', blurb: 'Moss on the trees and frogs on every log.', sky: '#cfe0c0', ground: '#4f6a3e' },
+  { name: 'Lobster Wharf', blurb: 'Traps, buoys and real lobsters. Micah is jealous.', sky: '#bfe0f2', ground: '#9a7a5a' },
+  { name: 'Apple Orchard', blurb: 'Apples on the trees, apples on the ground, apples in Micah.', sky: '#ffe2b8', ground: '#7fae4e' },
+  { name: 'Hot Springs', blurb: 'Warm pools, red maples and a lot of steam.', sky: '#f2d8c8', ground: '#8a8f7a' },
+  { name: 'Mini Golf', blurb: 'Hole 9 has a windmill. Micah keeps stealing the ball.', sky: '#bfe8ff', ground: '#3fbf5a' },
+  { name: 'Yoshi\u2019s Sleepover', blurb: 'Yoshi stays the night. Nobody sleeps.', sky: '#3a3160', ground: '#c99a7a' },
+  { name: 'Home Sweet Home', blurb: 'Past the Ark, through the gate, straight to her bed.', sky: '#ffc89a', ground: '#7db86a' },
 ];
 
 const BONE = 0, BALL = 1, PAW = 2, BOWL = 3, LOBSTER = 4, CAP = 5;
@@ -493,6 +503,67 @@ export const LEVELS: Level[] = [
   N(198, 40, 6, [M, Y, B], [4000, 9000, 10700], { mud: DEEP_MOON, yarn: YARN_STARS, bubbles: BUB_INSIDE }),
   N(199, 30, 5, [J(6), R, P('micah', 1)], [5800, 13000, 17000], { junk: 2, burrs: BURR_CENTER }),
   N(200, 23, 6, [M, B, X, R], [2300, 5100, 7300], { mud: MUD_TOP, bubbles: BUB_FEW, boxes: TAPE_LOW, burrs: BURR_CENTER }),
+
+  // Hot Air Balloons
+  N(201, 25, 6, [C(BALL, 30), P('zoomies', 3)], [3100, 6800, 8000]),
+  N(202, 28, 6, [B, C(CAP, 34)], [3100, 6800, 8400], { bubbles: BUB_HEART }),
+  N(203, 24, 6, [R, B, C(CAP, 30)], [2700, 6000, 7700], { burrs: BURR_TWO, bubbles: BUB_CORNERS }),
+  N(204, 45, 6, [X, Y], [4500, 10000, 12100], { boxes: TAPE_CENTER, yarn: YARN_CORNERS }),
+  N(205, 30, 6, [B, R, X, C(BALL, 40)], [3500, 7800, 9800], { bubbles: BUB_FEW, burrs: BURR_ROW, boxes: BOX_TOP }),
+  // Moon Dream
+  N(206, 25, 6, [M, C(BONE, 26)], [2800, 6100, 7900], { mud: DEEP_MOON }),
+  N(207, 45, 6, [Y, P('micah', 1)], [4700, 10500, 13100], { yarn: YARN_STARS }),
+  N(208, 35, 5, [J(6), M], [6300, 14100, 18300], { junk: 2, mud: DEEP_PUDDLES }),
+  N(209, 32, 6, [M, R, Y], [3300, 7300, 9300], { mud: MUD_BOTTOM, burrs: BURR_CORNERS, yarn: YARN_PAIR }),
+  N(210, 40, 6, [M, Y, B, S(9000)], [9000, 10500, 12100], { mud: DEEP_MOON, yarn: YARN_STARS, bubbles: BUB_FEW }),
+  // Lavender Fields
+  N(211, 34, 6, [F, C(PAW, 28)], [3200, 7200, 9100], { leaves: LEAF_SCATTER }),
+  N(212, 21, 6, [R, F], [1800, 3900, 5300], { burrs: BURR_SCATTER, leaves: LEAF_CORNER }),
+  N(213, 25, 6, [R, C(LOBSTER, 28), P('bark', 2)], [3000, 6700, 8100], { burrs: BURR_CENTER }),
+  N(214, 26, 6, [F, X, Y], [2300, 5200, 6900], { leaves: LEAF_TOP, boxes: BOX_FEW, yarn: YARN_PAIR }),
+  N(215, 40, 6, [R, F, M, P('zoomies', 3)], [3600, 8100, 10600], { burrs: BURR_ROW, leaves: LEAF_TOP, mud: MUD_BOTTOM }),
+  // Bayou Boardwalk
+  N(216, 30, 6, [M, C(CAP, 28)], [3200, 7200, 8900], { mud: DEEP_RIVER }),
+  N(217, 24, 6, [M, B], [2400, 5300, 6900], { mud: DEEP_BOTTOM, bubbles: BUB_FEW }),
+  N(218, 42, 6, [M, R, F], [4100, 9100, 11200], { mud: MUD_BOTTOM, burrs: BURR_CENTER, leaves: LEAF_TOP }),
+  N(219, 30, 5, [J(6), M, R], [5900, 13100, 16700], { junk: 2, mud: DEEP_PUDDLE, burrs: BURR_TWO }),
+  N(220, 41, 6, [M, Y, R, B], [3900, 8700, 10300], { mud: DEEP_SIDES, yarn: YARN_CORNERS, burrs: BURR_CENTER, bubbles: BUB_FEW }),
+  // Lobster Wharf
+  N(221, 26, 6, [C(LOBSTER, 32), X], [3100, 7000, 8400], { boxes: BOX_FEW }),
+  N(222, 29, 6, [X, C(LOBSTER, 36)], [3500, 7900, 9500], { boxes: BOX_STACKS }),
+  N(223, 35, 5, [X, J(6), R], [6100, 13500, 18100], { boxes: TAPE_CORNERS, junk: 2, burrs: BURR_CENTER }),
+  N(224, 28, 6, [X, B, C(LOBSTER, 34)], [3200, 7200, 9100], { boxes: TAPE_ROW, bubbles: BUB_CORNERS }),
+  N(225, 32, 6, [X, M, R, C(LOBSTER, 24)], [3200, 7200, 8900], { boxes: TAPE_ROW, mud: MUD_BOTTOM, burrs: BURR_CORNERS }),
+  // Apple Orchard
+  N(226, 26, 6, [F, C(BALL, 30)], [2900, 6400, 7900], { leaves: LEAF_PILE }),
+  N(227, 39, 5, [J(7), F], [6900, 15200, 21100], { junk: 2, leaves: LEAF_TWO }),
+  N(228, 28, 6, [F, R, C(BALL, 24)], [2600, 5800, 7500], { leaves: LEAF_STRIP, burrs: BURR_CORNERS }),
+  N(229, 44, 6, [F, X, M], [4300, 9500, 11600], { leaves: LEAF_TOP, boxes: BOX_ROW, mud: MUD_BOTTOM }),
+  N(230, 36, 5, [J(7), F, R, X], [6800, 15100, 18100], { junk: 2, leaves: LEAF_CORNER, burrs: BURR_CENTER, boxes: BOX_FEW }),
+  // Hot Springs
+  N(231, 24, 6, [B, C(BOWL, 28)], [2600, 5800, 7400], { bubbles: BUB_TUB }),
+  N(232, 24, 6, [B, M], [2200, 4800, 6200], { bubbles: BUB_COLS, mud: MUD_TOP }),
+  N(233, 39, 6, [B, F, P('bark', 2)], [3700, 8300, 10700], { bubbles: BUB_FOAM, leaves: LEAF_STRIP }),
+  N(234, 43, 6, [B, R, Y], [4400, 9700, 11600], { bubbles: BUB_FEW, burrs: BURR_CENTER, yarn: YARN_CORNERS }),
+  N(235, 37, 6, [B, M, F, X], [3600, 8000, 10900], { bubbles: BUB_SIDES, mud: MUD_BOTTOM, leaves: LEAF_TOP, boxes: BOX_FEW }),
+  // Mini Golf
+  N(236, 29, 6, [P('zoomies', 5), C(BALL, 34)], [3400, 7500, 9300]),
+  N(237, 28, 6, [Y, C(BALL, 28)], [3100, 6900, 8300], { yarn: YARN_FENCE }),
+  N(238, 39, 6, [S(10000), X], [10000, 11400, 12000], { boxes: TAPE_ROW }),
+  N(239, 40, 6, [Y, R, C(PAW, 24)], [4100, 9000, 10600], { yarn: YARN_CORNERS, burrs: BURR_TWO }),
+  N(240, 41, 6, [Y, X, R, C(BALL, 26)], [4200, 9400, 11100], { yarn: YARN_CORNERS, boxes: TAPE_CENTER, burrs: BURR_TWO }),
+  // Yoshi's Sleepover
+  N(241, 34, 5, [J(6), C(BOWL, 26)], [6100, 13500, 17700], { junk: 2 }),
+  N(242, 34, 6, [Y, B], [3300, 7400, 9100], { yarn: YARN_RING, bubbles: BUB_CORNERS }),
+  N(243, 37, 5, [J(7), X, R], [6800, 15200, 19600], { junk: 2, boxes: BOX_TOP, burrs: BURR_ROW }),
+  N(244, 42, 6, [M, Y, R], [4500, 9900, 11900], { mud: MUD_BOTTOM, yarn: YARN_CORNERS, burrs: BURR_CENTER }),
+  N(245, 34, 5, [J(7), Y, B, R], [6800, 15100, 20000], { junk: 2, yarn: YARN_CORNERS, bubbles: BUB_FEW, burrs: BURR_CENTER }),
+  // Home Sweet Home
+  N(246, 29, 6, [M, C(BONE, 30)], [3100, 7000, 8300], { mud: MUD_PAW }),
+  N(247, 40, 5, [J(7), X, F], [6800, 15200, 18900], { junk: 2, boxes: BOX_PORCH, leaves: LEAF_CORNER }),
+  N(248, 44, 6, [M, Y, B, R], [4400, 9900, 12300], { mud: DEEP_BOTTOM, yarn: YARN_CORNERS, bubbles: BUB_FEW, burrs: BURR_CENTER }),
+  N(249, 40, 6, [X, R, F, P('micah', 1)], [3700, 8200, 10200], { boxes: TAPE_LOW, burrs: BURR_TWO, leaves: LEAF_TOP }),
+  N(250, 42, 5, [J(8), M, X, R], [7400, 16400, 20200], { junk: 2, mud: MUD_TOP, boxes: TAPE_LOW, burrs: BURR_CENTER }),
 ];
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
