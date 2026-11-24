@@ -37,7 +37,7 @@ import { BOOSTER_ICONS, BUBBLE_OVERLAY, KINDS, UI, YARN_OVERLAY, svg } from './a
 import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
-import { owlSVG, sceneryHTML, wireScenery } from './scenery';
+import { noahsArk, owlSVG, sceneryHTML, wireScenery } from './scenery';
 import { LEVELS, ZONES, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
@@ -58,7 +58,8 @@ import {
   type BoosterId,
   type SaveData,
 } from './save';
-import { DECOR, yardScene } from './yard';
+import { AREAS, DECOR, areaOpen, museum, yardScene, yardTime, type YardArea, type YardTime } from './yard';
+import { SNACKS } from './snacks';
 import { YOSHI_YARD } from './yoshi';
 import { runLaunch } from './launch';
 import { floatLabel, installTapFx, pop, pressDown, pressUp, replay } from './tap';
@@ -589,11 +590,51 @@ const playScenerySound = (name: string) => SCENERY_SOUNDS[name]?.();
 
 // ───────────────────────────── Micah's Yard ─────────────────────────────
 
+let yardArea: YardArea = 'back';
+
+/** Snack ids Micah has eaten in the yard (kept as tally counters, so cloud saves merge them). */
+const ateList = (): string[] => SNACKS.filter((s) => (save.tally[`ate:${s.id}`] ?? 0) > 0).map((s) => s.id);
+
+/** The yard follows the real clock. ?yardtime=day|dusk|night previews the others. */
+function currentYardTime(): YardTime {
+  const q = new URLSearchParams(location.search).get('yardtime');
+  return q === 'day' || q === 'dusk' || q === 'night' ? q : yardTime();
+}
+
+const ITEM_LINES: Record<string, string[]> = {
+  gnome: ['The gnome keeps his eyes on Micah. He remembers the hat.'],
+  pumpkin: ['Micah takes another tiny bite. Just checking it is still pumpkin.'],
+  mailbox: ['Nothing in the mailbox. Micah barks at it anyway, to be safe.'],
+  compost: ['Banana peel, eggshells, old toast. Micah calls it lunch.'],
+  pond: ['The frog does not blink. Micah blinks first.'],
+};
+
 function showYard(): void {
   playMusic('map');
   const owned = save.decor;
   const left = starsToSpend(save);
+  const time = currentYardTime();
+  if (!areaOpen(AREAS.find((a) => a.id === yardArea)!, save.stars)) yardArea = 'back';
+  const area = AREAS.find((a) => a.id === yardArea)!;
+  const here = DECOR.filter((d) => d.area === area.id);
+  const builtHere = here.filter((d) => owned.includes(d.id)).length;
   const done = owned.length === DECOR.length;
+  const ate = ateList();
+  const nextLocked = AREAS.find((a) => !areaOpen(a, save.stars));
+  const tabs = AREAS.map((a) => {
+    const open = areaOpen(a, save.stars);
+    const n = DECOR.filter((d) => d.area === a.id);
+    const b = n.filter((d) => owned.includes(d.id)).length;
+    return `<button class="yard-tab${a.id === area.id ? ' on' : ''}" data-area="${a.id}" role="tab" aria-selected="${a.id === area.id}" ${open ? '' : 'disabled'}>
+      <b>${a.name}</b><span>${open ? `${b}/${n.length}` : `Level ${a.opensAt}`}</span></button>`;
+  }).join('');
+  const hint =
+    area.id === 'back'
+      ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over. Noah\u2019s Ark is right over the back fence: tap it. <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.'
+      : area.id === 'garden'
+        ? 'The Garden. Micah thinks every bit of it is food. Tap things to send her over, and keep watching the sky.'
+        : 'The Front Porch, for watching the street. Tap things to send her over, and keep watching the sky.';
+  const timeNote = time === 'night' ? ' It\u2019s night in the yard, so Micah is sleepy.' : time === 'dusk' ? ' The sun is going down.' : '';
   const screen = h(`
     <div class="screen yard-screen">
       <header class="topbar">
@@ -602,8 +643,9 @@ function showYard(): void {
         <div class="wallet star-wallet" aria-label="${left} stars to spend"><span class="star-pill">${UI.star}</span><b>${left}</b></div>
       </header>
       <div class="yard-body">
-        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume))}</div>
-        <p class="yard-hint">${owned.length ? 'Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over.' : 'Tap the grass to call Micah over. Build things below and she\u2019ll play with them.'} Yoshi, Grace\u2019s chinchilla, is visiting too: tap her to say hi. <b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.</p>
+        <div class="yard-tabs" role="tablist" aria-label="Parts of the yard">${tabs}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate })}</div>
+        <p class="yard-hint">${hint}${timeNote}</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
         </div>
@@ -614,12 +656,14 @@ function showYard(): void {
         <p class="notice">${
           done
             ? 'Micah\u2019s yard is finished. Every star you earn from now on is a bragging right.'
-            : left
-              ? 'Spend the stars you earn in levels to build Micah\u2019s yard.'
-              : 'You have no stars to spend yet. Win levels to earn up to three stars each.'
+            : builtHere === here.length && nextLocked
+              ? `This part is finished. The ${nextLocked.name} opens when you clear level ${nextLocked.opensAt}.`
+              : left
+                ? 'Spend the stars you earn in levels to build Micah\u2019s yard.'
+                : 'You have no stars to spend yet. Win levels to earn up to three stars each.'
         }</p>
         <ul class="shop-list">
-          ${DECOR.map((d) => {
+          ${here.map((d) => {
             const has = owned.includes(d.id);
             return `<li class="${has ? 'owned' : ''}" data-id="${d.id}">
               ${svg(d.svg, 'booster-icon')}
@@ -634,6 +678,14 @@ function showYard(): void {
     </div>`);
   screen.querySelector('[data-act="back"]')!.addEventListener('click', () => showMap());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showYard()));
+  screen.querySelectorAll<HTMLButtonElement>('.yard-tab').forEach((b) =>
+    b.addEventListener('click', () => {
+      if (b.disabled || b.dataset.area === yardArea) return;
+      yardArea = b.dataset.area as YardArea;
+      sfx.select();
+      showYard();
+    }),
+  );
   screen.querySelectorAll<HTMLButtonElement>('.buy').forEach((b) =>
     b.addEventListener('click', () => {
       const d = DECOR.find((x) => x.id === b.dataset.id)!;
@@ -651,8 +703,11 @@ function showYard(): void {
     }),
   );
   let stopRoam: (() => void) | null = null;
+  let arkLine = 0;
+  const arkLines = noahsArk().say ?? [];
   mount(screen, () => stopRoam?.());
-  stopRoam = startYard(screen.querySelector<SVGSVGElement>('.yard-scene')!, owned, sfx, {
+  const sceneEl = screen.querySelector<SVGSVGElement>('.yard-scene')!;
+  stopRoam = startYard(sceneEl, owned, sfx, {
     onYoshi: () => {
       bump(save, 'yoshi');
       const tags = awardBadges(save);
@@ -661,20 +716,36 @@ function showYard(): void {
       toast(YOSHI_YARD[((save.tally.yoshi ?? 1) - 1) % YOSHI_YARD.length]);
       if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
     },
+    onArk: () => {
+      haptic.tick();
+      toast(arkLines[arkLine++ % arkLines.length]);
+    },
+    onItem: (id) => {
+      if (id === 'shelf') {
+        const n = ateList().length;
+        toast(n ? `Micah has eaten ${n} of ${SNACKS.length} odd things. Keep watching the sky for the rest.` : 'The shelf is empty. Let something fall and see what Micah does.');
+      } else if (ITEM_LINES[id]) toast(ITEM_LINES[id][0]);
+    },
     onSnack: (snack, saved) => {
       bump(save, saved ? 'saves' : 'gulps');
       if (saved) save.biscuits += 2;
+      const first = !saved && !(save.tally[`ate:${snack.id}`] ?? 0);
+      if (!saved) bump(save, `ate:${snack.id}`);
       const tags = awardBadges(save);
       persist(save);
       haptic.tick();
       if (saved) toast(`${icon('biscuit', 'biscuit-icon')} Saved ${snack.name}! +2 biscuits`);
+      else if (first && save.decor.includes('shelf')) toast(`New on the shelf: ${snack.name}. ${ateList().length} of ${SNACKS.length} things Micah ate.`);
       else {
         const line = GULPS[(save.tally.gulps ?? 1) % GULPS.length].replace('{x}', snack.name);
         toast(line[0].toUpperCase() + line.slice(1));
       }
+      // Put it on the shelf right away.
+      const shelf = sceneEl.querySelector('.yard-item[data-id="shelf"] .yard-item-art');
+      if (first && shelf) shelf.innerHTML = museum(ateList());
       if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
     },
-  });
+  }, { area: area.id, time });
 }
 
 // ───────────────────────────── Wardrobe ─────────────────────────────

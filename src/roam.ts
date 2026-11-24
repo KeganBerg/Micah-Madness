@@ -1,7 +1,8 @@
 // Micah's Yard comes alive: she wanders between the things you've built, and tapping
 // anything sends her over to play with it. Coordinates are the yard's 360x300 SVG space,
 // and Micah's position is where her feet touch the grass.
-import { DECOR } from './yard';
+import { DECOR, GROUND, START, type YardArea, type YardTime } from './yard';
+import { SNACKS, type Snack } from './snacks';
 
 export interface RoamSounds {
   bark(): void;
@@ -25,46 +26,70 @@ const SPOTS: Record<string, { x: number; y: number; on?: boolean }> = {
   ballpit: { x: 50, y: 74, on: true },
   flowers: { x: 50, y: 92 },
   sprinkler: { x: 50, y: 112 },
+  dustbath: { x: 96, y: 86 },
+  shelf: { x: 50, y: 108 },
+  veggies: { x: 50, y: 96 },
+  birdbath: { x: 14, y: 96 },
+  barrow: { x: 40, y: 56, on: true },
+  compost: { x: 50, y: 100 },
+  gnome: { x: 94, y: 92 },
+  hammock: { x: 50, y: 62, on: true },
+  pond: { x: 20, y: 90 },
+  mat: { x: 50, y: 80, on: true },
+  pumpkin: { x: 0, y: 92 },
+  chimes: { x: 50, y: 330 },
+  mailbox: { x: 10, y: 96 },
+  lamp: { x: 86, y: 94 },
+  rocker: { x: 50, y: 62, on: true },
+  swing: { x: 50, y: 58, on: true },
 };
 
-const GRASS = { x0: 24, x1: 336, y0: 100, y1: 292 };
+/** Things Micah naps on. At night she heads for these. */
+const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing']);
 
-/** Things that drop out of the sky. Micah will eat any of them. Drawn centred on (0,0), about 24 units across. */
-export interface Snack { id: string; name: string; svg: string; }
-export const SNACKS: Snack[] = [
-  { id: 'sock', name: 'a sock', svg: '<path d="M-5 -12 H5 V2 Q5 8 11 8 Q14 12 10 13 H-2 Q-7 12 -6 6 Z" fill="#ffffff" stroke="#173a52" stroke-width="1.6"/><path d="M-5 -12 H5 V-8 H-5 Z" fill="#e8352f"/><path d="M-5 -4 H5" stroke="#e8352f" stroke-width="1.6"/>' },
-  { id: 'duck', name: 'a rubber duck', svg: '<ellipse cx="1" cy="4" rx="11" ry="7" fill="#ffd23f" stroke="#b58a00" stroke-width="1.4"/><circle cx="-4" cy="-5" r="6" fill="#ffd23f" stroke="#b58a00" stroke-width="1.4"/><path d="M-10 -5 L-15 -3 L-10 -2 Z" fill="#f08a24"/><circle cx="-5" cy="-7" r="1.2" fill="#111"/>' },
-  { id: 'flipflop', name: 'a flip-flop', svg: '<ellipse cx="0" cy="0" rx="7" ry="13" fill="#2f8fe0" stroke="#17599a" stroke-width="1.6" transform="rotate(20)"/><path d="M-4 -2 L1 -8 L5 0" fill="none" stroke="#ffd23f" stroke-width="2.2" stroke-linecap="round"/>' },
-  { id: 'remote', name: 'the TV remote', svg: '<rect x="-5" y="-13" width="10" height="26" rx="3" fill="#3b3f46" stroke="#15171b" stroke-width="1.4" transform="rotate(-25)"/><g transform="rotate(-25)"><circle cx="0" cy="-8" r="1.8" fill="#e8352f"/><circle cx="-2" cy="-2" r="1.1" fill="#ccc"/><circle cx="2" cy="-2" r="1.1" fill="#ccc"/><circle cx="-2" cy="2" r="1.1" fill="#ccc"/><circle cx="2" cy="2" r="1.1" fill="#ccc"/></g>' },
-  { id: 'crayon', name: 'a purple crayon', svg: '<g transform="rotate(35)"><rect x="-3.5" y="-11" width="7" height="18" rx="1" fill="#8e5bd6" stroke="#5a3392" stroke-width="1.2"/><path d="M-3.5 7 L0 13 L3.5 7 Z" fill="#b38df0" stroke="#5a3392" stroke-width="1.2"/><rect x="-3.5" y="-6" width="7" height="4" fill="#fff" opacity=".6"/></g>' },
-  { id: 'pinecone', name: 'a pinecone', svg: '<ellipse cx="0" cy="0" rx="8" ry="12" fill="#8b5a2b" stroke="#5a3a1a" stroke-width="1.4"/><path d="M-7 -5 Q0 -1 7 -5 M-8 1 Q0 5 8 1 M-6 7 Q0 10 6 7 M-4 -10 Q0 -7 4 -10" fill="none" stroke="#5a3a1a" stroke-width="1.3"/>' },
-  { id: 'tissue', name: 'a used tissue', svg: '<path d="M-10 4 Q-12 -6 -4 -9 Q0 -14 5 -9 Q12 -8 10 0 Q13 7 4 9 Q-4 12 -10 4 Z" fill="#f4f7fa" stroke="#9fb4c4" stroke-width="1.4"/><path d="M-4 -2 Q0 2 4 -3" fill="none" stroke="#9fb4c4" stroke-width="1.2"/>' },
-  { id: 'glove', name: 'a gardening glove', svg: '<path d="M-8 10 V-2 L-10 -8 Q-9 -11 -7 -9 L-5 -4 V-12 Q-3 -14 -2 -12 V-5 V-13 Q0 -15 1 -13 V-5 V-11 Q3 -13 4 -11 V-3 L7 -7 Q10 -7 9 -4 L4 6 V10 Z" fill="#5fae57" stroke="#2f6a3c" stroke-width="1.3"/>' },
-  { id: 'corn', name: 'a corn cob', svg: '<g transform="rotate(-30)"><ellipse cx="0" cy="0" rx="5.5" ry="12" fill="#ffc12e" stroke="#b58a00" stroke-width="1.3"/><path d="M-5 -4 H5 M-5.5 1 H5.5 M-5 6 H5 M0 -11 V11" stroke="#d99a1a" stroke-width="1"/><path d="M-5 9 Q-9 14 -4 14 M5 9 Q9 14 4 14" fill="#7fb85a" stroke="#4f8a3a" stroke-width="1"/></g>' },
-  { id: 'lego', name: 'a toy brick', svg: '<rect x="-10" y="-4" width="20" height="12" rx="1.5" fill="#e8352f" stroke="#a3201c" stroke-width="1.4"/><rect x="-7" y="-8" width="5" height="4" rx="1" fill="#e8352f" stroke="#a3201c" stroke-width="1.2"/><rect x="2" y="-8" width="5" height="4" rx="1" fill="#e8352f" stroke="#a3201c" stroke-width="1.2"/>' },
-];
+export { SNACKS } from './snacks';
+export type { Snack } from './snacks';
+
 
 export interface YardHooks {
   /** A falling thing was tapped away in time (saved) or Micah got to it first. */
   onSnack?: (snack: Snack, saved: boolean) => void;
   /** Yoshi was tapped and Micah came over to see her. */
   onYoshi?: () => void;
+  /** A built item was tapped. */
+  onItem?: (id: string) => void;
+  /** Noah's Ark, over the back fence, was tapped. */
+  onArk?: () => void;
+}
+
+export interface YardOptions {
+  area: YardArea;
+  time: YardTime;
 }
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
-export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds, hooks: YardHooks = {}): () => void {
+export function startYard(
+  svgEl: SVGSVGElement,
+  owned: string[],
+  sfx: RoamSounds,
+  hooks: YardHooks = {},
+  opts: YardOptions = { area: 'back', time: 'day' },
+): () => void {
+  const GRASS = GROUND[opts.area];
+  const night = opts.time === 'night';
   const ym = svgEl.querySelector<SVGGElement>('.ym')!;
   const flip = ym.querySelector<SVGGElement>('.ym-flip')!;
   const pose = ym.querySelector<SVGGElement>('.ym-pose')!;
   const emote = ym.querySelector<SVGTextElement>('.ym-emote')!;
   const layer = ym.parentElement!;
   const items = [...svgEl.querySelectorAll<SVGGElement>('.yard-item')];
-  const built = DECOR.filter((d) => owned.includes(d.id));
+  const built = DECOR.filter((d) => d.area === opts.area && owned.includes(d.id));
+  const naps = built.filter((d) => NAPS.has(d.id));
+  const bath = built.find((d) => d.id === 'dustbath');
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-  let x = 228;
-  let y = 168;
+  let [x, y] = START[opts.area].micah;
   let onTop: string | null = null; // item she is sitting on (drawn above it)
   let token = 0; // bumps on every new command, cancelling whatever she was doing
   let idleTimer = 0;
@@ -93,8 +118,7 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
   const yPose = yy?.querySelector<SVGGElement>('.yy-pose');
   const yDust = yy?.querySelector<SVGGElement>('.yy-dust');
   const yEmote = yy?.querySelector<SVGTextElement>('.yy-emote');
-  let yx = 96;
-  let yy0 = 250;
+  let [yx, yy0] = START[opts.area].yoshi;
   let yToken = 0;
   let yTimer = 0;
   let yRaf = 0;
@@ -200,6 +224,12 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
           if (Math.hypot(tx - x, ty - y) > 50) break;
         }
         if (!(await yMoveTo(tx, ty, t))) return;
+      } else if (bath && r < 0.68) {
+        const s = bath.w / 100;
+        if (!(await yMoveTo(bath.x + 50 * s, bath.y + 80 * s, t))) return;
+        ySetPose('roll');
+        puffs();
+        if (!(await yWait(1300, t))) return;
       } else if (r < 0.75) {
         ySetPose('popcorn');
         if (!(await yWait(900, t))) return;
@@ -216,7 +246,18 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
   function meetYoshi(): void {
     yCommand(async (t) => {
       ySay('\u2665');
-      if (Math.random() < 0.5) {
+      if (bath) {
+        // Hops into her own dust bath for a proper roll.
+        const s = bath.w / 100;
+        if (!(await yMoveTo(bath.x + 50 * s, bath.y + 80 * s, t))) return;
+        ySetPose('roll');
+        puffs();
+        sfx.whoosh();
+        if (!(await yWait(1300, t))) return;
+        ySetPose('roll');
+        puffs();
+        if (!(await yWait(1300, t))) return;
+      } else if (Math.random() < 0.5) {
         ySetPose('roll');
         puffs();
         sfx.whoosh();
@@ -312,6 +353,10 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
         break;
       }
       case 'bed':
+      case 'hammock':
+      case 'rocker':
+      case 'swing':
+        if (id !== 'bed') wiggle(id);
         setPose('nap');
         say('z z z');
         if (!(await wait(6000, t))) return;
@@ -367,8 +412,71 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
         say('!');
         break;
       }
+      case 'veggies':
+        setPose('dig');
+        wiggle(id);
+        sfx.whoosh();
+        if (!(await wait(1200, t))) return;
+        setPose('eat');
+        sfx.crunch();
+        if (!(await wait(700, t))) return;
+        say('crunch');
+        break;
+      case 'compost':
+        setPose('eat');
+        wiggle(id);
+        for (let i = 0; i < 3; i++) {
+          sfx.crunch();
+          if (!(await wait(550, t))) return;
+        }
+        say('yum');
+        break;
+      case 'birdbath':
+      case 'pond':
+        face(false);
+        setPose('eat');
+        wiggle(id);
+        sfx.splash();
+        if (!(await wait(1400, t))) return;
+        say(id === 'pond' ? 'ribbit?' : '♥');
+        break;
+      case 'barrow':
+      case 'mat':
+        setPose('sit');
+        wiggle(id);
+        say('♥');
+        if (!(await wait(2200, t))) return;
+        break;
+      case 'mailbox':
+      case 'chimes':
+        face(id === 'mailbox');
+        wiggle(id);
+        for (let i = 0; i < 3; i++) {
+          setPose('jump');
+          sfx.bark();
+          if (!(await wait(500, t))) return;
+        }
+        say('!!');
+        break;
+      case 'dustbath':
+        setPose('sniff');
+        wiggle(id);
+        if (!(await wait(1200, t))) return;
+        say('achoo');
+        setPose('scratch');
+        if (!(await wait(800, t))) return;
+        break;
+      case 'gnome':
+      case 'pumpkin':
+        setPose('sniff');
+        if (!(await wait(1000, t))) return;
+        setPose('eat');
+        sfx.crunch();
+        if (!(await wait(500, t))) return;
+        say('?');
+        break;
       default:
-        // Tree, hydrant and anything new: a good long sniff.
+        // Tree, hydrant, shelf and anything new: a good long sniff.
         setPose('sniff');
         if (!(await wait(1600, t))) return;
     }
@@ -380,7 +488,11 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
     while (t === token && !stopped) {
       if (!(await wait(rand(1800, 4200), t))) return;
       const r = Math.random();
-      if (built.length && r < 0.4) {
+      if (night && naps.length && r < 0.55) {
+        // Bedtime: she heads for somewhere comfy and stays a good while.
+        await visit(naps[Math.floor(Math.random() * naps.length)].id, t);
+        if (!(await wait(rand(4000, 8000), t))) return;
+      } else if (built.length && r < 0.4) {
         await visit(built[Math.floor(Math.random() * built.length)].id, t);
       } else if (yy && r < 0.52) {
         // Goes to check on Yoshi.
@@ -438,8 +550,25 @@ export function startYard(svgEl: SVGSVGElement, owned: string[], sfx: RoamSounds
       });
       return;
     }
+    if (target.closest('.yard-ark')) {
+      hooks.onArk?.();
+      command(async (t) => {
+        onTop = null;
+        if (!(await moveTo(214, GRASS.y0 + 6, t, 150))) return;
+        face(false);
+        for (let i = 0; i < 2; i++) {
+          setPose('jump');
+          sfx.bark();
+          if (!(await wait(550, t))) return;
+        }
+        say('!');
+        setPose('sit');
+      });
+      return;
+    }
     const item = target.closest<SVGGElement>('.yard-item');
     if (item) {
+      hooks.onItem?.(item.dataset.id!);
       wiggle(item.dataset.id!);
       command((t) => visit(item.dataset.id!, t, true));
       return;
