@@ -798,6 +798,12 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yy-pose.hop { animation: yy-hop .3s ease-in-out infinite; }
 .yy-pose.popcorn { animation: yy-popcorn .9s ease-out; }
 .yy-pose.roll { animation: yy-roll .65s ease-in-out 2; }
+.yy-pose.nap { animation: yy-nap 2.6s ease-in-out infinite; }
+.yy.inside { opacity: 0; transition: opacity .25s; }
+.yard-item .wheel-spin { transform-box: fill-box; transform-origin: 50% 50%; }
+.yard-item.spinning .wheel-spin { animation: wheel-spin .7s linear infinite; }
+@keyframes wheel-spin { to { transform: rotate(-360deg); } }
+@keyframes yy-nap { 0%, 100% { transform: scale(1.1, .74); } 50% { transform: scale(1.13, .7); } }
 .yy-pose.groom { animation: yy-groom .2s linear 7; }
 .yy-pose .yoshi-tail { transform-box: fill-box; transform-origin: 0% 100%; }
 .yy-pose.sit .yoshi-tail { animation: yy-tail 2.4s ease-in-out infinite; }
@@ -810,7 +816,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yy-puff { fill: #e9dcc4; opacity: 0; pointer-events: none; transform-box: fill-box; transform-origin: 50% 50%; animation: yy-puff 1s ease-out forwards; }
 @keyframes yy-puff { 0% { opacity: .9; transform: translate(0, 0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.8); } }
 @media (prefers-reduced-motion: reduce) {
-  .ym-pose, .yy-pose, .yy-pose .yoshi-tail, .yy-puff, .yard-item-art, .ym-emote.show { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+  .ym-pose, .yy-pose, .yy-pose .yoshi-tail, .yy-puff, .yard-item-art, .ym-emote.show, .yard-item.spinning .wheel-spin { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
 
 /* Map: Micah sniffs about beside her level while you decide. */
@@ -1199,8 +1205,6 @@ h2.center { margin: 2px 0 6px; }
 
 /* Weekly Walk: a chip floating over the map, and paw stamps */
 .weekly-chip {
-  position: absolute; left: var(--s3); bottom: var(--s3); z-index: 3;
-  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #ffd23f; color: #173a52; box-shadow: 0 4px 0 #b58a00, 0 8px 20px #0004; text-align: left;
 }
 .weekly-chip .paw-icon { width: 26px; height: 26px; color: #e8352f; }
@@ -1225,11 +1229,8 @@ h2.center { margin: 2px 0 6px; }
 
 /* Micah's Winter */
 .winter-chip {
-  position: absolute; left: var(--s3); bottom: var(--s3); z-index: 3;
-  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #fff; color: #173a52; box-shadow: 0 4px 0 #8fb3cc, 0 8px 20px #0004; text-align: left;
 }
-.weekly-chip ~ .winter-chip { bottom: calc(var(--s3) + 56px); }
 .winter-chip .snow-icon { width: 28px; height: 28px; }
 .winter-chip:not(.done) .snow-icon { animation: wiggle 1.8s ease-in-out infinite; }
 .winter-chip span { display: grid; line-height: 1.1; }
@@ -1323,14 +1324,9 @@ html.full-app, html.full-app body { overflow: hidden; }
 
 /* Noah's Ark */
 .ark-chip {
-  position: absolute; left: var(--s3); bottom: var(--s3); z-index: 3;
-  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
   background: #fff; color: #173a52; box-shadow: 0 4px 0 #b9a98f, 0 8px 20px #0004; text-align: left;
 }
 .ark-chip .ark-icon { width: 30px; height: 30px; }
-/* The map's event chips stack up from the bottom: Weekly Walk, then Noah's Ark, then Micah's Winter. */
-.weekly-chip ~ .ark-chip, .ark-chip ~ .winter-chip { bottom: calc(var(--s3) + 56px); }
-.weekly-chip ~ .ark-chip ~ .winter-chip { bottom: calc(var(--s3) + 112px); }
 .ark-chip:not(.done) .ark-icon { animation: wiggle 2.2s ease-in-out infinite; }
 .ark-chip span { display: grid; line-height: 1.1; }
 .ark-chip b { font-family: var(--font-display); font-weight: 400; font-size: 16px; }
@@ -1348,3 +1344,16 @@ html.full-app, html.full-app body { overflow: hidden; }
 /* Polish: no lonely last word on short lines of copy. */
 .modal .body, .modal p, .goal-list span, .bubble, .sticker figcaption span, .sticker small { text-wrap: pretty; }
 .brand span { line-height: 1.05; }
+
+/* The map's event chips (Weekly Walk, Noah's Ark, Micah's Winter) share one row at the bottom of the map.
+   With two or more open they shrink to icon + short name, so the row stays one chip tall on any phone. */
+.event-tray { position: absolute; left: var(--s3); right: var(--s3); bottom: var(--s3); z-index: 3; display: flex; gap: var(--s2); pointer-events: none; }
+.event-chip {
+  pointer-events: auto; flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; min-height: 44px; border-radius: 999px;
+  color: #173a52; text-align: left;
+}
+.event-chip .short { display: none; }
+.event-tray.multi .event-chip { gap: 6px; padding: 6px 12px 6px 8px; }
+.event-tray.multi .event-chip .full, .event-tray.multi .event-chip small { display: none; }
+.event-tray.multi .event-chip .short { display: inline; }
+.event-tray.multi .event-chip svg { width: 24px; height: 24px; }

@@ -49,10 +49,28 @@ const SPOTS: Record<string, { x: number; y: number; on?: boolean }> = {
   tent: { x: 50, y: 96 },
   firepit: { x: 96, y: 86 },
   floaty: { x: 50, y: 62, on: true },
+  hidey: { x: 104, y: 94 },
+  hayrack: { x: 110, y: 100 },
+  chews: { x: 112, y: 92 },
+  ledges: { x: 104, y: 96 },
+  wheel: { x: -24, y: 116 },
+  blanket: { x: 76, y: 80, on: true },
 };
 
+/** Where Yoshi goes to use each of her things, in the item's 100x100 art box. */
+const YOSHI_USE: Record<string, { x: number; y: number }> = {
+  hidey: { x: 50, y: 92 },
+  hayrack: { x: 50, y: 104 },
+  chews: { x: -14, y: 94 },
+  ledges: { x: 34, y: 96 },
+  wheel: { x: 50, y: 86 },
+  blanket: { x: 28, y: 80 },
+};
+/** The ledges she hops up, bottom to top. */
+const LEDGES: [number, number][] = [[34, 68], [66, 44], [34, 20]];
+
 /** Things Micah naps on. At night she heads for these. */
-const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing', 'floaty', 'tent']);
+const NAPS = new Set(['bed', 'hammock', 'rocker', 'swing', 'blanket', 'floaty', 'tent']);
 
 export { SNACKS } from './snacks';
 export type { Snack } from './snacks';
@@ -132,6 +150,8 @@ export function startYard(
   const yDust = yy?.querySelector<SVGGElement>('.yy-dust');
   const yEmote = yy?.querySelector<SVGTextElement>('.yy-emote');
   let [yx, yy0] = START[opts.area].yoshi;
+  let yOn: string | null = null; // item Yoshi is on or in (drawn above it)
+  const yItems = built.filter((d) => YOSHI_USE[d.id]);
   let yToken = 0;
   let yTimer = 0;
   let yRaf = 0;
@@ -156,7 +176,10 @@ export function startYard(
     const above = onTop ? items.find((it) => it.dataset.id === onTop) : undefined;
     const depth = (el: Element): number => {
       if (el === ym) return above ? Number(above.dataset.bottom) + 0.01 : y;
-      if (el === yy) return yy0;
+      if (el === yy) {
+        const on = yOn ? items.find((it) => it.dataset.id === yOn) : undefined;
+        return on ? Number(on.dataset.bottom) + 0.02 : yy0;
+      }
       return Number((el as SVGGElement).dataset.bottom);
     };
     const all: Element[] = [...items, ym, ...(yy ? [yy] : [])];
@@ -169,16 +192,19 @@ export function startYard(
   const yWait = (ms: number, t: number) =>
     new Promise<boolean>((res) => setTimeout(() => res(t === yToken && !stopped), ms));
 
-  function yMoveTo(tx: number, ty: number, t: number): Promise<boolean> {
-    tx = clamp(tx, GRASS.x0 + 10, GRASS.x1 - 10);
-    ty = clamp(ty, GRASS.y0 + 30, GRASS.y1);
+  /** Hops to a spot on the grass (or, with `free`, anywhere, like up her ledges). */
+  function yMoveTo(tx: number, ty: number, t: number, free = false): Promise<boolean> {
+    if (!free) {
+      tx = clamp(tx, GRASS.x0 + 10, GRASS.x1 - 10);
+      ty = clamp(ty, GRASS.y0 + 30, GRASS.y1);
+    }
     const dist = Math.hypot(tx - yx, ty - yy0);
     if (dist < 2) return Promise.resolve(t === yToken);
     yFace(tx < yx);
     ySetPose('hop');
     const x0 = yx;
     const y0 = yy0;
-    const dur = (dist / 45) * 1000;
+    const dur = (dist / (free ? 60 : 45)) * 1000;
     const start = performance.now();
     return new Promise((res) => {
       const tick = (now: number) => {
@@ -219,16 +245,91 @@ export function startYard(
     const t = ++yToken;
     clearTimeout(yTimer);
     cancelAnimationFrame(yRaf);
+    yy?.classList.remove('inside');
+    svgEl.querySelector('.yard-item.spinning')?.classList.remove('spinning');
+    if (yOn !== 'ledges') yOn = null;
     void run(t).then(() => {
       if (t === yToken && !stopped && !reduced) yTimer = window.setTimeout(() => yCommand(yIdle), rand(2500, 5000));
     });
+  }
+
+  /** Yoshi goes and uses one of her own things in her corner. */
+  async function yUse(id: string, t: number): Promise<void> {
+    const d = yItems.find((b) => b.id === id);
+    if (!d || !yy) return;
+    const s = d.w / 100;
+    const at = (ax: number, ay: number): [number, number] => [d.x + ax * s, d.y + ay * s];
+    if (yOn === 'ledges') {
+      // Down off the ledges first.
+      if (!(await yMoveTo(...at(34, 96), t, true))) return;
+    }
+    yOn = null;
+    const [px, py] = at(YOSHI_USE[id].x, YOSHI_USE[id].y);
+    if (!(await yMoveTo(px, py, t))) return;
+    switch (id) {
+      case 'hidey':
+        yy.classList.add('inside');
+        ySay('');
+        if (!(await yWait(2800, t))) return;
+        yy.classList.remove('inside');
+        ySay('!');
+        break;
+      case 'hayrack':
+      case 'chews':
+        yFace(id === 'hayrack' ? px < d.x + 50 * s : false);
+        ySetPose('groom');
+        ySay(id === 'chews' ? 'crunch' : 'nom');
+        if (!(await yWait(1800, t))) return;
+        break;
+      case 'wheel': {
+        yOn = 'wheel';
+        yPlace();
+        const el = items.find((it) => it.dataset.id === 'wheel');
+        el?.classList.add('spinning');
+        ySetPose('hop');
+        sfx.whoosh();
+        if (!(await yWait(3000, t))) return;
+        el?.classList.remove('spinning');
+        yOn = null;
+        ySetPose('popcorn');
+        if (!(await yWait(900, t))) return;
+        break;
+      }
+      case 'ledges':
+        yOn = 'ledges';
+        for (const [lx, ly] of LEDGES) {
+          if (!(await yMoveTo(...at(lx, ly), t, true))) return;
+          ySetPose('sit');
+          if (!(await yWait(450, t))) return;
+        }
+        ySetPose('popcorn');
+        ySay('\u2665');
+        if (!(await yWait(1600, t))) return;
+        break;
+      case 'blanket':
+        yOn = 'blanket';
+        yPlace();
+        ySetPose('nap');
+        ySay('z');
+        if (!(await yWait(4000, t))) return;
+        break;
+    }
+    ySetPose('sit');
   }
 
   /** Yoshi potters about: little hops, the odd popcorn jump, a groom. */
   async function yIdle(t: number): Promise<void> {
     while (t === yToken && !stopped) {
       const r = Math.random();
-      if (r < 0.55) {
+      if (yItems.length && r < 0.35) {
+        await yUse(yItems[Math.floor(Math.random() * yItems.length)].id, t);
+        if (t !== yToken) return;
+      } else if (yOn === 'ledges') {
+        // Hops back down before wandering off.
+        await yUse('ledges', t);
+        if (!(await yMoveTo(yx + 30, yy0 + 60, t, true))) return;
+        yOn = null;
+      } else if (r < 0.55) {
         let tx = yx;
         let ty = yy0;
         for (let i = 0; i < 8; i++) {
@@ -259,7 +360,10 @@ export function startYard(
   function meetYoshi(): void {
     yCommand(async (t) => {
       ySay('\u2665');
-      if (bath) {
+      if (yItems.length) {
+        await yUse(yItems[Math.floor(Math.random() * yItems.length)].id, t);
+        if (t !== yToken) return;
+      } else if (bath) {
         // Hops into her own dust bath for a proper roll.
         const s = bath.w / 100;
         if (!(await yMoveTo(bath.x + 50 * s, bath.y + 80 * s, t))) return;
@@ -363,7 +467,39 @@ export function startYard(
     art.classList.remove('wiggle');
     void (art as SVGGElement).getBoundingClientRect();
     art.classList.add('wiggle');
+    // Restacking moves items in the DOM, which would replay a leftover wiggle.
+    art.addEventListener('animationend', () => art.classList.remove('wiggle'), { once: true });
   };
+
+  /** Micah and Yoshi curl up side by side (on the Nap Blanket if there is one here). */
+  async function napTogether(t: number, hurry = false): Promise<void> {
+    if (!yy) return;
+    const b = yItems.find((d) => d.id === 'blanket');
+    const s = b ? b.w / 100 : 0;
+    const tx = b ? b.x + 28 * s : clamp(yOn ? yx + 40 : yx, GRASS.x0 + 20, GRASS.x1 - 60);
+    const ty = b ? b.y + 80 * s : clamp(yy0 + (yOn ? 60 : 0), GRASS.y0 + 30, GRASS.y1);
+    yCommand(async (yt) => {
+      yOn = null;
+      if (!(await yMoveTo(tx, ty, yt))) return;
+      if (b) yOn = 'blanket';
+      yPlace();
+      yFace(false);
+      ySetPose('nap');
+      ySay('z');
+      await yWait(9500, yt);
+    });
+    onTop = null;
+    if (!(await moveTo(tx + 54, ty + 2, t, hurry ? 130 : 70))) return;
+    if (b) onTop = 'blanket';
+    place();
+    face(true);
+    setPose('nap');
+    say('z z z');
+    if (!(await wait(8500, t))) return;
+    say('');
+    setPose('scratch');
+    if (!(await wait(800, t))) return;
+  }
 
   /** Walk to an item and do the thing Micah does with it. */
   async function visit(id: string, t: number, hurry = false): Promise<void> {
@@ -397,6 +533,10 @@ export function startYard(
         sfx.bark();
         break;
       }
+      case 'blanket':
+        await napTogether(t);
+        if (t !== token) return;
+        break;
       case 'bed':
       case 'hammock':
       case 'rocker':
@@ -533,7 +673,11 @@ export function startYard(
     while (t === token && !stopped) {
       if (!(await wait(rand(1800, 4200), t))) return;
       const r = Math.random();
-      if (night && naps.length && r < 0.55) {
+      if (yy && Math.random() < (night ? 0.2 : 0.07)) {
+        // Nap time with Yoshi.
+        await napTogether(t);
+        if (!(await wait(rand(2000, 4000), t))) return;
+      } else if (night && naps.length && r < 0.55) {
         // Bedtime: she heads for somewhere comfy and stays a good while.
         await visit(naps[Math.floor(Math.random() * naps.length)].id, t);
         if (!(await wait(rand(4000, 8000), t))) return;
@@ -668,6 +812,28 @@ export function startYard(
       return;
     }
     const item = target.closest<SVGGElement>('.yard-item');
+    const yid = item?.dataset.id;
+    if (item && yid && YOSHI_USE[yid] && yy) {
+      hooks.onItem?.(yid);
+      wiggle(yid);
+      if (yid === 'blanket') {
+        command((t) => napTogether(t, true));
+        return;
+      }
+      // Yoshi shows it off and Micah comes to watch.
+      yCommand((yt) => yUse(yid, yt));
+      command(async (t) => {
+        onTop = null;
+        const d = yItems.find((b) => b.id === yid)!;
+        const sp = SPOTS[yid];
+        if (!(await moveTo(d.x + sp.x * (d.w / 100), d.y + sp.y * (d.w / 100), t, 130))) return;
+        face(true);
+        setPose('sit');
+        if (!(await wait(1500, t))) return;
+        say('\u2665');
+      });
+      return;
+    }
     if (item) {
       hooks.onItem?.(item.dataset.id!);
       wiggle(item.dataset.id!);

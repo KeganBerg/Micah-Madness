@@ -8,7 +8,7 @@ import { SNACKS } from './snacks';
 import { moundSVG } from './dig';
 import { presentSVG } from './advent';
 
-export type YardArea = 'back' | 'garden' | 'porch' | 'lake';
+export type YardArea = 'back' | 'yoshi' | 'garden' | 'porch' | 'lake';
 export type YardTime = 'day' | 'dusk' | 'night';
 
 export interface Decor {
@@ -33,6 +33,7 @@ export interface AreaInfo {
 
 export const AREAS: AreaInfo[] = [
   { id: 'back', name: 'Backyard', opensAt: 0 },
+  { id: 'yoshi', name: 'Yoshi’s Corner', opensAt: 15 },
   { id: 'garden', name: 'Garden', opensAt: 30 },
   { id: 'porch', name: 'Front Porch', opensAt: 60 },
   { id: 'lake', name: 'Lakeside', opensAt: 150 },
@@ -112,6 +113,50 @@ export function museum(ate: string[] | null): string {
 ${slots}
 <rect x="14" y="92" width="8" height="6" fill="#4a2f14"/><rect x="78" y="92" width="8" height="6" fill="#4a2f14"/>`;
 }
+
+// ───────────────────────────── Yoshi's Corner ─────────────────────────────
+
+const hidey = `
+<path d="M10 90 L50 30 L90 90 Z" fill="#c8a57a" stroke="#8a6a45" stroke-width="3" stroke-linejoin="round"/>
+<path d="M24 69 H76 M17 80 H83 M31 58 H69 M38 47 H62" stroke="#a3845c" stroke-width="2"/>
+<path d="M6 92 L50 24 L94 92" fill="none" stroke="#7a4f25" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M36 90 V76 A14 14 0 0 1 64 76 V90 Z" fill="#3b2a1d"/>
+<rect x="40" y="40" width="20" height="9" rx="2" fill="#fff"/><text x="50" y="47" text-anchor="middle" font-size="6.4" font-weight="900" fill="#173a52" font-family="sans-serif">YOSHI</text>`;
+
+const hayRack = `
+<rect x="16" y="20" width="68" height="8" rx="3" fill="#7a4f25"/>
+<path d="M22 28 L30 70 H70 L78 28" fill="#e6c766" stroke="#7a4f25" stroke-width="3" stroke-linejoin="round"/>
+<path d="M30 28 L36 70 M42 28 L44 70 M54 28 L52 70 M66 28 L62 70" stroke="#7a4f25" stroke-width="2.4"/>
+<g stroke="#c9a640" stroke-width="2" stroke-linecap="round"><path d="M26 22 l-6 -12 M34 20 l-2 -14 M46 20 l2 -15 M58 21 l5 -13 M70 22 l8 -11"/><path d="M34 72 l-4 10 M48 72 l1 12 M62 72 l5 9"/></g>
+<rect x="46" y="70" width="8" height="24" fill="#7a4f25"/><rect x="34" y="90" width="32" height="6" rx="2" fill="#5e3e25"/>`;
+
+const runWheel = `
+<path d="M50 50 L30 94 M50 50 L70 94" stroke="#5d6f7c" stroke-width="5" stroke-linecap="round"/>
+<rect x="22" y="90" width="56" height="6" rx="3" fill="#5d6f7c"/>
+<g class="wheel-spin"><circle cx="50" cy="50" r="40" fill="#e8352f" stroke="#a3201c" stroke-width="3"/>
+<circle cx="50" cy="50" r="33" fill="#ffd5cf"/>
+<path d="M50 17 V83 M17 50 H83 M27 27 L73 73 M73 27 L27 73" stroke="#e8352f" stroke-width="2.5" opacity=".55"/>
+<circle cx="50" cy="50" r="7" fill="#a3201c"/></g>`;
+
+const ledges = `
+<rect x="46" y="8" width="8" height="86" rx="2" fill="#7a4f25"/>
+<rect x="14" y="68" width="40" height="7" rx="2" fill="#c8a57a" stroke="#8a6a45" stroke-width="2"/>
+<rect x="46" y="44" width="40" height="7" rx="2" fill="#c8a57a" stroke="#8a6a45" stroke-width="2"/>
+<rect x="14" y="20" width="40" height="7" rx="2" fill="#c8a57a" stroke="#8a6a45" stroke-width="2"/>
+<rect x="34" y="90" width="32" height="6" rx="2" fill="#5e3e25"/>`;
+
+const chewPot = `
+<path d="M28 9 L40 60 M42 6 L46 60 M58 7 L54 60 M72 12 L60 60" stroke="#8a5a33" stroke-width="5" stroke-linecap="round"/>
+<path d="M28 9 l-3 -4 M58 7 l3 -4" stroke="#6b4528" stroke-width="3" stroke-linecap="round"/>
+<path d="M22 54 H78 L70 94 H30 Z" fill="#c96a3c" stroke="#8f4320" stroke-width="3" stroke-linejoin="round"/>
+<rect x="18" y="50" width="64" height="10" rx="3" fill="#d97b4c" stroke="#8f4320" stroke-width="3"/>
+<circle cx="50" cy="76" r="7" fill="#e8352f"/><path d="M50 69 q2 -4 5 -4" stroke="#4f9a4a" stroke-width="2" fill="none"/>`;
+
+const napBlanket = `
+<path d="M6 66 Q50 54 94 66 L90 92 Q50 84 10 92 Z" fill="#e8352f" stroke="#a3201c" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M28 62 L26 89 M50 59 L50 86 M72 62 L74 89" stroke="#ffffff" stroke-width="3" opacity=".75"/>
+<path d="M8 74 Q50 64 92 74 M9 83 Q50 74 91 83" stroke="#173a52" stroke-width="2.4" fill="none" opacity=".5"/>
+<ellipse cx="22" cy="70" rx="10" ry="5" fill="#fff" stroke="#c9d3da" stroke-width="1.5"/>`;
 
 // ───────────────────────────── Garden ─────────────────────────────
 
@@ -280,6 +325,12 @@ export const DECOR: Decor[] = [
   { id: 'dustbath', area: 'back', name: 'Yoshi’s Dust Bath', desc: 'Yoshi rolls. Micah sneezes.', cost: 5, x: 188, y: 130, w: 76, svg: dustBath },
   { id: 'shelf', area: 'back', name: 'Things Micah Ate', desc: 'Fills up with what she swallows.', cost: 6, x: 188, y: 82, w: 68, svg: museum(null) },
   // Garden (opens after level 30)
+  { id: 'hidey', area: 'yoshi', name: 'Hidey House', desc: 'Her quiet spot.', cost: 3, x: 24, y: 96, w: 82, svg: hidey },
+  { id: 'hayrack', area: 'yoshi', name: 'Hay Rack', desc: 'Bottomless hay.', cost: 4, x: 212, y: 66, w: 60, svg: hayRack },
+  { id: 'chews', area: 'yoshi', name: 'Apple Sticks', desc: 'For chewing. Not Micah.', cost: 4, x: 144, y: 190, w: 50, svg: chewPot },
+  { id: 'ledges', area: 'yoshi', name: 'Climbing Ledges', desc: 'Up, up, up.', cost: 5, x: 128, y: 62, w: 76, svg: ledges },
+  { id: 'wheel', area: 'yoshi', name: 'Running Wheel', desc: 'Zoomies, Yoshi-sized.', cost: 6, x: 262, y: 110, w: 86, svg: runWheel },
+  { id: 'blanket', area: 'yoshi', name: 'Nap Blanket', desc: 'Room for two.', cost: 7, x: 14, y: 164, w: 130, svg: napBlanket },
   { id: 'veggies', area: 'garden', name: 'Veggie Patch', desc: 'One carrot is already missing.', cost: 8, x: 14, y: 58, w: 108, svg: veggies },
   { id: 'birdbath', area: 'garden', name: 'Birdbath', desc: 'Micah drinks from it anyway.', cost: 8, x: 150, y: 70, w: 64, svg: birdbath },
   { id: 'barrow', area: 'garden', name: 'Wheelbarrow', desc: 'Micah rides. Nobody pushes.', cost: 9, x: 196, y: 126, w: 80, svg: wheelbarrow },
@@ -402,11 +453,54 @@ const house = (time: YardTime, snowy = false) => {
       <rect x="134" y="206" width="92" height="4" rx="2" fill="#ffffff"/>` : ''}`;
 };
 
+/** Yoshi's Corner: Grace's house behind her, a beige three-decker with stacked porches, a bay and a lamp post. */
+const graceHouse = (time: YardTime, snowy = false) => {
+  const night = time === 'night';
+  const wall = night ? '#8f8673' : '#dccfb2';
+  const line = night ? '#7d7563' : '#c6b898';
+  const deep = night ? '#6f6858' : '#c2b496';
+  const glass = night ? '#ffd56a' : '#5b7c93';
+  const trim = night ? '#d9d6cf' : '#ffffff';
+  let siding = '';
+  for (let y = 16; y < 96; y += 5) siding += `<path d="M20 ${y} H232" stroke="${line}" stroke-width="1"/>`;
+  const win = (x: number, y: number, w = 16, h = 20) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${glass}" stroke="${trim}" stroke-width="2.4"/><path d="M${x} ${y + h / 2} H${x + w}" stroke="${trim}" stroke-width="1.4"/>`;
+  const rail = (y: number, x0 = 22, x1 = 98) => {
+    let bars = '';
+    for (let x = x0 + 4; x < x1; x += 4) bars += `<path d="M${x} ${y} V${y + 8}"/>`;
+    return `<g stroke="#2a2826" stroke-width="1"><path d="M${x0} ${y} H${x1}" stroke-width="2"/>${bars}</g>`;
+  };
+  const floors = [12, 40, 68];
+  return `<rect x="20" y="10" width="212" height="86" fill="${wall}"/>${siding}
+    <rect x="22" y="12" width="78" height="84" fill="${deep}"/>
+    ${floors.map((y) => `${win(108, y + 4)}${win(134, y + 4)}`).join('')}
+    <path d="M164 10 L176 6 H220 L232 10 V96 H164 Z" fill="${wall}"/>
+    <path d="M164 10 L176 6 V96 H164 Z M220 6 L232 10 V96 H220 Z" fill="${deep}" opacity=".7"/>
+    ${floors.map((y) => `${win(168, y + 4, 6)}${win(181, y + 4, 14)}${win(201, y + 4, 14)}${win(222, y + 4, 6)}`).join('')}
+    ${win(30, 44, 12, 18)}${win(30, 72, 12, 18)}
+    <rect x="52" y="42" width="14" height="22" fill="${glass}" stroke="${trim}" stroke-width="2"/>
+    <rect x="52" y="70" width="15" height="24" fill="#1c1d22" stroke="${trim}" stroke-width="2"/><circle cx="64" cy="83" r="1" fill="#c9a640"/>
+    <rect x="72" y="14" width="14" height="22" fill="${glass}" stroke="${trim}" stroke-width="2"/>
+    ${rail(28)}${rail(56)}${rail(84, 22, 48)}${rail(84, 72, 98)}
+    <g fill="${trim}"><rect x="20" y="36" width="82" height="4"/><rect x="20" y="64" width="82" height="4"/>
+      <rect x="22" y="12" width="3" height="84"/><rect x="56" y="40" width="3" height="24"/><rect x="96" y="12" width="3" height="84"/></g>
+    <rect x="14" y="4" width="224" height="7" fill="${trim}"/><path d="M164 4 L176 0 H222 L238 4 Z" fill="${trim}"/>
+    <path d="M48 96 h22 v-3 h-22 Z M50 93 h18 v-3 h-18 Z" fill="#a0533f"/>
+    <g fill="${night ? '#2c5a3a' : '#3f7d4a'}"><ellipse cx="34" cy="94" rx="14" ry="6"/><ellipse cx="88" cy="94" rx="12" ry="5"/><ellipse cx="190" cy="95" rx="22" ry="5"/></g>
+    ${snowy ? `<g fill="#ffffff"><rect x="12" y="1" width="228" height="5" rx="2.5"/><rect x="18" y="34" width="86" height="3" rx="1.5"/><rect x="18" y="62" width="86" height="3" rx="1.5"/><ellipse cx="34" cy="89" rx="12" ry="3"/><ellipse cx="88" cy="90" rx="10" ry="2.6"/><ellipse cx="190" cy="91" rx="20" ry="3"/></g>` : ''}
+    <g><rect x="258" y="34" width="3.4" height="62" fill="#1c1d22"/><rect x="255" y="92" width="9.4" height="5" rx="1.5" fill="#1c1d22"/>
+      <path d="M254 30 h11 l-2 -10 h-7 Z" fill="${night ? '#fff3c4' : '#eef2f4'}" stroke="#1c1d22" stroke-width="1.4"/><path d="M256 19 h7 l-3.5 -4 Z" fill="#1c1d22"/>
+      ${night ? '<circle cx="259.7" cy="25" r="16" fill="#ffe27a" opacity=".25"/>' : ''}</g>`;
+};
+
 /** Snow that settles on things in winter, in each item's 100x100 box. */
 const SNOW_CAPS: Record<string, string> = {
   doghouse: '<path d="M10 44 L50 10 L90 44 Q86 49 82 44 L50 17 L18 44 Q14 49 10 44 Z" fill="#fff"/>',
   tree: '<ellipse cx="50" cy="11" rx="20" ry="6"/><ellipse cx="28" cy="33" rx="11" ry="5"/><ellipse cx="72" cy="31" rx="11" ry="5"/>',
   hydrant: '<ellipse cx="50" cy="20" rx="17" ry="6"/>',
+  hidey: '<path d="M8 92 L50 26 L92 92 L86 90 L50 34 L14 90 Z"/>',
+  hayrack: '<rect x="14" y="16" width="72" height="6" rx="3"/>',
+  ledges: '<rect x="13" y="16" width="42" height="5" rx="2.5"/><rect x="45" y="40" width="42" height="5" rx="2.5"/><rect x="13" y="64" width="42" height="5" rx="2.5"/>',
   ballpit: '<ellipse cx="38" cy="14" rx="16" ry="4"/><ellipse cx="66" cy="18" rx="12" ry="3.5"/>',
   sprinkler: '<ellipse cx="50" cy="52" rx="10" ry="4"/>',
   shelf: '<rect x="4" y="2" width="92" height="6" rx="3"/>',
@@ -489,6 +583,8 @@ function sceneLights(area: YardArea, lamp: Lamp): string {
     return runOfLights(0, 360, 60, 40, 7, lamp)
       // On Noah's Ark someone gave up halfway: the string droops off the roof and dangles (and comes on last).
       + `<g class="ark-lights">${festoon([[170, 54], [200, 34], [226, 50]], 6, 3, lamp, 0.9, 0, 2.2)}${festoon([[226, 50], [232, 70]], 2, 2, lamp, 0.9, 6, 2.6)}</g>`;
+  if (area === 'yoshi')
+    return runOfLights(14, 238, 9, 32, 5, lamp) + festoon([[22, 28], [98, 28]], 3, 7, lamp, 1, 0, 1) + festoon([[22, 56], [98, 56]], 3, 7, lamp, 1, 3, 1.2);
   if (area === 'garden')
     return runOfLights(0, 360, 50, 36, 6, lamp) + festoon([[232, 92], [236, 54], [258, 30], [280, 54], [284, 92]], 3, 2, lamp, 1, 4, 1.6);
   return runOfLights(0, 360, 14, 30, 6, lamp) + festoon([[156, 22], [180, 18], [204, 22]], 3, 3, lamp, 1, 1, 1.8);
@@ -515,6 +611,7 @@ const fireflies = (n: number) =>
 
 export const GROUND: Record<YardArea, { x0: number; x1: number; y0: number; y1: number }> = {
   back: { x0: 24, x1: 336, y0: 100, y1: 292 },
+  yoshi: { x0: 24, x1: 336, y0: 100, y1: 292 },
   garden: { x0: 24, x1: 336, y0: 104, y1: 292 },
   porch: { x0: 24, x1: 336, y0: 128, y1: 292 },
   lake: { x0: 24, x1: 336, y0: 140, y1: 292 },
@@ -523,6 +620,7 @@ export const GROUND: Record<YardArea, { x0: number; x1: number; y0: number; y1: 
 /** Where Micah and Yoshi start in each part of the yard. */
 export const START: Record<YardArea, { micah: [number, number]; yoshi: [number, number] }> = {
   back: { micah: [228, 196], yoshi: [96, 270] },
+  yoshi: { micah: [230, 250], yoshi: [176, 170] },
   garden: { micah: [180, 250], yoshi: [150, 284] },
   porch: { micah: [180, 190], yoshi: [110, 270] },
   lake: { micah: [200, 230], yoshi: [130, 276] },
@@ -568,6 +666,9 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
       ${time === 'night' ? '<rect x="189" y="34" width="6" height="6" fill="#ffd56a" opacity=".9"/>' : ''}
       ${grass(80, time, snowy)}${fence(snowy)}
       ${trail('M70 170 C100 200 160 186 190 214 S 250 258 300 252 M190 214 C 210 194 236 196 258 212 M70 170 C 76 206 66 228 60 248', snowy)}`;
+  } else if (area === 'yoshi') {
+    back = `${sky(time)}${grass(92, time, snowy)}${graceHouse(time, snowy)}
+      ${trail('M60 190 C100 170 160 200 200 186 S 270 170 300 214', snowy)}`;
   } else if (area === 'garden') {
     back = `${sky(time)}${grass(88, time, snowy)}${hedge(time, snowy)}
       ${trail('M60 160 C110 150 150 220 200 220 S 280 180 330 196 M200 220 C 196 250 210 270 230 290', snowy)}`;

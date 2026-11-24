@@ -20,9 +20,11 @@ describe("Micah's Yard", () => {
     expect(total).toBeLessThan(max * 0.8);
   });
 
-  it('opens the Garden and Front Porch as you clear levels further along the map', () => {
-    const [back, garden, porch] = AREAS;
+  it('opens Yoshi’s Corner, the Garden and the Front Porch as you clear levels further along the map', () => {
+    const [back, yoshi, garden, porch] = AREAS;
     expect(areaOpen(back, {})).toBe(true);
+    expect(areaOpen(yoshi, { 14: 3 })).toBe(false);
+    expect(areaOpen(yoshi, { 15: 1 })).toBe(true);
     expect(areaOpen(garden, { 29: 3 })).toBe(false);
     expect(areaOpen(garden, { 30: 1 })).toBe(true);
     expect(areaOpen(porch, { 30: 3 })).toBe(false);
@@ -38,6 +40,16 @@ describe("Micah's Yard", () => {
     expect(at(17)).toBe('dusk');
     expect(at(19)).toBe('dusk');
     expect(at(20)).toBe('night');
+  });
+
+  it('gives Yoshi her own things in her corner, with Grace’s house behind', () => {
+    const mine = DECOR.filter((d) => d.area === 'yoshi').map((d) => d.id);
+    expect(mine).toEqual(expect.arrayContaining(['hidey', 'hayrack', 'wheel', 'ledges', 'chews', 'blanket']));
+    const corner = yardScene(mine, 'm.png', { area: 'yoshi', time: 'day', ate: [] });
+    expect(corner).toContain('wheel-spin');
+    expect(corner).toContain('data-id="blanket"');
+    expect(corner).not.toContain('yard-ark');
+    for (const t of ['day', 'dusk', 'night'] as const) expect(yardScene(mine, 'm.png', { area: 'yoshi', time: t, ate: [], snowy: true })).toContain('xmas-lights');
   });
 
   it('shows Noah’s Ark over the back fence only', () => {
