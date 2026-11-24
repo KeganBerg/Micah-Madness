@@ -192,7 +192,7 @@ h2, h3, p { margin: 0; }
 .modal-head { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--s4); align-items: center; }
 .modal-avatar { width: 64px; height: 64px; }
 .modal-avatar.sad { transform: rotate(-8deg); filter: grayscale(.35); }
-.eyebrow { font-size: var(--fs-xs); font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.eyebrow { font-size: var(--fs-xs); font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; line-height: 1.3; text-wrap: balance; }
 .modal h2 { font-family: var(--font-display); font-weight: 400; font-size: var(--fs-xl); line-height: 1.1; letter-spacing: .01em; text-wrap: balance; }
 .modal h3 { font-size: var(--fs-xs); font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .modal section { display: flex; flex-direction: column; gap: var(--s2); }
@@ -823,8 +823,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .wardrobe button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); border: 3px solid transparent; font: inherit; text-align: center; min-width: 0; }
 .wardrobe button img { width: 72px; height: 72px; }
 .wardrobe button b { font-size: var(--fs-sm); line-height: 1.15; }
-.wardrobe button small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 2px; }
-.wardrobe button small .biscuit-icon { width: 16px; height: 16px; }
+.wardrobe button small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; display: block; line-height: 1.25; text-wrap: balance; }
+/* Lock and biscuit sit inline with the words, so long unlock hints wrap as one centred line of text. */
+.wardrobe button small .biscuit-icon, .wardrobe button small .ui-icon { display: inline-block; width: 14px; height: 14px; margin-right: 2px; vertical-align: -2px; }
+.wardrobe button small .biscuit-icon { width: 16px; height: 16px; vertical-align: -3px; }
 .wardrobe button.wearing { border-color: var(--brand); background: #fff; }
 .wardrobe button.wearing small { color: var(--brand); }
 .wardrobe button.locked img { filter: grayscale(1) brightness(.6); opacity: .55; }
@@ -1215,7 +1217,7 @@ h2.center { margin: 2px 0 6px; }
   width: min(380px, calc(100% - var(--s4))); display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center;
   border-radius: var(--radius); background: var(--sea-deep); color: #fff; box-shadow: 0 8px 24px #0006; animation: tag-card-in .25s ease-out;
 }
-.tag-card.leaving { opacity: 0; transform: translate(-50%, -12px); transition: opacity .2s, transform .2s; }
+.tag-card.leaving { pointer-events: none; opacity: 0; transform: translate(-50%, -12px); transition: opacity .2s, transform .2s; }
 .tag-card-open { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; min-height: 56px; padding: var(--s2) 0 var(--s2) var(--s3); color: inherit; text-align: left; }
 .tag-card-icons { display: flex; }
 .tag-card-icons .tag-icon { width: 32px; height: 32px; }
@@ -1300,3 +1302,7 @@ html.full-app, html.full-app body { overflow: hidden; }
 @keyframes junk-wobble { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
 .tile.gulp .piece { animation: none; transition: transform .36s cubic-bezier(.5, 0, .9, .4), opacity .36s; transform: translateY(70%) scale(.2) rotate(40deg); opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .ark-chip .ark-icon, .tile.junk .piece { animation: none; } }
+
+/* Polish: no lonely last word on short lines of copy. */
+.modal .body, .modal p, .goal-list span, .bubble, .sticker figcaption span, .sticker small { text-wrap: pretty; }
+.brand span { line-height: 1.05; }
