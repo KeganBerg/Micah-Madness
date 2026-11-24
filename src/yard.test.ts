@@ -42,7 +42,7 @@ describe("Micah's Yard", () => {
     expect(at(20)).toBe('night');
   });
 
-  it('gives Yoshi her own things in her corner, with the shed behind', () => {
+  it('gives Yoshi her own things in her corner, with Grace’s house behind', () => {
     const mine = DECOR.filter((d) => d.area === 'yoshi').map((d) => d.id);
     expect(mine).toEqual(expect.arrayContaining(['hidey', 'hayrack', 'wheel', 'ledges', 'chews', 'blanket']));
     const corner = yardScene(mine, 'm.png', { area: 'yoshi', time: 'day', ate: [] });
