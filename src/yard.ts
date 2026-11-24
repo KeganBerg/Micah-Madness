@@ -5,6 +5,7 @@ import { KINDS, ORTHO_BED } from './art';
 import { YOSHI } from './yoshi';
 import { noahsArk } from './scenery';
 import { SNACKS } from './snacks';
+import { moundSVG } from './dig';
 
 export type YardArea = 'back' | 'garden' | 'porch';
 export type YardTime = 'day' | 'dusk' | 'night';
@@ -346,6 +347,8 @@ export interface SceneOptions {
   time: YardTime;
   /** Snack ids Micah has eaten, for the shelf. */
   ate: string[];
+  /** Micah's dig mound (Backyard only): where it is and whether it is ready to dig up. */
+  dig?: { x: number; y: number; ready: boolean };
 }
 
 /** One part of the yard, with bought items drawn and the rest shown as empty spots.
@@ -384,6 +387,7 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
   return `<svg viewBox="0 0 360 300" class="yard-scene yard-${area} yard-${time}" role="img" aria-label="Micah's ${label} with ${built} of ${here.length} things built">
     ${back}
     <g class="yard-layer">
+      ${opts.dig && area === 'back' ? `<g class="dig-mound${opts.dig.ready ? ' ready' : ''}" transform="translate(${opts.dig.x} ${opts.dig.y})" role="button" aria-label="${opts.dig.ready ? 'Micah’s dig spot: something is buried here, tap to dig it up' : 'Micah’s dig spot: freshly buried, come back tomorrow'}">${moundSVG(opts.dig.ready)}</g>` : ''}
       ${items}
       <g class="yy" transform="translate(${yx} ${yy})" role="button" aria-label="Yoshi the chinchilla">
         <ellipse cx="0" cy="0" rx="14" ry="4" fill="#000" opacity=".16"/>

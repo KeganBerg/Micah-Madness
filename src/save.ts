@@ -38,6 +38,8 @@ export interface SaveData {
   winter: { season: number; won: number[] };
   /** Noah's Ark: the Ark levels won (1-based numbers). */
   ark: number[];
+  /** The day (YYYY-MM-DD, local) Micah buried the thing in her dig spot ('' before the first one). */
+  dig: string;
   /** Cloud save: the secret code this save syncs under ('' when off). */
   cloud: string;
   /** When this save was last written (ms), to tell which copy is newer. */
@@ -82,6 +84,7 @@ export function freshSave(): SaveData {
     weekly: { won: '', stamps: 0 },
     winter: { season: 0, won: [] },
     ark: [],
+    dig: '',
     cloud: '',
     savedAt: 0,
   };
@@ -159,6 +162,7 @@ export function migrate(raw: unknown): SaveData {
       return { season: num(w.season, 0, 9999) ?? 0, won: [...new Set(won)].sort((a, b) => a - b) };
     })(),
     ark: Array.isArray(d.ark) ? [...new Set(d.ark.map((x) => num(x, 1, 99)).filter((x): x is number => x !== undefined))].sort((a, b) => a - b) : [],
+    dig: typeof d.dig === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.dig) ? d.dig : '',
     cloud: typeof d.cloud === 'string' && /^[A-HJ-NP-Z2-9]{10}$/.test(d.cloud) ? d.cloud : '',
     savedAt: num(d.savedAt) ?? 0,
   };
@@ -361,6 +365,7 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
     weekly: { won: later(local.weekly.won, remote.weekly.won), stamps: Math.max(local.weekly.stamps, remote.weekly.stamps) },
     winter,
     ark: [...new Set([...local.ark, ...remote.ark])].sort((a, b) => a - b),
+    dig: later(local.dig, remote.dig),
     cloud: local.cloud || remote.cloud,
     savedAt: Math.max(local.savedAt, remote.savedAt),
   };

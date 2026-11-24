@@ -826,6 +826,10 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-tab:disabled { opacity: .55; cursor: default; }
 .yard-tab:disabled b::before { content: '\1F512\FE0E  '; font-size: .8em; }
 .yard-ark { cursor: pointer; }
+.dig-mound { cursor: pointer; }
+.dig-mound .dig-sparkle { transform-box: fill-box; transform-origin: 50% 50%; animation: dig-sparkle 1.4s ease-in-out infinite; }
+@keyframes dig-sparkle { 0%, 100% { opacity: .4; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .dig-mound .dig-sparkle { animation: none; } }
 .firefly { animation: firefly 3.2s ease-in-out infinite; }
 @keyframes firefly { 0%, 100% { opacity: .2; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(3px, -5px); } }
 @media (prefers-reduced-motion: reduce) { .firefly { animation: none; } }

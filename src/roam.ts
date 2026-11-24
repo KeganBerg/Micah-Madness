@@ -60,6 +60,8 @@ export interface YardHooks {
   onItem?: (id: string) => void;
   /** Noah's Ark, over the back fence, was tapped. */
   onArk?: () => void;
+  /** Micah reached her dig spot and dug. Returns where she buries the next one if she found something. */
+  onDig?: () => { x: number; y: number } | null;
 }
 
 export interface YardOptions {
@@ -547,6 +549,39 @@ export function startYard(
         setPose('jump');
         await wait(700, t);
         setPose('sit');
+      });
+      return;
+    }
+    const mound = target.closest<SVGGElement>('.dig-mound');
+    if (mound) {
+      command(async (t) => {
+        onTop = null;
+        const m = mound.transform.baseVal.consolidate()?.matrix;
+        const mx = m?.e ?? x;
+        const my = m?.f ?? y;
+        if (!(await moveTo(mx + 26, my + 4, t, 150))) return;
+        face(true);
+        setPose('dig');
+        sfx.whoosh();
+        if (!(await wait(mound.classList.contains('ready') ? 1600 : 700, t))) return;
+        const next = hooks.onDig?.() ?? null;
+        if (!next) {
+          setPose('sniff');
+          say('?');
+          return;
+        }
+        setPose('jump');
+        say('!');
+        sfx.bark();
+        if (!(await wait(1400, t))) return;
+        // Off to bury the next one for tomorrow.
+        if (!(await moveTo(next.x + 26, next.y + 4, t))) return;
+        face(true);
+        setPose('dig');
+        sfx.whoosh();
+        if (!(await wait(1200, t))) return;
+        setPose('sit');
+        say('♥');
       });
       return;
     }
