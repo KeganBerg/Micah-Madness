@@ -545,7 +545,7 @@ function maybeNudgeInstall(): void {
     const m = modal(`
       <header class="modal-head">
         ${micahImg('modal-avatar cheer')}
-        <div><p class="eyebrow">Keep your progress safe</p><h2>Put Micah on your Home Screen</h2></div>
+        <div><p class="eyebrow">Keep your save safe</p><h2>Put Micah on your Home Screen</h2></div>
         <button class="close" aria-label="Close">${UI.close}</button>
       </header>
       <p class="body">Phones sometimes tidy away saved games for websites you haven\u2019t opened in a while. Add Micah to your Home Screen and she stays put, opens like an app and works offline.</p>
@@ -752,7 +752,7 @@ function showDaily(): void {
   const m = modal(`
     <div class="modal-head">
       ${icon('treat', 'modal-avatar')}
-      <div><p class="eyebrow">Come back every day</p><h2>Daily treat</h2></div>
+      <div><p class="eyebrow">Every day</p><h2>Daily treat</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <p class="body">Claim a treat once a day. Come back on consecutive days for bigger rewards. Missing a day starts you back at day 1.</p>
@@ -858,7 +858,8 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
   );
   const onKey = (e: KeyboardEvent) => {
     if (!m.isConnected) return document.removeEventListener('keydown', onKey);
-    if (e.key !== 'Escape' || document.querySelector('.modal-wrap:last-of-type') !== m) return;
+    // The top pop-up is the last .modal-wrap (a collar tag card may sit after it in the page).
+    if (e.key !== 'Escape' || [...document.querySelectorAll('.modal-wrap')].pop() !== m) return;
     const close = m.querySelector<HTMLButtonElement>('.close');
     if (close) close.click();
     else if (onClose) (m.remove(), onClose());
@@ -1139,7 +1140,7 @@ function showSettings(): void {
            <button class="btn secondary" data-act="cloud-off">Turn off on this device</button>`
         : `<p class="body">Save your progress online so it follows you to any phone or computer, and is safe if this one is lost.</p>
            <button class="btn secondary" data-act="cloud-on">Turn on cloud save</button>
-           <input class="code-input" data-act="cloud-code" placeholder="Have a code? ABCDE-FGHJK" aria-label="Cloud code from another device" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="14" />
+           <input class="code-input" data-act="cloud-code" placeholder="Enter a code" aria-label="Cloud code from another device" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="14" />
            <button class="btn secondary" data-act="cloud-load">Load progress from this code</button>`}
       <p class="cloud-msg body" role="status"></p>
     </section>
@@ -1382,7 +1383,7 @@ function showArk(): void {
   const m = modal(`
     <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">Up the lane from level ${ARK_UNLOCK_LEVEL}</p><h2>Noah\u2019s Ark</h2></div>
+      <div><p class="eyebrow">Past level ${ARK_UNLOCK_LEVEL}</p><h2>Noah\u2019s Ark</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <p class="body">The raccoons living in Noah\u2019s Ark are throwing junk out the windows. Get it down to the bottom row and Micah will eat it, because Micah will eat anything. Each level you win pays <b>${ARK_BISCUITS} biscuits</b>.</p>
