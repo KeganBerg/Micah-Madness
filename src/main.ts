@@ -70,6 +70,7 @@ import { shareCard } from './share';
 import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode, whenCloudIsNewer } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { STICKERS, freshStickers, markStickersSeen, stickerEarned, stickerHint, stickersEarned, type Sticker } from './stickers';
+import { startSnow } from './snow';
 import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_GIFT, WINTER_LEVELS, WINTER_UNLOCK, claimWinter, giveWinterGift, isWinterLevel, winterHello, winterNext, winterNumber, winterOpen, winterSnowing, winterWon } from './winter';
 import { ARK_BISCUITS, ARK_COUNT, ARK_LEVELS, ARK_TIPS, ARK_UNLOCK_LEVEL, JUNK_ITEMS, MASK_AT, arkNext, arkNumber, arkOpen, claimArk, isArkLevel } from './ark';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
@@ -233,7 +234,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="round-btn" data-act="settings" aria-label="Settings and how to play">${UI.settings}</button>
       </header>
       <div class="map-stage ${winterSnowing(new Date(), WINTER_PREVIEW) ? 'snowy' : ''}">
-      ${winterSnowing(new Date(), WINTER_PREVIEW) ? '<div class="map-snow" aria-hidden="true"><i></i><i></i></div>' : ''}
+      ${winterSnowing(new Date(), WINTER_PREVIEW) ? '<canvas class="map-snow" aria-hidden="true"></canvas>' : ''}
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
           <div class="scenery" aria-hidden="true"></div>
@@ -351,7 +352,10 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   // While you decide, Micah potters about beside her level: sniffs, scratches, paces a step or two.
   let idleTimer = 0;
   let stopOwl = () => {};
-  mount(screen, () => (clearTimeout(idleTimer), stopOwl(), resizeWatch.disconnect(), chromeWatch.disconnect(), unwire()));
+  const snowEl = screen.querySelector<HTMLCanvasElement>('.map-snow');
+  let stopSnow = () => {};
+  mount(screen, () => (clearTimeout(idleTimer), stopOwl(), stopSnow(), resizeWatch.disconnect(), chromeWatch.disconnect(), unwire()));
+  if (snowEl) stopSnow = startSnow(snowEl, screen.querySelector<HTMLElement>('.map-scroll')!);
   measureChrome();
   paintScenery();
   resizeWatch.observe(mapEl);
