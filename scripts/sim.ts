@@ -123,3 +123,17 @@ export function summarize(lv: Level, n: number, smart = true) {
   };
 }
 
+
+/** Moves the bot needed to finish each run when given plenty (Infinity = never finished). The bot ignores the move
+ * limit, so the win rate at any limit M is the share of runs that needed M or fewer. */
+export function movesNeeded(lv: Level, n: number, smart = true): number[] {
+  const roomy = { ...lv, moves: 150 };
+  return Array.from({ length: n }, () => { const o = play(roomy, smart); return o.won ? roomy.moves - o.movesLeft : Infinity; }).sort((a, b) => a - b);
+}
+
+/** Target bot win rate (%) for a level: a five-level saw (breather first, area finale last) that slowly drops. */
+export function targetWin(id: number): number {
+  const pos = (id - 1) % 5, area = Math.floor((id - 1) / 5);
+  const off = area < 4 ? 0 : area < 8 ? 3 : area < 12 ? 6 : area < 16 ? 8 : 10;
+  return [75, 65, 60, 60, 50][pos] - off;
+}
