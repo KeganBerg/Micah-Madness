@@ -608,6 +608,7 @@ const ITEM_LINES: Record<string, string[]> = {
   mailbox: ['No mail. Bark anyway.'],
   compost: ['Lunch!'],
   pond: ['The frog wins the staring contest.'],
+  snowman: ['Someone ate his carrot nose.'],
 };
 
 function showYard(): void {
@@ -624,6 +625,7 @@ function showYard(): void {
   if (ensureBuried(save)) persist(save);
   const digAt = digSpot(save.dig);
   const digReady = digState(save) === 'ready';
+  const snowy = winterSnowing(new Date(), WINTER_PREVIEW);
   const nextLocked = AREAS.find((a) => !areaOpen(a, save.stars));
   const tabs = AREAS.map((a) => {
     const open = areaOpen(a, save.stars);
@@ -645,7 +647,7 @@ function showYard(): void {
       </header>
       <div class="yard-body">
         <div class="yard-tabs" role="tablist" aria-label="Parts of the yard">${tabs}</div>
-        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady } })}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady }, snowy })}${snowy ? '<canvas class="yard-snow" aria-hidden="true"></canvas>' : ''}</div>
         <p class="yard-hint">${hint}</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
@@ -773,7 +775,13 @@ function showYard(): void {
       if (first && shelf) shelf.innerHTML = museum(ateList());
       if (tags.length) window.setTimeout(() => celebrate(tags), 1200);
     },
-  }, { area: area.id, time });
+  }, { area: area.id, time, snowy });
+  const snowCanvas = screen.querySelector<HTMLCanvasElement>('.yard-snow');
+  if (snowCanvas) {
+    const stopSnow = startSnow(snowCanvas, screen.querySelector<HTMLElement>('.yard-frame')!);
+    const stopYard = stopRoam;
+    stopRoam = () => { stopSnow(); stopYard(); };
+  }
 }
 
 // ───────────────────────────── Wardrobe ─────────────────────────────
