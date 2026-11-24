@@ -794,6 +794,12 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yy-pose.hop { animation: yy-hop .3s ease-in-out infinite; }
 .yy-pose.popcorn { animation: yy-popcorn .9s ease-out; }
 .yy-pose.roll { animation: yy-roll .65s ease-in-out 2; }
+.yy-pose.nap { animation: yy-nap 2.6s ease-in-out infinite; }
+.yy.inside { opacity: 0; transition: opacity .25s; }
+.yard-item .wheel-spin { transform-box: fill-box; transform-origin: 50% 50%; }
+.yard-item.spinning .wheel-spin { animation: wheel-spin .7s linear infinite; }
+@keyframes wheel-spin { to { transform: rotate(-360deg); } }
+@keyframes yy-nap { 0%, 100% { transform: scale(1.1, .74); } 50% { transform: scale(1.13, .7); } }
 .yy-pose.groom { animation: yy-groom .2s linear 7; }
 .yy-pose .yoshi-tail { transform-box: fill-box; transform-origin: 0% 100%; }
 .yy-pose.sit .yoshi-tail { animation: yy-tail 2.4s ease-in-out infinite; }
@@ -806,7 +812,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yy-puff { fill: #e9dcc4; opacity: 0; pointer-events: none; transform-box: fill-box; transform-origin: 50% 50%; animation: yy-puff 1s ease-out forwards; }
 @keyframes yy-puff { 0% { opacity: .9; transform: translate(0, 0) scale(.6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.8); } }
 @media (prefers-reduced-motion: reduce) {
-  .ym-pose, .yy-pose, .yy-pose .yoshi-tail, .yy-puff, .yard-item-art, .ym-emote.show { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+  .ym-pose, .yy-pose, .yy-pose .yoshi-tail, .yy-puff, .yard-item-art, .ym-emote.show, .yard-item.spinning .wheel-spin { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
 
 /* Map: Micah sniffs about beside her level while you decide. */
@@ -819,7 +825,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); }
 .yard-actions img { width: 32px; height: 32px; margin: -6px 0; }
 .yard-hint { margin: 0; color: #ffffffb3; font-size: var(--fs-xs); text-align: center; }
-.yard-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); flex: none; }
+.yard-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); flex: none; }
 .yard-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); border: 0; border-radius: var(--radius); background: #ffffff1a; color: #fff; font: inherit; cursor: pointer; }
 .yard-tab b { font-family: var(--font-display); font-size: var(--fs-sm); line-height: 1.1; }
 .yard-tab span { font-size: var(--fs-xs); opacity: .8; }
