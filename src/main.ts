@@ -182,7 +182,7 @@ const TIPS: Record<number, string> = {
   1015: 'The very last winter level. The Santa Hat is waiting!',
   56: 'Look for five in a row: some goals need a Micah piece.',
   61: 'Fallen leaves! Match on top of them to rake them up. If a move rakes none, the wind blows one more in, so keep at them.',
-  66: 'That\u2019s Noah\u2019s Arc up ahead. Rake the leaves before they bury the porch.',
+  66: 'That\u2019s Noah\u2019s Ark up ahead. Rake the leaves before they bury the porch.',
   76: 'The last street before home. Every trick you know, all at once.',
 };
 const streakZoomies = () => Math.min(3, save.winStreak);
@@ -399,7 +399,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
 }
 
 /**
- * The owl who lives over Noah's Arc garage. Whenever Micah is standing near the house, the owl
+ * The owl who lives over Noah's Ark garage. Whenever Micah is standing near the house, the owl
  * swoops down, circles her a couple of times (passing behind and in front of her) and flies home.
  * Returns a cleanup function.
  */
@@ -1371,7 +1371,7 @@ function showFinale(): void {
     </div>
     <p class="eyebrow center">All ${ZONES.length} adventures done</p>
     <h2 class="center">Micah\u2019s big finish!</h2>
-    <p class="body center">From the backyard, past Noah\u2019s Arc, through bath day, the barbecue and the sprinkler, all the way to one last walk under the moon: you helped Micah fetch every toy, wash every muddy paw, untangle every bit of yarn, rake every leaf and pop every bubble. All 100 levels. She\u2019s in her pyjamas and off for the comfiest nap of all.</p>
+    <p class="body center">From the backyard, past Noah\u2019s Ark, through bath day, the barbecue and the sprinkler, all the way to one last walk under the moon: you helped Micah fetch every toy, wash every muddy paw, untangle every bit of yarn, rake every leaf and pop every bubble. All 100 levels. She\u2019s in her pyjamas and off for the comfiest nap of all.</p>
     <dl class="stat-rows">
       <dt>Levels cleared</dt><dd>${LEVELS.length} of ${LEVELS.length}</dd>
       <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${stars} of ${LEVELS.length * 3}</dd>

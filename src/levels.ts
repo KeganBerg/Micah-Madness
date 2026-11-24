@@ -47,7 +47,7 @@ export const ZONES: Zone[] = [
   { name: 'Pumpkin Patch', blurb: 'Crunchy leaves and pumpkins bigger than Micah.', sky: '#ffe6c2', ground: '#d9884a' },
   { name: 'Starry Sleepover', blurb: 'A big night under the stars, then the comfiest nap.', sky: '#c7c3f0', ground: '#5b5a9e' },
   { name: 'Neighbourhood Walk', blurb: 'Leaves on every lawn, and they spread if you leave them.', sky: '#ffe3c4', ground: '#8fae5e' },
-  { name: 'Noah\u2019s Arc Lane', blurb: 'The falling-down house is still standing. The raccoons say hi.', sky: '#d9d2c4', ground: '#7d8f5a' },
+  { name: 'Noah\u2019s Ark Lane', blurb: 'The falling-down house is still standing. The raccoons say hi.', sky: '#d9d2c4', ground: '#7d8f5a' },
   { name: 'The Long Way Home', blurb: 'Every hydrant, every mailbox, every single sniff.', sky: '#f7c9a0', ground: '#a7834e' },
   { name: 'Front Porch', blurb: 'Almost home. One last pile of leaves, then dinner.', sky: '#f2b48a', ground: '#9c6b45' },
   { name: 'Bath Day', blurb: 'Suds everywhere. Pop the bubbles with a match right beside them.', sky: '#c8ecf5', ground: '#8fc9c4' },
@@ -244,7 +244,7 @@ export const LEVELS: Level[] = [
   L(64, 40, 6, [F, M], [4000, 6500, 8500], MUD_DRIVE, undefined, LEAF_EDGES),
   L(65, 26, 6, [F, P('zoomies', 3)], [4000, 6500, 8500], undefined, undefined, LEAF_PILE),
 
-  // Noah's Arc Lane: leaves, yarn and the deep puddles out front.
+  // Noah's Ark Lane: leaves, yarn and the deep puddles out front.
   L(66, 37, 6, [F, Y], [4000, 6500, 8500], undefined, YARN_ARC, LEAF_TWO),
   L(67, 40, 6, [F, C(BALL, 22), C(PAW, 22)], [4000, 6500, 8000], undefined, undefined, LEAF_EDGES),
   L(68, 45, 6, [F, M], [5000, 8000, 10000], DEEP_GUTTER, undefined, LEAF_PILE),
