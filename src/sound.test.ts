@@ -273,4 +273,57 @@ describe('sound', () => {
     await tap();
     expect(contexts.length).toBe(0);
   });
+
+  describe('recorded music', () => {
+    function withRecordings(ok: boolean) {
+      const urls: string[] = [];
+      vi.stubGlobal('fetch', (u: string) => {
+        urls.push(u);
+        return Promise.resolve({ ok, status: ok ? 200 : 404, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
+      });
+      (FakeContext.prototype as unknown as Record<string, unknown>).decodeAudioData = (_b: ArrayBuffer, res: (x: unknown) => void) =>
+        res({ duration: 60 });
+      return urls;
+    }
+    afterEach(() => {
+      delete (FakeContext.prototype as unknown as Record<string, unknown>).decodeAudioData;
+    });
+
+    it('plays the real track for the map and each zone, looping, instead of the synth', async () => {
+      const urls = withRecordings(true);
+      const s = await boot();
+      s.setMusic(true);
+      s.playMusic('map');
+      await tap();
+      await flush();
+      await flush();
+      expect(urls).toEqual([s.trackFor('map')]);
+      expect(contexts[0].started.src ?? 0).toBeGreaterThanOrEqual(1);
+      const osc = sounds();
+      contexts[0].currentTime += 2;
+      vi.advanceTimersByTime(200);
+      expect(sounds()).toBe(osc); // no synth notes
+      s.playMusic('level', 2);
+      vi.advanceTimersByTime(900);
+      await flush();
+      await flush();
+      expect(urls[1]).toBe(s.trackFor('level', 2));
+      expect(s.trackFor('level', 6)).toBe(s.trackFor('level', 2));
+      expect(new Set([0, 1, 2, 3].map((z) => s.trackFor('level', z))).size).toBe(4);
+    });
+
+    it('falls back to the synth tunes when a track will not load', async () => {
+      withRecordings(false);
+      const s = await boot();
+      s.setMusic(true);
+      s.playMusic('map');
+      await tap();
+      await flush();
+      await flush();
+      const before = sounds();
+      contexts[0].currentTime += 2;
+      vi.advanceTimersByTime(200);
+      expect(sounds()).toBeGreaterThan(before);
+    });
+  });
 });

@@ -1125,6 +1125,10 @@ function showSettings(): void {
       <p class="code-msg body" role="status"></p>
     </section>
     <section>
+      <h3>Music by</h3>
+      <p class="body setting-hint">MintoDog (map, Fetch, Birthday Zoomies), haruta (Puddle Hop) and KiluaBoy (Rainy Day Sniffs), shared free on OpenGameArt.org. Thank you!</p>
+    </section>
+    <section>
       <h3>Start over</h3>
       <button class="btn secondary danger" data-act="reset">Erase all progress</button>
     </section>`, () => showMap());
