@@ -603,11 +603,11 @@ function currentYardTime(): YardTime {
 }
 
 const ITEM_LINES: Record<string, string[]> = {
-  gnome: ['The gnome keeps his eyes on Micah. He remembers the hat.'],
-  pumpkin: ['Micah takes another tiny bite. Just checking it is still pumpkin.'],
-  mailbox: ['Nothing in the mailbox. Micah barks at it anyway, to be safe.'],
-  compost: ['Banana peel, eggshells, old toast. Micah calls it lunch.'],
-  pond: ['The frog does not blink. Micah blinks first.'],
+  gnome: ['He remembers the hat.'],
+  pumpkin: ['Just one more bite.'],
+  mailbox: ['No mail. Bark anyway.'],
+  compost: ['Lunch!'],
+  pond: ['The frog wins the staring contest.'],
 };
 
 function showYard(): void {
@@ -633,13 +633,9 @@ function showYard(): void {
       <b>${a.name}</b><span>${open ? `${b}/${n.length}` : `Level ${a.opensAt}`}</span></button>`;
   }).join('');
   const hint =
-    area.id === 'back'
-      ? `Tap anything Micah owns and she\u2019ll go play with it. Tap the grass to call her over. Noah\u2019s Ark is right over the back fence: tap it. ${digReady ? '<b>Micah buried something!</b> Tap the dirt mound and she\u2019ll dig it up. ' : 'Micah buries something every day: come back tomorrow and dig it up. '}`
-        + '<b>Watch the sky:</b> if something falls, tap it before Micah eats it. She will eat anything.'
-      : area.id === 'garden'
-        ? 'The Garden. Micah thinks every bit of it is food. Tap things to send her over, and keep watching the sky.'
-        : 'The Front Porch, for watching the street. Tap things to send her over, and keep watching the sky.';
-  const timeNote = time === 'night' ? ' It\u2019s night in the yard, so Micah is sleepy.' : time === 'dusk' ? ' The sun is going down.' : '';
+    area.id === 'back' && digReady
+      ? '<b>Micah buried something!</b> Tap the mound.'
+      : 'Tap anything to play. Catch falling things before Micah eats them.';
   const screen = h(`
     <div class="screen yard-screen">
       <header class="topbar">
@@ -650,7 +646,7 @@ function showYard(): void {
       <div class="yard-body">
         <div class="yard-tabs" role="tablist" aria-label="Parts of the yard">${tabs}</div>
         <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady } })}</div>
-        <p class="yard-hint">${hint}${timeNote}</p>
+        <p class="yard-hint">${hint}</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
         </div>
@@ -660,12 +656,12 @@ function showYard(): void {
         </div>
         <p class="notice">${
           done
-            ? 'Micah\u2019s yard is finished. Every star you earn from now on is a bragging right.'
+            ? 'All built! Nice work.'
             : builtHere === here.length && nextLocked
-              ? `This part is finished. The ${nextLocked.name} opens when you clear level ${nextLocked.opensAt}.`
+              ? `All built here. ${nextLocked.name} opens at level ${nextLocked.opensAt}.`
               : left
-                ? 'Spend the stars you earn in levels to build Micah\u2019s yard.'
-                : 'You have no stars to spend yet. Win levels to earn up to three stars each.'
+                ? 'Spend stars from levels to build.'
+                : 'No stars yet. Win levels to earn them.'
         }</p>
         <ul class="shop-list">
           ${here.map((d) => {
@@ -724,7 +720,7 @@ function showYard(): void {
     onDig: () => {
       const prize = claimDig(save);
       if (!prize) {
-        toast('Micah buried something here today. Come back tomorrow and she\u2019ll dig it up.');
+        toast('Come back tomorrow to dig it up.');
         return null;
       }
       const tags = awardBadges(save);
@@ -733,6 +729,8 @@ function showYard(): void {
       haptic.tick();
       toast(prize.kind === 'booster' ? prizeText(prize) : `${icon('biscuit', 'biscuit-icon')} ${prizeText(prize)}`);
       if (tags.length) window.setTimeout(() => celebrate(tags), 1400);
+      const hintEl = screen.querySelector('.yard-hint');
+      if (hintEl) hintEl.textContent = 'Tap anything to play. Catch falling things before Micah eats them.';
       const [nx, ny] = digSpot(save.dig);
       const mound = sceneEl.querySelector<SVGGElement>('.dig-mound');
       if (mound) {
@@ -753,7 +751,7 @@ function showYard(): void {
     onItem: (id) => {
       if (id === 'shelf') {
         const n = ateList().length;
-        toast(n ? `Micah has eaten ${n} of ${SNACKS.length} odd things. Keep watching the sky for the rest.` : 'The shelf is empty. Let something fall and see what Micah does.');
+        toast(n ? `Micah has eaten ${n} of ${SNACKS.length}.` : 'Nothing on the shelf yet.');
       } else if (ITEM_LINES[id]) toast(ITEM_LINES[id][0]);
     },
     onSnack: (snack, saved) => {
@@ -765,7 +763,7 @@ function showYard(): void {
       persist(save);
       haptic.tick();
       if (saved) toast(`${icon('biscuit', 'biscuit-icon')} Saved ${snack.name}! +2 biscuits`);
-      else if (first && save.decor.includes('shelf')) toast(`New on the shelf: ${snack.name}. ${ateList().length} of ${SNACKS.length} things Micah ate.`);
+      else if (first && save.decor.includes('shelf')) toast(`New on the shelf: ${snack.name}!`);
       else {
         const line = GULPS[(save.tally.gulps ?? 1) % GULPS.length].replace('{x}', snack.name);
         toast(line[0].toUpperCase() + line.slice(1));

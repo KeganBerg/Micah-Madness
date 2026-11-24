@@ -9,15 +9,15 @@ export type DigPrize =
 
 /** Odd things Micah buried. Each also comes with a few biscuits she buried next to it. */
 export const FINDS = [
-  'a sock she buried in the spring. Still damp.',
+  'an old sock. Still damp.',
   'the TV remote. Again.',
-  'a tennis ball, very much used.',
-  'one of Yoshi’s hay cubes. Yoshi would like it back.',
-  'a pinecone she was saving for later.',
-  'an acorn a squirrel from Noah’s Ark hid. Finders keepers.',
-  'a rubber duck that has seen things.',
-  'half a corn cob. The other half is a mystery.',
-  'a garden glove. Its partner is still missing.',
+  'a very used tennis ball.',
+  'Yoshi’s hay cube. Oops.',
+  'a pinecone for later.',
+  'a squirrel’s acorn. Finders keepers.',
+  'a rubber duck.',
+  'half a corn cob.',
+  'a lone garden glove.',
   'a biscuit she hid from herself.',
 ];
 
@@ -86,9 +86,9 @@ export function claimDig(s: SaveData, now = new Date()): DigPrize | null {
 }
 
 export function prizeText(p: DigPrize): string {
-  if (p.kind === 'biscuits') return `Micah dug up ${p.n} biscuits!`;
-  if (p.kind === 'booster') return `Micah dug up ${p.name}!`;
-  return `Micah dug up ${p.text} +${p.n} biscuits`;
+  if (p.kind === 'biscuits') return `Dug up ${p.n} biscuits!`;
+  if (p.kind === 'booster') return `Dug up ${p.name}!`;
+  return `Found ${p.text} +${p.n}`;
 }
 
 /** The mound, drawn with its base centred on (0,0). Ready mounds sparkle; fresh ones are smooth. */
