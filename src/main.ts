@@ -60,6 +60,7 @@ import {
 } from './save';
 import { AREAS, DECOR, areaOpen, museum, yardScene, yardTime, type YardArea, type YardTime } from './yard';
 import { SNACKS } from './snacks';
+import { adventReady, adventText, openAdvent } from './advent';
 import { claimDig, digSpot, digState, ensureBuried, moundSVG, prizeText } from './dig';
 import { YOSHI_YARD } from './yoshi';
 import { runLaunch } from './launch';
@@ -132,6 +133,15 @@ const WINTER_PREVIEW = (() => {
     return new URLSearchParams(location.search).has('winter');
   } catch {
     return false;
+  }
+})();
+/** ?advent=N shows that day's present in the Yard; ?winter shows today's. */
+const ADVENT_PREVIEW: number | boolean = (() => {
+  try {
+    const n = Number(new URLSearchParams(location.search).get('advent'));
+    return n >= 1 && n <= 24 ? n : WINTER_PREVIEW;
+  } catch {
+    return WINTER_PREVIEW;
   }
 })();
 // Micah's Winter: the map and the Yard play the holiday track.
@@ -628,6 +638,7 @@ function showYard(): void {
   const digAt = digSpot(save.dig);
   const digReady = digState(save) === 'ready';
   const snowy = winterSnowing(new Date(), WINTER_PREVIEW);
+  const giftDay = adventReady(save, new Date(), ADVENT_PREVIEW);
   const nextLocked = AREAS.find((a) => !areaOpen(a, save.stars));
   const tabs = AREAS.map((a) => {
     const open = areaOpen(a, save.stars);
@@ -637,7 +648,9 @@ function showYard(): void {
       <b>${a.name}</b><span>${open ? `${b}/${n.length}` : `Level ${a.opensAt}`}</span></button>`;
   }).join('');
   const hint =
-    area.id === 'back' && digReady
+    area.id === 'back' && giftDay
+      ? '<b>A present for Micah!</b> Tap it.'
+      : area.id === 'back' && digReady
       ? '<b>Micah buried something!</b> Tap the mound.'
       : 'Tap anything to play. Catch falling things before Micah eats them.';
   const screen = h(`
@@ -649,7 +662,7 @@ function showYard(): void {
       </header>
       <div class="yard-body">
         <div class="yard-tabs" role="tablist" aria-label="Parts of the yard">${tabs}</div>
-        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady }, snowy })}${snowy ? '<canvas class="yard-snow" aria-hidden="true"></canvas>' : ''}</div>
+        <div class="yard-frame">${yardScene(owned, costumeUrl(save.costume), { area: area.id, time, ate, dig: { x: digAt[0], y: digAt[1], ready: digReady }, gift: giftDay, snowy })}${snowy ? '<canvas class="yard-snow" aria-hidden="true"></canvas>' : ''}</div>
         <p class="yard-hint">${hint}</p>
         <div class="yard-actions">
           <button class="btn secondary" data-act="closet">${micahImg('')}Dress up Micah</button>
@@ -747,6 +760,18 @@ function showYard(): void {
         }, 2600);
       }
       return { x: nx, y: ny };
+    },
+    onGift: () => {
+      const got = openAdvent(save, new Date(), ADVENT_PREVIEW);
+      if (!got) return;
+      persist(save);
+      sfx.build();
+      haptic.tick();
+      const { prize } = got;
+      toast(prize.kind === 'booster' ? adventText(prize) : `${icon('biscuit', 'biscuit-icon')} ${adventText(prize)}`);
+      if (prize.kind === 'outfit') window.setTimeout(() => toast('It’s in Micah’s Closet.'), 2600);
+      const hintEl = screen.querySelector('.yard-hint');
+      if (hintEl) hintEl.innerHTML = digState(save) === 'ready' ? '<b>Micah buried something!</b> Tap the mound.' : 'Tap anything to play. Catch falling things before Micah eats them.';
     },
     onArk: () => {
       haptic.tick();

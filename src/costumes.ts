@@ -191,6 +191,15 @@ const knitScarf = `
   <path d="M57.4 72 L52.2 73 M59.4 78 L53.4 79 M61.4 84 L54.4 85" stroke="#fff" stroke-width="2.6"/>
   <path d="M54 89 L54 92 M57 88.7 L57.5 91.7 M60 88.3 L61 91.2 M63 88 L64.2 90.8" stroke="#e8352f" stroke-width="1.6" stroke-linecap="round"/>`;
 
+// The Christmas Eve present in the Yard's advent calendar: a floppy elf hat with a bell.
+const elfHat = `
+  <path d="M28 27 C30 10 48 4 62 6 C74 8 84 16 90 26 C84 22 76 20 70 22 C72 24 73 26 72 27 Z" fill="#2f9e5a" stroke="#1d6b3c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M40 14 Q52 9 64 10" fill="none" stroke="#4fc07a" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>
+  <path d="M25 26 Q50 19 75 26 L75 33 Q50 26 25 33 Z" fill="#e8352f" stroke="#a3201c" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M31 24.6 L29 31.6 M41 22.4 L39 29.4 M51 21.8 L49 28.8 M61 22.6 L59 29.6 M70 24.6 L68 31.6" stroke="#fff" stroke-width="2.6"/>
+  <circle cx="90" cy="28" r="4.4" fill="#ffd23f" stroke="#b58a00" stroke-width="1.5"/>
+  <path d="M87.4 29 H92.6" stroke="#b58a00" stroke-width="1.2"/>`;
+
 export const COSTUMES: Costume[] = [
   { id: 'lobster', name: 'Lobster Suit', desc: 'The classic. Claws and all.', unlock: { free: true } },
   { id: 'cap', name: 'Orange Cap', desc: 'Her everyday look.', unlock: { free: true }, front: cap },
@@ -207,6 +216,7 @@ export const COSTUMES: Costume[] = [
   { id: 'antlers', name: 'Reindeer Antlers', desc: 'With a nose so bright she can find her treats in the dark.', unlock: { winter: 8 }, front: antlers },
   { id: 'santa', name: 'Santa Hat', desc: 'For finishing all of Micah\u2019s Winter. Ho ho woof.', unlock: { winter: 15 }, suit: winterScarf, front: santaHat },
   { id: 'scarf', name: 'Holiday Knits', desc: 'A bobble hat and scarf, knitted in lobster red. A December gift for Micah.', unlock: { gift: 'winter' }, suit: knitScarf, front: bobbleHat },
+  { id: 'elf', name: 'Elf Hat', desc: 'From the last present in the advent calendar.', unlock: { gift: 'advent' }, front: elfHat },
   { id: 'bandit', name: 'Bandit Mask', desc: 'An honorary Noah\u2019s Ark raccoon. She fits right in.', unlock: { ark: 5 }, back: banditTail, front: banditMask },
   { id: 'hardhat', name: 'Hard Hat', desc: 'For surviving every level at Noah\u2019s Ark. Safety first, snacks second.', unlock: { ark: 10 }, front: hardHat },
   { id: 'champion', name: 'Champion', desc: 'For walking all the way home, from the backyard to the front porch. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
@@ -248,7 +258,7 @@ export function unlockText(c: Costume): string {
   if ('free' in c.unlock) return 'Free';
   if ('level' in c.unlock) return `Clear level ${c.unlock.level}`;
   if ('weekly' in c.unlock) return `Win ${c.unlock.weekly} Weekly Walks`;
-  if ('gift' in c.unlock) return 'A December gift';
+  if ('gift' in c.unlock) return c.unlock.gift === 'advent' ? 'Open the 24 December present' : 'A December gift';
   if ('winter' in c.unlock) return c.unlock.winter >= 15 ? 'Finish Micah\u2019s Winter (December)' : `Win ${c.unlock.winter} levels of Micah\u2019s Winter`;
   if ('ark' in c.unlock) return c.unlock.ark >= 10 ? 'Win every Noah\u2019s Ark level' : `Win ${c.unlock.ark} Noah\u2019s Ark levels`;
   return `${c.unlock.biscuits} biscuits`;
