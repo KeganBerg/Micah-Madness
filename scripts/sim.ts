@@ -1,6 +1,7 @@
 // Level-balance bot used by scripts/sim.test.ts. Pure logic, no DOM.
 import { bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
-import { applyClear, applyGravity, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
+import { JUNK_ITEMS } from '../src/ark';
+import { applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -8,6 +9,8 @@ const powerOf = (sp: string): Power | null => (sp === 'bark' ? 'bark' : sp === '
 
 export function play(lv: Level, smart = true): Outcome {
   const grid: Grid = createGrid(8, 8, Math.random, lv.kinds);
+  const junkGoal = lv.goals.findIndex((g) => g.type === 'junk');
+  const junkWant = () => (junkGoal < 0 ? 0 : Math.min(lv.junk ?? 2, Math.max(0, rem[junkGoal])));
   const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => mudDepth(lv, r, c)));
   const yarn = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.yarn?.[r]?.[c] === 'y'));
   const leaf = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.leaves?.[r]?.[c] === 'l'));
@@ -16,8 +19,10 @@ export function play(lv: Level, smart = true): Outcome {
   const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : 0);
   const leavesLeft = () => leaf.flat().filter(Boolean).length;
   let raked = false;
-  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' ? g.count : g.type === 'score' ? g.target : total(g)));
+  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : total(g)));
   const syncLeaves = () => lv.goals.forEach((g, i) => g.type === 'leaves' && (rem[i] = leavesLeft()));
+  if (junkGoal >= 0) placeJunk(grid, junkWant(), JUNK_ITEMS.length);
+  const fall = () => { const drops = applyGravity(grid, Math.random, lv.kinds); throwJunk(grid, drops, junkWant(), JUNK_ITEMS.length); };
   let score = 0;
   const done = () => lv.goals.every((g, i) => (g.type === 'score' ? score >= g.target : rem[i] <= 0));
 
@@ -25,8 +30,17 @@ export function play(lv: Level, smart = true): Outcome {
     let chain = 1;
     for (;;) {
       const res = computeClear(grid, pref, forced);
-      if (res.cleared.size === 0) break;
+      if (res.cleared.size === 0) {
+        // Micah eats any junk that reached the bottom row, and more falls in.
+        const eat = junkAtBottom(grid);
+        if (!eat.length) break;
+        for (const [r, c] of eat) grid[r][c] = null;
+        rem[junkGoal] -= eat.length;
+        fall();
+        continue;
+      }
       score += res.cleared.size * 20 * chain + res.created.length * 100;
+      if (junkGoal >= 0) rem[junkGoal] -= junkIn(grid, res.cleared);
       lv.goals.forEach((g, i) => {
         if (g.type === 'collect') rem[i] -= res.collected[g.kind];
         if (g.type === 'power') rem[i] -= res.created.filter((cr) => powerOf(cr.tile.special) === g.power).length;
@@ -40,7 +54,7 @@ export function play(lv: Level, smart = true): Outcome {
       const popped = popBubbles(bubble, res.cleared).length;
       lv.goals.forEach((g, i) => g.type === 'bubbles' && (rem[i] -= popped));
       syncLeaves();
-      applyClear(grid, res); applyGravity(grid, Math.random, lv.kinds);
+      applyClear(grid, res); fall();
       chain++; pref = []; forced = [];
     }
   };
@@ -61,6 +75,17 @@ export function play(lv: Level, smart = true): Outcome {
       if (lv.goals.some((g, i) => g.type === 'yarn' && rem[i] > 0) && yarn[rr][cc]) v += smart ? 5 : 3;
       if (leaf[rr][cc]) v += smart ? 6 : 3;
     }
+    if (junkGoal >= 0 && rem[junkGoal] > 0) {
+      v += junkIn(g2, res.cleared) * (smart ? 10 : 5);
+      // Junk drops one row for every cell cleared below it; the lower it ends up the better.
+      for (let c = 0; c < 8; c++) {
+        let below = 0;
+        for (let r = 7; r >= 0; r--) {
+          if (isJunk(g2[r][c])) v += below * (smart ? 2 + r * 0.6 : 1);
+          if (res.cleared.has(key(r, c))) below++;
+        }
+      }
+    }
     if (lv.goals.some((g, i) => g.type === 'bubbles' && rem[i] > 0)) v += popBubbles(bubble.map((row) => [...row]), res.cleared).length * (smart ? 5 : 3);
     for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += smart ? 8 : 4; });
     lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
@@ -73,7 +98,9 @@ export function play(lv: Level, smart = true): Outcome {
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) for (const [dr, dc] of [[0, 1], [1, 0]]) {
       const b: Pos = [r + dr, c + dc]; const a: Pos = [r, c];
       if (b[0] > 7 || b[1] > 7 || locked(r, c) || locked(b[0], b[1]) || !isLegalSwap(grid, a, b)) continue;
-      const v = value(a, b);
+      let v = value(a, b);
+      // Swapping junk itself one row down.
+      if (junkGoal >= 0 && dr === 1 && isJunk(grid[r][c])) v += smart ? 4 + r : 2;
       if (v > bestV) { bestV = v; best = [a, b]; }
     }
     if (!best) { shuffle(grid); continue; }
@@ -94,14 +121,14 @@ export function play(lv: Level, smart = true): Outcome {
     for (let i = 0; i < Math.min(moves, 12); i++) {
       const r = Math.floor(Math.random() * 8); const c = Math.floor(Math.random() * 8);
       const t = grid[r][c];
-      if (!t || t.special !== 'none') continue;
+      if (!t || t.special !== 'none' || t.kind < 0) continue;
       t.special = Math.random() < 0.5 ? 'zoomRow' : 'zoomCol';
       forced.push(key(r, c)); moves--;
     }
     score += moves * 100;
     cascade([], forced);
   }
-  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'collect' || g.type === 'power' ? g.count : Math.max(1, total(g)))));
+  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : Math.max(1, total(g)))));
   return { won, movesLeft, score, left };
 }
 
