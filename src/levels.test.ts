@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { LEVELS, ZONES, mudCount, yarnCount } from './levels';
+import { LEVELS, ZONES, boxTotal, mudCount, yarnCount } from './levels';
 
 describe('levels', () => {
   test('ids run 1..N and every zone has exactly five levels', () => {
@@ -23,6 +23,23 @@ describe('levels', () => {
       expect(lv.stars[0]).toBeLessThan(lv.stars[1]);
       expect(lv.stars[1]).toBeLessThan(lv.stars[2]);
     }
+  });
+
+  test('parcels sit on a clean cell of their own, and only where a parcel goal counts them', () => {
+    for (const lv of LEVELS.filter((l) => l.boxes)) {
+      expect(lv.boxes).toHaveLength(8);
+      for (const row of lv.boxes!) expect(row).toMatch(/^[.xX]{8}$/);
+      expect(boxTotal(lv)).toBeGreaterThan(0);
+      expect(lv.goals.some((g) => g.type === 'boxes')).toBe(true);
+      lv.boxes!.forEach((row, r) => [...row].forEach((ch, c) => {
+        if (ch === '.') return;
+        for (const layer of [lv.mud, lv.yarn, lv.leaves, lv.bubbles]) expect(layer?.[r]?.[c] ?? '.', `L${lv.id} ${r},${c}`).toBe('.');
+      }));
+    }
+  });
+
+  test('a junk goal on the map always has raccoons to throw it', () => {
+    for (const lv of LEVELS.filter((l) => l.goals.some((g) => g.type === 'junk'))) expect(lv.junk, `L${lv.id}`).toBeGreaterThan(0);
   });
 
   test('move limits stay in a playable range', () => {

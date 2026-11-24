@@ -27,18 +27,21 @@ import {
   type Special,
   type Tile,
   isJunk,
+  isBox,
+  placeBoxes,
+  hitBoxes,
   junkAtBottom,
   junkIn,
   junkMove,
   placeJunk,
   throwJunk,
 } from './board';
-import { BOOSTER_ICONS, BUBBLE_OVERLAY, KINDS, UI, YARN_OVERLAY, svg } from './art';
+import { BOOSTER_ICONS, BUBBLE_OVERLAY, KINDS, UI, YARN_OVERLAY, parcelSVG, svg } from './art';
 import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { noahsArk, owlSVG, sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
+import { LEVELS, ZONES, boxTotal, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -160,6 +163,7 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'yarn') return svg(BOOSTER_ICONS.yarn, 'goal-icon');
   if (goal.type === 'bubbles') return svg(BOOSTER_ICONS.bubbles, 'goal-icon');
   if (goal.type === 'junk') return svg(JUNK_ITEMS[0].svg, 'goal-icon');
+  if (goal.type === 'boxes') return svg(BOOSTER_ICONS.boxes, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
@@ -176,6 +180,7 @@ function goalText(goal: Goal): string {
   if (goal.type === 'yarn') return 'Untangle every ball of yarn';
   if (goal.type === 'bubbles') return 'Pop every soap bubble';
   if (goal.type === 'junk') return `Let Micah eat ${goal.count} pieces of junk`;
+  if (goal.type === 'boxes') return 'Tear open every parcel';
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
@@ -194,6 +199,10 @@ const TIPS: Record<number, string> = {
   86: 'Bubbles pop from the side too, so one match can pop two or three at once.',
   96: 'The last area. Power-ups pop every bubble they touch.',
   100: 'Level 100! Mud, yarn, leaves and bubbles, all at once. Micah believes in you.',
+  101: 'A brand new trip. Every trick from the first 100 levels comes along.',
+  106: 'Junk! Get it down to the bottom row and Micah eats it.',
+  126: 'Parcels are too heavy to swap. Match right beside one to tear it open.',
+  141: 'Red tape means a parcel takes two tears.',
   21: 'Yarn ties a piece down so you can\u2019t swap it. Make a match through it, or blast it, to untangle it.',
   26: 'Big score goals: chain power-ups together and let the cascades do the work.',
   31: 'Fewer moves from here on. Save your power-ups for the hardest corner.',
@@ -1243,6 +1252,8 @@ const HOW_TO: [string, string][] = [
   ['Yarn', 'A tangled piece can\u2019t be swapped. Match through it to untangle it.'],
   ['Soap bubbles', 'A piece in a bubble is too slippery to swap. A match on it or right beside it pops the bubble.'],
   ['Fallen leaves', 'Match on top of a leaf to rake it. Any move that rakes none blows one more leaf in.'],
+  ['Junk', 'Get it to the bottom row and Micah eats it.'],
+  ['Parcels', 'Too heavy to swap. A match beside one tears it open. Red tape takes two.'],
   ['Stars', 'Spend them in Micah\u2019s Yard. Biscuits buy treats in the shop.'],
 ];
 
@@ -1606,10 +1617,12 @@ const FINALE_BISCUITS = 300;
 
 /** The end of the road (for now): every level done. */
 function showFinale(): void {
-  // Each finish has its own seen key and prize: 'finale' was level 60, 'finale80' the walk home, 'finale100' Moonlight Walk.
-  const firstTime = !save.seen.includes('finale100');
+  // Each finish has its own seen key and prize: 'finale' was level 60, 'finale80' the walk home, 'finale100' Moonlight Walk,
+  // and from then on 'finale<last level>', so every new batch of levels pays out once more.
+  const seenKey = `finale${LEVELS.length}`;
+  const firstTime = !save.seen.includes(seenKey);
   if (firstTime) {
-    save.seen.push('finale100');
+    save.seen.push(seenKey);
     save.biscuits += FINALE_BISCUITS;
     persist(save);
   }
@@ -1627,13 +1640,13 @@ function showFinale(): void {
     </div>
     <p class="eyebrow center">All ${ZONES.length} adventures done</p>
     <h2 class="center">Micah\u2019s big finish!</h2>
-    <p class="body center">From the backyard, past Noah\u2019s Ark, through bath day, the barbecue and the sprinkler, all the way to one last walk under the moon: you helped Micah fetch every toy, wash every muddy paw, untangle every bit of yarn, rake every leaf and pop every bubble. All 100 levels. She\u2019s in her pyjamas and off for the comfiest nap of all.</p>
+    <p class="body center">From the backyard all the way to ${ZONES[ZONES.length - 1].name}: all ${LEVELS.length} levels. Micah is in her pyjamas and off for a very long nap.</p>
     <dl class="stat-rows">
       <dt>Levels cleared</dt><dd>${LEVELS.length} of ${LEVELS.length}</dd>
       <dt>Stars earned</dt><dd><span class="star-pill">${UI.star}</span>${stars} of ${LEVELS.length * 3}</dd>
       ${firstTime ? `<dt>Finish prize</dt><dd>${icon('biscuit', 'biscuit-icon')}${FINALE_BISCUITS}</dd>` : ''}
     </dl>
-    <p class="notice">New outfit unlocked in the Closet: <b>Cozy Pyjamas</b>. More adventures are on their way, and you can replay any level for three stars.</p>
+    <p class="notice">More adventures are on their way. Replay any level for three stars.</p>
     <div class="actions">
       <button class="btn" data-act="map">Back to the map</button>
       <button class="btn secondary" data-act="share">${UI.share}Share Micah\u2019s big finish</button>
@@ -1656,6 +1669,7 @@ function showFinale(): void {
 
 // ───────────────────────────── Game screen ─────────────────────────────
 
+const PARCEL_LINES = ['Micah signed for it.', 'Shredded!', 'Cardboard is her favourite snack.', 'Was it for Micah? It is now.'];
 const CHEERS = ['Good match!', 'Woof!', 'Treat time!', 'Wag wag!', 'Nice!', 'Bork!'];
 const BIG_CHEERS = ['ZOOMIES!', 'Micah Madness!', 'Who\u2019s a good player?', 'Bark-tastic!', 'Pawsome!'];
 
@@ -1673,7 +1687,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let blownSaid = 0;
   snowy = !!level.snow;
   const soap: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.bubbles?.[r]?.[c] === 'b'));
-  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c];
+  // Parcels sit on the board like pieces but are too heavy to swap.
+  placeBoxes(grid, level.boxes);
+  if (level.boxes && !hasMove(grid, (r, c) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]))) shuffle(grid);
+  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]);
   let moves = level.moves;
   let score = 0;
   let busy = false;
@@ -1699,7 +1716,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.target,
+    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.target,
   );
   const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
   // Noah's Ark: the raccoons keep junk on the board until Micah has eaten enough.
@@ -1709,7 +1726,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let junkSaid = 0;
 
   // Pre-level boosters: drop specials onto random cells.
-  const randomCell = (): Pos => [2 + Math.floor(Math.random() * 4), Math.floor(Math.random() * COLS)];
+  const randomCell = (): Pos => {
+    for (;;) {
+      const p: Pos = [2 + Math.floor(Math.random() * 4), Math.floor(Math.random() * COLS)];
+      if ((grid[p[0]][p[1]]?.kind ?? 0) >= 0) return p; // never on junk or a parcel
+    }
+  };
   if (picks.zoomies) {
     for (let i = 0; i < 2; i++) {
       const [r, c] = randomCell();
@@ -1824,14 +1846,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
   // Micah keeps her picture even after a combo spends her power (kind -1 has no regular art).
   const tileInner = (t: Tile) =>
-    isJunk(t) ? svg(JUNK_ITEMS[t.junk ?? 0].svg, 'piece') : t.special === 'micah' || !KINDS[t.kind] ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
+    isJunk(t) ? svg(JUNK_ITEMS[t.junk ?? 0].svg, 'piece') : isBox(t) ? svg(parcelSVG((t.box ?? 1) > 1), 'piece') : t.special === 'micah' || !KINDS[t.kind] ? micahImg('piece') : svg(KINDS[t.kind].svg, 'piece');
 
   function makeTileEl(t: Tile): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = `tile ${specialClass(t.special)} ${isJunk(t) ? 'junk' : ''}`;
+    el.className = `tile ${specialClass(t.special)} ${isJunk(t) ? 'junk' : ''} ${isBox(t) ? 'parcel' : ''}`;
     el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
     el.dataset.special = t.special;
     el.dataset.kind = String(t.kind);
+    el.dataset.box = String(t.box ?? 0);
     boardEl.append(el);
     tileEls.set(t.id, el);
     return el;
@@ -1841,7 +1864,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   }
   function syncTileEl(t: Tile, r: number, c: number) {
     let el = tileEls.get(t.id);
-    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind)) {
+    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind) || el.dataset.box !== String(t.box ?? 0)) {
       el?.remove();
       el = makeTileEl(t);
     }
@@ -1923,7 +1946,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -2063,6 +2086,24 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         if (!(await gulpJunk())) break;
         continue;
       }
+      // Parcels beside the match (or in a blast) lose a layer; torn-open ones go with the match.
+      const torn = hitBoxes(grid, res.cleared);
+      if (torn.broken.length) {
+        level.goals.forEach((g, i) => g.type === 'boxes' && (remaining[i] -= torn.broken.length));
+        bump(save, 'boxes', torn.broken.length);
+        sfx.snip();
+        if (Math.random() < 0.35) say(PARCEL_LINES[Math.floor(Math.random() * PARCEL_LINES.length)], 'big');
+      }
+      for (const [r, c] of torn.dented) {
+        const t = grid[r][c]!;
+        const old = tileEls.get(t.id);
+        old?.remove();
+        tileEls.delete(t.id);
+        const el = makeTileEl(t);
+        placeEl(el, r, c);
+        el.classList.add('torn');
+      }
+      if (torn.dented.length && !torn.broken.length) sfx.snip();
       const points = res.cleared.size * 20 * chain + res.created.length * 100;
       score += points;
       let washed = false;
@@ -2280,6 +2321,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       selectCell(null);
       sfx.bad();
       haptic.bad();
+      if (isBox(grid[a[0]][a[1]]) || isBox(grid[b[0]][b[1]])) {
+        say('Too heavy to move. Match right beside it.', 'sad');
+        return;
+      }
       const soapy = soap[a[0]][a[1]] || soap[b[0]][b[1]];
       const y = (soapy ? bubbleEls[a[0]][a[1]] ?? bubbleEls[b[0]][b[1]] : null) ?? yarnEls[a[0]][a[1]] ?? yarnEls[b[0]][b[1]];
       y?.classList.remove('tug');
@@ -2405,7 +2450,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   /** The wind blows one more leaf onto the board, next to the others. */
   function blowLeaf() {
-    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c]);
+    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c] || isBox(grid[r][c]));
     if (!p) return;
     const el = cellEls[p[0]][p[1]];
     el.classList.add('leafy', 'blown');
@@ -2876,7 +2921,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const SPECIAL_NAMES: Record<Special, string> = { none: '', zoomRow: ' Zoomies, clears its row', zoomCol: ' Zoomies, clears its column', bark: ' Big Bark', micah: '' };
   const describe = ([r, c]: Pos) => {
     const t = grid[r][c];
-    const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
+    const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : isBox(t) ? ((t.box ?? 1) > 1 ? 'taped parcel' : 'parcel') : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
     const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : '', soap[r][c] ? 'in a soap bubble' : ''].filter(Boolean).join(', ');
     return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
   };

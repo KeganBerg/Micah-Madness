@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import {
   applyClear,
   applyGravity,
@@ -12,6 +12,12 @@ import {
   isLegalSwap,
   key,
   newTile,
+  newBox,
+  hitBoxes,
+  placeBoxes,
+  boxCount,
+  isBox,
+  BOX_KIND,
   shuffle,
   transformKind,
   type Grid,
@@ -181,5 +187,36 @@ describe('Magic Dust', () => {
     expect(dustTarget(g, 0, 4, [{ kind: 2, left: 0 }])).toBe(1);
     expect(dustTarget(g, 1, 4)).toBe(3);
     expect(dustTarget(g, 3, 4, [{ kind: 3, left: 4 }])).toBe(1);
+  });
+});
+
+describe('parcels', () => {
+  const board = (): Grid => createGrid(8, 8, Math.random, 6);
+  test('a match beside a parcel tears it open; a taped one only loses its tape', () => {
+    const g = board();
+    g[3][3] = newBox(1);
+    g[3][5] = newBox(2);
+    const cleared = new Set([key(3, 4)]); // a cleared cell between the two parcels
+    const res = hitBoxes(g, cleared);
+    expect(res.broken).toEqual([[3, 3]]);
+    expect(res.dented).toEqual([[3, 5]]);
+    expect(cleared.has(key(3, 3))).toBe(true); // torn open, so it goes with the match
+    expect(cleared.has(key(3, 5))).toBe(false); // still there, one layer left
+    expect(g[3][5]!.box).toBe(1);
+  });
+  test('a blast through a parcel counts once, even with matches beside it too', () => {
+    const g = board();
+    g[2][2] = newBox(2);
+    const res = hitBoxes(g, new Set([key(2, 2), key(2, 1), key(1, 2)]));
+    expect(res.dented).toEqual([[2, 2]]);
+    expect(g[2][2]!.box).toBe(1);
+  });
+  test('parcels never match and are placed from a layout', () => {
+    const g = board();
+    placeBoxes(g, ['xxx.....', 'X.......']);
+    expect(boxCount(g)).toBe(4);
+    expect(findRuns(g).some((run) => run.kind === BOX_KIND)).toBe(false);
+    expect(isBox(g[1][0])).toBe(true);
+    expect(g[1][0]!.box).toBe(2);
   });
 });

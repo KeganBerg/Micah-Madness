@@ -1,7 +1,7 @@
 // Level-balance bot used by scripts/sim.test.ts. Pure logic, no DOM.
-import { bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
+import { boxTotal, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
 import { JUNK_ITEMS } from '../src/ark';
-import { applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
+import { hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -15,8 +15,10 @@ export function play(lv: Level, smart = true): Outcome {
   const yarn = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.yarn?.[r]?.[c] === 'y'));
   const leaf = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.leaves?.[r]?.[c] === 'l'));
   const bubble = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.bubbles?.[r]?.[c] === 'b'));
-  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c];
-  const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : 0);
+  placeBoxes(grid, lv.boxes);
+  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c] || isBox(grid[r][c]);
+  if (lv.boxes && !hasMove(grid, locked)) shuffle(grid);
+  const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : g.type === 'boxes' ? boxTotal(lv) : 0);
   const leavesLeft = () => leaf.flat().filter(Boolean).length;
   let raked = false;
   const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : total(g)));
@@ -39,6 +41,8 @@ export function play(lv: Level, smart = true): Outcome {
         fall();
         continue;
       }
+      const torn = hitBoxes(grid, res.cleared).broken.length;
+      lv.goals.forEach((g, i) => g.type === 'boxes' && (rem[i] -= torn));
       score += res.cleared.size * 20 * chain + res.created.length * 100;
       if (junkGoal >= 0) rem[junkGoal] -= junkIn(grid, res.cleared);
       lv.goals.forEach((g, i) => {
@@ -86,6 +90,12 @@ export function play(lv: Level, smart = true): Outcome {
         }
       }
     }
+    if (lv.goals.some((g, i) => g.type === 'boxes' && rem[i] > 0)) {
+      // A player aims matches right beside parcels (a copy, so the real board isn't torn).
+      const g3 = cloneGrid(g2);
+      const hits = hitBoxes(g3, new Set(res.cleared));
+      v += (hits.broken.length * 6 + hits.dented.length * 4) * (smart ? 1 : 0.6);
+    }
     if (lv.goals.some((g, i) => g.type === 'bubbles' && rem[i] > 0)) v += popBubbles(bubble.map((row) => [...row]), res.cleared).length * (smart ? 5 : 3);
     for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += smart ? 8 : 4; });
     lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
@@ -110,7 +120,7 @@ export function play(lv: Level, smart = true): Outcome {
     moves--;
     raked = false;
     cascade([b, a], forced);
-    if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c]); syncLeaves(); }
+    if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c] || isBox(grid[r][c])); syncLeaves(); }
     let n = 0; while (!hasMove(grid, locked) && n++ < 20) shuffle(grid);
   }
   const won = done();
@@ -158,9 +168,13 @@ export function movesNeeded(lv: Level, n: number, smart = true): number[] {
   return Array.from({ length: n }, () => { const o = play(roomy, smart); return o.won ? roomy.moves - o.movesLeft : Infinity; }).sort((a, b) => a - b);
 }
 
+/** Levels 101 on that bring in something new: kept gentle, like the early intros. */
+const INTROS = [106, 126, 141, 151];
+
 /** Target bot win rate (%) for a level: a five-level saw (breather first, area finale last) that slowly drops. */
 export function targetWin(id: number): number {
   const pos = (id - 1) % 5, area = Math.floor((id - 1) / 5);
-  const off = area < 4 ? 0 : area < 8 ? 3 : area < 12 ? 6 : area < 16 ? 8 : 10;
+  if (INTROS.includes(id)) return 90;
+  const off = area < 4 ? 0 : area < 8 ? 3 : area < 12 ? 6 : area < 16 ? 8 : area < 20 ? 10 : area < 30 ? 12 : area < 40 ? 13 : 14;
   return [75, 65, 60, 60, 50][pos] - off;
 }
