@@ -830,6 +830,11 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-frame { position: relative; }
 .yard-snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .paws { fill: #9fb6ca; pointer-events: none; }
+.bulb { animation: bulb-twinkle 2.4s ease-in-out infinite; }
+.bulb.t1 { animation-delay: .8s; }
+.bulb.t2 { animation-delay: 1.6s; }
+@keyframes bulb-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
 .paw-print { animation: paw-fade 9s ease-in forwards; }
 @keyframes paw-fade { 0%, 60% { opacity: .85; } 100% { opacity: 0; } }
 .dig-mound .dig-sparkle { transform-box: fill-box; transform-origin: 50% 50%; animation: dig-sparkle 1.4s ease-in-out infinite; }
