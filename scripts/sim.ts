@@ -1,7 +1,7 @@
 // Level-balance bot used by scripts/sim.test.ts. Pure logic, no DOM.
-import { boxTotal, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
+import { boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
 import { JUNK_ITEMS } from '../src/ark';
-import { hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
+import { burrsHit, hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -16,13 +16,16 @@ export function play(lv: Level, smart = true): Outcome {
   const leaf = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.leaves?.[r]?.[c] === 'l'));
   const bubble = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.bubbles?.[r]?.[c] === 'b'));
   placeBoxes(grid, lv.boxes);
-  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c] || isBox(grid[r][c]);
-  if (lv.boxes && !hasMove(grid, locked)) shuffle(grid);
-  const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : g.type === 'boxes' ? boxTotal(lv) : 0);
+  const burr = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.burrs?.[r]?.[c] === 'r'));
+  const burrsLeft = () => burr.flat().filter(Boolean).length;
+  let picked = false;
+  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c]);
+  if ((lv.boxes || lv.burrs) && !hasMove(grid, locked)) shuffle(grid);
+  const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : g.type === 'boxes' ? boxTotal(lv) : g.type === 'burrs' ? burrCount(lv) : 0);
   const leavesLeft = () => leaf.flat().filter(Boolean).length;
   let raked = false;
   const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : total(g)));
-  const syncLeaves = () => lv.goals.forEach((g, i) => g.type === 'leaves' && (rem[i] = leavesLeft()));
+  const syncLeaves = () => lv.goals.forEach((g, i) => (g.type === 'leaves' && (rem[i] = leavesLeft())) || (g.type === 'burrs' && (rem[i] = burrsLeft())));
   if (junkGoal >= 0) placeJunk(grid, junkWant(), JUNK_ITEMS.length);
   const fall = () => { const drops = applyGravity(grid, Math.random, lv.kinds); throwJunk(grid, drops, junkWant(), JUNK_ITEMS.length); };
   let score = 0;
@@ -55,6 +58,7 @@ export function play(lv: Level, smart = true): Outcome {
         if (yarn[r][c]) { yarn[r][c] = false; lv.goals.forEach((g, i) => g.type === 'yarn' && rem[i]--); }
         if (leaf[r][c]) { leaf[r][c] = false; raked = true; }
       }
+      for (const [r, c] of burrsHit(burr, res.cleared)) { burr[r][c] = false; picked = true; }
       const popped = popBubbles(bubble, res.cleared).length;
       lv.goals.forEach((g, i) => g.type === 'bubbles' && (rem[i] -= popped));
       syncLeaves();
@@ -96,6 +100,7 @@ export function play(lv: Level, smart = true): Outcome {
       const hits = hitBoxes(g3, new Set(res.cleared));
       v += (hits.broken.length * 6 + hits.dented.length * 4) * (smart ? 1 : 0.6);
     }
+    v += burrsHit(burr, res.cleared).length * (smart ? 7 : 3);
     if (lv.goals.some((g, i) => g.type === 'bubbles' && rem[i] > 0)) v += popBubbles(bubble.map((row) => [...row]), res.cleared).length * (smart ? 5 : 3);
     for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += smart ? 8 : 4; });
     lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
@@ -119,8 +124,10 @@ export function play(lv: Level, smart = true): Outcome {
     swap(grid, a, b);
     moves--;
     raked = false;
+    picked = false;
     cascade([b, a], forced);
-    if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c] || isBox(grid[r][c])); syncLeaves(); }
+    if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c])); syncLeaves(); }
+    if (!picked && burrsLeft() > 0) { spreadLeaf(burr, (r, c) => yarn[r][c] || bubble[r][c] || isBox(grid[r][c])); syncLeaves(); }
     let n = 0; while (!hasMove(grid, locked) && n++ < 20) shuffle(grid);
   }
   const won = done();

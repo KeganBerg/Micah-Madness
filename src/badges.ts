@@ -5,7 +5,7 @@ import { LEVELS } from './levels';
 import { DECOR } from './yard';
 import type { SaveData } from './save';
 
-export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps' | 'yoshi' | 'junk' | 'digs' | 'boxes' | `ate:${string}`;
+export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps' | 'yoshi' | 'junk' | 'digs' | 'boxes' | 'burrs' | `ate:${string}`;
 
 export interface Badge {
   id: string;
@@ -42,6 +42,7 @@ export const BADGES: Badge[] = [
   { id: 'yoshi', name: 'Yoshi\u2019s Bestie', desc: 'Visit Yoshi the chinchilla in Micah\u2019s Yard 10 times.', reward: 30, color: '#a9b3bc', progress: (s) => [t(s, 'yoshi'), 10] },
   { id: 'junk', name: 'Will Eat Anything', desc: 'Let Micah eat 40 pieces of junk.', reward: 40, color: '#6b6f78', progress: (s) => [t(s, 'junk'), 40] },
   { id: 'parcel', name: 'Parcel Shredder', desc: 'Tear open 50 parcels.', reward: 40, color: '#c98f52', progress: (s) => [t(s, 'boxes'), 50] },
+  { id: 'burr', name: 'Burr Picker', desc: 'Pick out 60 burrs.', reward: 40, color: '#9a8a2e', progress: (s) => [t(s, 'burrs'), 60] },
   { id: 'dig', name: 'Treasure Hunter', desc: 'Dig up 10 things Micah buried in her Yard.', reward: 40, color: '#b07a3c', progress: (s) => [t(s, 'digs'), 10] },
   { id: 'yard', name: 'Dream Yard', desc: 'Build everything in Micah’s Yard.', reward: 75, color: '#86a9d6', progress: (s) => [s.decor.length, DECOR.length] },
 ];

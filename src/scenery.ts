@@ -1032,6 +1032,239 @@ const loon = (): Prop => ({
     <circle cx="7" cy="-10" r="3.4" fill="#1b1b1b"/><path d="M10 -10 L14 -9 L10 -8.5 Z" fill="#2b2b2b"/><circle cx="8" cy="-10.6" r=".8" fill="#e8352f"/></g>`,
 });
 
+
+// ── Levels 151-200: sunflowers to fireworks ──
+const sunflower = (s = 1): Prop => ({
+  r: 14 * s, poke: 'rustle', fx: 'petal', sfx: 'rustle',
+  svg: `${shadow(8 * s, 0.12)}<g transform="scale(${s})"><path d="M0 0 V-46" stroke="#4f8a3a" stroke-width="3"/>
+    <path d="M0 -16 Q-10 -20 -12 -28 Q-4 -24 0 -18 M0 -26 Q10 -30 12 -38 Q4 -34 0 -28" fill="#5fa04a"/>
+    <g class="sway"><g transform="translate(0 -52)">${[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((a) => `<ellipse cx="0" cy="-9" rx="3.4" ry="7" fill="#ffc12e" transform="rotate(${a})"/>`).join('')}
+    <circle r="7" fill="#6b4529"/><circle r="4.4" fill="#4f3220"/></g></g></g>`,
+});
+const bee = (): Prop => ({
+  r: 10, poke: 'flyoff', sfx: 'flutter',
+  svg: `${hit(12, -22)}<g class="flutter"><g transform="translate(0 -22)"><ellipse rx="5" ry="3.6" fill="#ffc12e"/><path d="M-1.5 -3.4 V3.4 M1.5 -3.4 V3.4" stroke="#2b2b2b" stroke-width="1.4"/>
+    <g class="flap"><ellipse cx="-1" cy="-5" rx="3" ry="2.2" fill="#fff" opacity=".8"/><ellipse cx="2" cy="-5" rx="3" ry="2.2" fill="#fff" opacity=".8"/></g></g></g>`,
+});
+const scarecrow = (): Prop => ({
+  r: 20, poke: 'wobble', fx: 'dirt', sfx: 'knock',
+  say: ['A scarecrow. Micah is not scared. Mostly.', 'Micah barked at it for ten minutes. It did not move.'],
+  svg: `${shadow(12, 0.15)}<path d="M0 0 V-40 M-18 -30 H18" stroke="#8a5f36" stroke-width="3"/>
+    <path d="M-14 -34 H14 L10 -16 H-10 Z" fill="#e8352f"/><path d="M-6 -34 V-16 M6 -34 V-16" stroke="#a3201c" stroke-width="1.4"/>
+    <circle cx="0" cy="-42" r="7" fill="#e3bf5c"/><path d="M-11 -46 H11 L6 -52 H-6 Z" fill="#6b4529"/><path d="M-10 -46 h20" stroke="#6b4529" stroke-width="2.4"/>
+    <circle cx="-2.5" cy="-42" r="1" fill="#2b2b2b"/><circle cx="2.5" cy="-42" r="1" fill="#2b2b2b"/><path d="M-18 -30 l-3 4 M18 -30 l3 4" stroke="#e3bf5c" stroke-width="2"/>`,
+});
+const burrBush = (): Prop => ({
+  r: 16, poke: 'rustle', fx: 'leaf', sfx: 'rustle',
+  say: ['Burrs! They come home in Micah’s fur every time.', 'Micah walked through it. Now she has a new hairstyle.'],
+  svg: `${shadow(15, 0.12)}<g class="sway"><circle cx="-8" cy="-10" r="9" fill="#7a8a3a"/><circle cx="8" cy="-11" r="9" fill="#7a8a3a"/><circle cx="0" cy="-17" r="10" fill="#8a9a42"/>
+    ${[[-8, -14], [6, -18], [10, -8], [-3, -7], [-1, -22]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#9a8a2e" stroke="#6b5a1e" stroke-width="1.2" stroke-dasharray="1 1"/>`).join('')}</g>`,
+});
+
+const greenhouse = (): Prop => ({
+  r: 40, poke: 'glow', fx: 'drop', sfx: 'splash',
+  say: ['The greenhouse. Warm, misty and smells like dirt. Micah loves it.', 'So many plants to sniff. So little time.'],
+  svg: `${shadow(38, 0.12)}<path d="M-36 0 V-34 Q0 -64 36 -34 V0 Z" fill="#d8f4ff" fill-opacity=".55" stroke="#fff" stroke-width="2.4"/>
+    <path d="M-18 0 V-48 M0 0 V-53 M18 0 V-48 M-36 -17 H36 M-36 -34 Q0 -50 36 -34" stroke="#fff" stroke-width="2" fill="none"/>
+    <circle cx="-26" cy="-8" r="7" fill="#3f9a4a"/><circle cx="22" cy="-10" r="8" fill="#4fb35a"/><circle cx="-4" cy="-12" r="6" fill="#ff8fb1"/>`,
+});
+const monstera = (): Prop => ({
+  r: 20, poke: 'rustle', fx: 'leaf', sfx: 'rustle',
+  svg: `${shadow(12, 0.15)}<path d="M-8 0 L-6 -10 H6 L8 0 Z" fill="#c96a3a"/><g class="sway">
+    <path d="M0 -10 Q-22 -16 -20 -34 Q-6 -36 0 -10 Z M0 -10 Q20 -18 22 -36 Q6 -38 0 -10 Z M0 -10 Q-4 -34 4 -46 Q12 -30 0 -10 Z" fill="#2f8f4a"/>
+    <path d="M-12 -24 l4 -2 M12 -26 l-4 -2 M3 -32 l-3 2" stroke="#1f6a35" stroke-width="2"/></g>`,
+});
+const parrot = (): Prop => ({
+  r: 12, poke: 'flyoff', sfx: 'tweet',
+  say: ['A parrot. It says “good girl” in a voice that isn’t Micah’s person. Suspicious.'],
+  svg: `${hit(13, -10)}<g class="peck"><path d="M-2 -2 L-6 10 L0 4 Z" fill="#2f8fe0"/><ellipse cx="0" cy="-8" rx="6" ry="8" fill="#e8352f"/>
+    <circle cx="2" cy="-16" r="4.6" fill="#e8352f"/><path d="M5.6 -17 Q10 -15 6 -12 Z" fill="#ffc12e"/><circle cx="3" cy="-17" r="1" fill="#fff"/>
+    <path d="M-6 -10 Q-10 -4 -4 0" fill="#ffc12e"/></g>`,
+});
+const wateringCan = (): Prop => ({
+  r: 12, poke: 'hop', fx: 'drop', sfx: 'splash',
+  svg: `${shadow(10, 0.15)}<path d="M-9 0 V-12 H6 V0 Z" fill="#23925a"/><path d="M6 -10 L16 -18" stroke="#23925a" stroke-width="3"/><path d="M-9 -12 Q-2 -22 6 -12" fill="none" stroke="#176a40" stroke-width="2"/>`,
+});
+
+const canyonSides = (w: number, b: Band): string => {
+  // Red rock walls stepping up on both sides, and the river along the left.
+  const step = (x0: number, dir: number) => {
+    let d = `M${x0} ${b.top}`;
+    for (let y = b.top; y < b.bottom; y += 46) d += ` H${x0 + dir * (20 + ((y / 46) % 3) * 8)} V${y + 46}`;
+    return d + ` H${x0} Z`;
+  };
+  return `<path d="${step(0, 1)}" fill="#a8401a"/><path d="${step(w, -1)}" fill="#a8401a"/>
+    <path d="M44 ${b.top} Q30 ${b.top + 120} 52 ${b.top + 240} T44 ${b.bottom}" stroke="#3fa9d8" stroke-width="16" fill="none"/>
+    <g class="foam"><path d="M44 ${b.top} Q30 ${b.top + 120} 52 ${b.top + 240} T44 ${b.bottom}" stroke="#bfe8fa" stroke-width="2" stroke-dasharray="8 16" fill="none"/></g>`;
+};
+const raft = (): Prop => ({
+  r: 18, poke: 'wobble', fx: 'drop', sfx: 'splash',
+  say: ['A raft. Micah is wearing her life jacket. Very proud.'],
+  svg: `${shadow(16, 0.1)}<ellipse cx="0" cy="-6" rx="17" ry="7" fill="#ffc12e" stroke="#c49a1a" stroke-width="2"/><ellipse cx="0" cy="-7" rx="10" ry="3.4" fill="#e0a21a"/>
+    <path d="M-4 -8 L12 -22" stroke="#6b4529" stroke-width="2"/><ellipse cx="13" cy="-23" rx="2.4" ry="4" fill="#6b4529" transform="rotate(40 13 -23)"/>`,
+});
+const eagle = (): Prop => ({
+  r: 14, poke: 'flyoff', sfx: 'tweet',
+  svg: `${hit(14, -30)}<g class="flutter"><g transform="translate(0 -30)"><path d="M-16 -2 Q-8 -8 0 0 Q8 -8 16 -2 Q8 -4 0 3 Q-8 -4 -16 -2 Z" fill="#5a3a1e"/><circle cx="0" cy="-1" r="3" fill="#fff"/><path d="M2 -1 l3 1 l-3 1 Z" fill="#ffc12e"/></g></g>`,
+});
+
+const aurora = (w: number, b: Band): string => {
+  const band = (y: number, c: string, o: number) => `<path d="M0 ${y} Q${w * 0.25} ${y - 40} ${w * 0.5} ${y} T${w} ${y} V${y + 26} Q${w * 0.75} ${y - 10} ${w * 0.5} ${y + 26} T0 ${y + 26} Z" fill="${c}" opacity="${o}"/>`;
+  return `<g class="foam">${band(b.top + 60, '#5fe0a8', 0.35)}${band(b.top + 260, '#7fd0ec', 0.28)}${band(b.top + 420, '#b38df0', 0.22)}</g>`;
+};
+const fox = (): Prop => ({
+  r: 14, poke: 'hop', fx: 'snow', sfx: 'boing',
+  say: ['An arctic fox! Micah wants to be friends. The fox wants to be left alone.', 'The fox pounced into the snow. Micah tried it too.'],
+  svg: `${shadow(11, 0.15)}<path d="M-10 -6 Q-22 -10 -18 -20 Q-12 -14 -8 -10" fill="#fff" stroke="#c4d6e2"/>
+    <ellipse cx="0" cy="-8" rx="10" ry="6" fill="#fff" stroke="#c4d6e2"/><circle cx="9" cy="-14" r="5" fill="#fff" stroke="#c4d6e2"/>
+    <path d="M6 -18 L7 -24 L10 -19 Z M10 -18 L13 -23 L13 -17 Z" fill="#fff" stroke="#c4d6e2"/><circle cx="10" cy="-15" r=".9" fill="#111"/><circle cx="14" cy="-13" r="1" fill="#111"/>`,
+});
+const iceCrystal = (): Prop => ({
+  r: 10, poke: 'spin', fx: 'snow', sfx: 'chime',
+  svg: `${hit(12, -10)}<path d="M0 -20 L5 -10 L0 0 L-5 -10 Z" fill="#cfe6f5" stroke="#fff" stroke-width="1.2"/><path d="M6 -14 L9 -8 L6 -2 L3 -8 Z" fill="#9fd8ec"/>`,
+});
+
+const checker = (w: number, b: Band, a: string, c: string): string => {
+  let s = '';
+  const sz = 36;
+  for (let y = b.top - (b.top % sz); y < b.bottom; y += sz) for (let x = 0; x < w; x += sz) if (((x + y) / sz) % 2 === 0) s += `<rect x="${x}" y="${y}" width="${sz}" height="${sz}" fill="${a}"/>`;
+  return `<g opacity=".55">${s}</g><g fill="${c}"></g>`;
+};
+const oven = (): Prop => ({
+  r: 26, poke: 'glow', fx: 'sparkle', sfx: 'chime',
+  say: ['The oven. Something smells AMAZING.', 'Micah is guarding the oven. Nobody asked her to.'],
+  svg: `${shadow(24, 0.15)}<rect x="-24" y="-44" width="48" height="44" rx="3" fill="#e8e2d6" stroke="#8f8a7a" stroke-width="2"/>
+    <rect x="-18" y="-30" width="36" height="22" rx="3" fill="#3b2a1d"/><rect x="-14" y="-26" width="28" height="14" rx="2" fill="#ff8a1f" class="lamp-glow"/>
+    <ellipse cx="-4" cy="-17" rx="7" ry="3" fill="#c9893f"/><rect x="-18" y="-38" width="36" height="3" rx="1.5" fill="#8f8a7a"/>
+    ${[-14, -6, 2, 10].map((x) => `<circle cx="${x}" cy="-41" r="1.8" fill="#e8352f"/>`).join('')}`,
+});
+const flourSack = (): Prop => ({
+  r: 14, poke: 'bounce', fx: 'snow', sfx: 'boing',
+  say: ['A sack of flour. Micah sat in it. She is now a white dog.'],
+  svg: `${shadow(13, 0.15)}<path d="M-12 0 Q-15 -16 -8 -26 Q0 -30 8 -26 Q15 -16 12 0 Z" fill="#f6efe0" stroke="#c9bfa8" stroke-width="1.6"/>
+    <path d="M-8 -26 Q0 -22 8 -26" stroke="#c9bfa8" stroke-width="2" fill="none"/><text x="0" y="-10" text-anchor="middle" font-size="6" font-weight="900" fill="#c9893f" font-family="sans-serif">FLOUR</text>`,
+});
+const breadBasket = (): Prop => ({
+  r: 16, poke: 'wobble', fx: 'heart', sfx: 'tap',
+  say: ['Fresh bread. Micah would like to “help”.', 'One baguette is mysteriously shorter than the others.'],
+  svg: `${shadow(14, 0.15)}<path d="M-6 -10 L-12 -30 M2 -10 L4 -32 M8 -10 L16 -28" stroke="#d9a066" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-15 -12 H15 L11 0 H-11 Z" fill="#a7784a" stroke="#6b4529" stroke-width="1.4"/><path d="M-13 -6 H13" stroke="#6b4529" stroke-width="1"/>`,
+});
+
+const dinoBones = (): Prop => ({
+  r: 46, poke: 'wobble', fx: 'sparkle', sfx: 'bark',
+  say: ['THE BIGGEST BONE IN THE WORLD. Micah needs it.', 'Micah has been staring at the dinosaur for twenty minutes.', 'Please do not lick the exhibit.'],
+  svg: `${shadow(40, 0.12)}<rect x="-42" y="-4" width="84" height="4" fill="#8f8a7a"/>
+    <path d="M-30 -4 V-20 M-14 -4 V-20 M14 -4 V-22 M28 -4 V-22" stroke="#f6efe0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-34 -24 Q0 -36 32 -26" stroke="#f6efe0" stroke-width="7" fill="none" stroke-linecap="round"/>
+    ${[-24, -14, -4, 6, 16, 26].map((x) => `<path d="M${x} ${-28 - Math.abs(x) * -0.05} q-2 8 0 10" stroke="#f6efe0" stroke-width="2.6" fill="none"/>`).join('')}
+    <path d="M32 -26 Q44 -40 40 -58" stroke="#f6efe0" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M34 -60 L52 -62 L50 -54 L38 -52 Z" fill="#f6efe0"/><circle cx="42" cy="-58" r="1.6" fill="#3b2a1d"/>
+    <path d="M-34 -24 Q-48 -22 -54 -10" stroke="#f6efe0" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+});
+const pillar = (): Prop => ({
+  r: 14, poke: 'wobble', sfx: 'knock',
+  svg: `${shadow(12, 0.15)}<rect x="-12" y="-4" width="24" height="4" fill="#bdb4a4"/><rect x="-9" y="-50" width="18" height="46" fill="#ece6da"/>
+    <path d="M-5 -50 V-4 M0 -50 V-4 M5 -50 V-4" stroke="#cfc6b8" stroke-width="1.2"/><rect x="-12" y="-54" width="24" height="4" fill="#bdb4a4"/>`,
+});
+const velvetRope = (): Prop => ({
+  r: 20, poke: 'wobble', sfx: 'knock',
+  svg: `${shadow(18, 0.1)}<path d="M-18 0 V-18 M18 0 V-18" stroke="#c49a1a" stroke-width="3"/><circle cx="-18" cy="-19" r="2.6" fill="#ffc12e"/><circle cx="18" cy="-19" r="2.6" fill="#ffc12e"/>
+    <path d="M-18 -16 Q0 -4 18 -16" stroke="#a3201c" stroke-width="3" fill="none"/>`,
+});
+const fossil = (): Prop => ({
+  r: 12, poke: 'spin', fx: 'sparkle', sfx: 'tap',
+  svg: `${shadow(10, 0.12)}<ellipse cx="0" cy="-8" rx="11" ry="8" fill="#bdb4a4"/><path d="M0 -8 m-5 0 a5 5 0 1 0 5 -5 a3 3 0 1 0 -3 3" stroke="#8f8a7a" stroke-width="1.6" fill="none"/>`,
+});
+
+const digger = (): Prop => ({
+  r: 30, poke: 'hop', fx: 'dirt', sfx: 'knock',
+  say: ['A digger. Finally, someone who digs as much as Micah.', 'Micah would like to drive. Micah may not drive.'],
+  svg: `${shadow(28, 0.18)}<rect x="-26" y="-10" width="34" height="8" rx="4" fill="#2b2b2b"/>${[-20, -11, -2, 6].map((x) => `<circle cx="${x}" cy="-6" r="2.4" fill="#6b6b6b"/>`).join('')}
+    <rect x="-24" y="-28" width="28" height="18" rx="2" fill="#ffc12e" stroke="#c49a1a" stroke-width="1.4"/><rect x="-20" y="-40" width="14" height="13" fill="#cfe6f5" stroke="#c49a1a" stroke-width="2"/>
+    <path d="M4 -24 L20 -40 L30 -22" stroke="#ffc12e" stroke-width="5" fill="none" stroke-linejoin="round"/><path d="M26 -24 L36 -22 L32 -12 L24 -14 Z" fill="#6b6b6b"/>`,
+});
+const dirtPile = (): Prop => ({
+  r: 20, poke: 'bounce', fx: 'dirt', sfx: 'dig',
+  say: ['A whole mountain of dirt. Micah’s dream.'],
+  svg: `<path d="M-22 0 Q-10 -26 0 -24 Q12 -26 22 0 Z" fill="#8a6239"/><circle cx="-6" cy="-14" r="2" fill="#6b4529"/><circle cx="6" cy="-8" r="2.4" fill="#a77b52"/>`,
+});
+const girders = (): Prop => ({
+  r: 22, poke: 'wobble', sfx: 'knock',
+  svg: `${shadow(20, 0.15)}${[0, 6, 12].map((y, i) => `<rect x="${-20 + i * 2}" y="${-6 - y}" width="40" height="5" fill="#e8352f" stroke="#a3201c" stroke-width="1"/>`).join('')}
+    <path d="M-16 -18 V-4 M16 -18 V-4" stroke="#a3201c" stroke-width="1"/>`,
+});
+const hardHat = (): Prop => ({
+  r: 10, poke: 'spin', sfx: 'knock',
+  say: ['A hard hat. Micah already has one, from Noah’s Ark.'],
+  svg: `${shadow(9, 0.15)}<path d="M-10 -2 Q-10 -16 0 -16 Q10 -16 10 -2 Z" fill="#ffc12e" stroke="#c49a1a" stroke-width="1.4"/><rect x="-13" y="-3" width="26" height="3" rx="1.5" fill="#e0a21a"/><path d="M0 -16 V-4" stroke="#e0a21a" stroke-width="2"/>`,
+});
+const barrier = (): Prop => ({
+  r: 18, poke: 'wobble', sfx: 'knock',
+  svg: `${shadow(16, 0.12)}<path d="M-14 0 V-14 M14 0 V-14" stroke="#5d6f7c" stroke-width="2.4"/><rect x="-18" y="-20" width="36" height="7" fill="#fff"/>
+    <path d="M-14 -20 l-4 7 M-6 -20 l-4 7 M2 -20 l-4 7 M10 -20 l-4 7 M18 -20 l-4 7" stroke="#e8352f" stroke-width="3.4"/>`,
+});
+
+const rails = (w: number, b: Band): string => {
+  const x = w - 34;
+  let ties = '';
+  for (let y = b.top; y < b.bottom; y += 14) ties += `<rect x="${x - 14}" y="${y}" width="28" height="5" fill="#7a5233"/>`;
+  return `<rect x="${x - 22}" y="${b.top}" width="44" height="${b.bottom - b.top}" fill="#a5a09a"/>${ties}<path d="M${x - 8} ${b.top} V${b.bottom} M${x + 8} ${b.top} V${b.bottom}" stroke="#5d6f7c" stroke-width="3"/>`;
+};
+const train = (): Prop => ({
+  r: 34, poke: 'hop', fx: 'sparkle', sfx: 'chime',
+  say: ['Choo choo! Micah has the window seat.', 'All aboard! Micah boarded first, as usual.'],
+  svg: `${shadow(32, 0.18)}<rect x="-32" y="-30" width="40" height="24" rx="3" fill="#e8352f" stroke="#a3201c" stroke-width="1.6"/>
+    <rect x="8" y="-22" width="22" height="16" rx="2" fill="#173a52"/><rect x="18" y="-34" width="7" height="12" fill="#173a52"/>
+    <g class="flicker"><circle cx="21" cy="-40" r="4" fill="#d6dde2" opacity=".8"/><circle cx="26" cy="-46" r="3" fill="#d6dde2" opacity=".6"/></g>
+    <rect x="-28" y="-26" width="9" height="8" fill="#ffe7a3"/><rect x="-16" y="-26" width="9" height="8" fill="#ffe7a3"/><rect x="-4" y="-26" width="9" height="8" fill="#ffe7a3"/>
+    ${[-24, -8, 8, 22].map((x) => `<circle cx="${x}" cy="-5" r="5" fill="#2b2b2b"/><circle cx="${x}" cy="-5" r="2" fill="#ffc12e"/>`).join('')}`,
+});
+const stationClock = (): Prop => ({
+  r: 14, poke: 'spin', sfx: 'chime',
+  svg: `${shadow(6, 0.15)}<rect x="-1.6" y="-40" width="3.2" height="40" fill="#2d3e4a"/><circle cx="0" cy="-44" r="10" fill="#fff" stroke="#2d3e4a" stroke-width="2.4"/>
+    <path d="M0 -44 V-51 M0 -44 L5 -41" stroke="#2d3e4a" stroke-width="1.6" stroke-linecap="round"/>`,
+});
+const suitcase = (c: string): Prop => ({
+  r: 12, poke: 'hop', sfx: 'knock',
+  svg: `${shadow(10, 0.15)}<rect x="-10" y="-16" width="20" height="16" rx="2" fill="${c}" stroke="#0003" stroke-width="1.4"/><path d="M-4 -16 V-20 H4 V-16" stroke="#2d3e4a" stroke-width="2" fill="none"/>
+    <path d="M-10 -9 H10" stroke="#fff" stroke-width="1.4" opacity=".6"/><circle cx="5" cy="-5" r="2" fill="#e8352f"/>`,
+});
+
+const kite = (c: string, d: string): Prop => ({
+  r: 14, poke: 'flyoff', sfx: 'whoosh',
+  say: ['A kite! Micah chases the string. Every. Single. Time.'],
+  svg: `${hit(14, -40)}<path d="M0 0 Q8 -20 2 -32" stroke="#fff" stroke-width="1" fill="none" opacity=".8"/>
+    <g class="flutter"><g transform="translate(2 -42)"><path d="M0 -12 L9 0 L0 14 L-9 0 Z" fill="${c}"/><path d="M0 -12 V14 M-9 0 H9" stroke="${d}" stroke-width="1.2"/>
+    <path d="M0 14 q-4 5 0 8 q4 3 0 7" stroke="${d}" stroke-width="1.2" fill="none"/></g></g>`,
+});
+const turbine = (): Prop => ({
+  r: 20, poke: 'glow', sfx: 'whoosh',
+  svg: `${shadow(6, 0.12)}<path d="M-2 0 L-1 -54 H1 L2 0 Z" fill="#fff" stroke="#c9d2d8"/>
+    <g transform="translate(0 -56)"><g class="spin-slow">${[0, 120, 240].map((a) => `<path d="M0 0 L-2 -24 Q0 -27 2 -24 Z" fill="#fff" stroke="#c9d2d8" transform="rotate(${a})"/>`).join('')}</g><circle r="2.4" fill="#c9d2d8"/></g>`,
+});
+
+const burst = (c: string): Prop => {
+  let rays = '';
+  for (let i = 0; i < 12; i++) { const a = i * 30 * Math.PI / 180; rays += `<path d="M${f(Math.cos(a) * 5)} ${f(Math.sin(a) * 5)} L${f(Math.cos(a) * 16)} ${f(Math.sin(a) * 16)}" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>`; }
+  return { r: 18, poke: 'glow', fx: 'confetti', sfx: 'pop', svg: `${hit(18, -40)}<g transform="translate(0 -40)"><g class="twinkle">${rays}<circle r="3" fill="#fff"/></g></g>` };
+};
+const sparkler = (): Prop => ({
+  r: 10, poke: 'glow', fx: 'sparkle', sfx: 'pop',
+  svg: `<path d="M0 0 V-18" stroke="#8f9aa0" stroke-width="1.6"/><g class="flicker"><circle cx="0" cy="-20" r="5" fill="#ffe28a" opacity=".6"/><path d="M0 -20 l-6 -4 M0 -20 l6 -5 M0 -20 l-2 -7 M0 -20 l5 3 M0 -20 l-5 3" stroke="#fff3a0" stroke-width="1.2"/></g>`,
+});
+const blanket = (a: string, b: string): Prop => ({
+  r: 22, poke: 'wobble', fx: 'heart', sfx: 'tap',
+  say: ['Micah’s spot for the fireworks. She is very brave. Mostly.'],
+  svg: `<path d="M-22 -4 L-14 -14 H18 L24 -4 Z" fill="${a}"/><path d="M-18 -9 H21 M-6 -14 L-8 -4 M6 -14 L7 -4" stroke="${b}" stroke-width="2"/>`,
+});
+const mixingBowl = (): Prop => ({
+  r: 13, poke: 'wobble', fx: 'snow', sfx: 'tap',
+  say: ['Cake batter. Micah licked the spoon. And the bowl. And the floor.'],
+  svg: `${shadow(12, 0.15)}<path d="M-13 -12 H13 Q12 0 0 0 Q-12 0 -13 -12 Z" fill="#7fc7e8" stroke="#3f8fb8" stroke-width="1.4"/>
+    <ellipse cx="0" cy="-12" rx="13" ry="3.5" fill="#f3dca8" stroke="#3f8fb8" stroke-width="1.2"/><path d="M4 -13 L12 -26" stroke="#c9893f" stroke-width="2.4" stroke-linecap="round"/>`,
+});
+
 /** Mown show-ring stripes for the Big Dog Show. */
 const mownStripes = (w: number, b: Band): string => {
   let s = '';
@@ -1386,6 +1619,100 @@ export const THEMES: Theme[] = [
       [() => log(), 2], [() => fern('#5e9a45'), 2], [() => firefly(), 3], [() => loon(), 1],
     ],
   },
+  // 31 · Sunflower Fields: tall sunflowers, bees, a scarecrow and burr bushes everywhere.
+  {
+    ground: '#a7b84a', dark: '#9aab40', light: '#b4c456', path: '#e9d9a6', edge: '#b8a060', dots: '#ffc12e',
+    texture: mix(tuft('#7f9a3a'), dot('#ffc12e', 1.4), tuft('#8aa540')),
+    props: () => [
+      [() => sunflower(1.1), 6], [() => sunflower(0.8), 5], [() => bee(), 4], [() => scarecrow(), 1], [() => burrBush(), 4],
+      [() => hay(), 2], [() => fence(), 1], [() => bird('#2b2b2b'), 1],
+    ],
+  },
+  // 32 · The Greenhouse: deep green, glass houses, giant leaves, a parrot and misty air.
+  {
+    ground: '#3f8a5a', dark: '#367d4f', light: '#4a9765', path: '#c9a66b', edge: '#8a6a3a', dots: '#bfeaf7',
+    texture: mix(tuft('#2f6a45'), dot('#bfeaf7', 1.2), dot('#5fb37a', 1.8)),
+    props: (r) => [
+      [() => greenhouse(), 2], [() => monstera(), 5], [() => fern('#5fb37a'), 4], [() => parrot(), 2], [() => wateringCan(), 2],
+      [() => flowers(r, ['#ff8fb1', '#ffc12e', '#fff']), 3], [() => butterfly('#5fc7f0'), 3],
+    ],
+  },
+  // 33 · Canyon River: stepped red rock walls, a river, rafts and an eagle overhead.
+  {
+    ground: '#b5653a', dark: '#a85a32', light: '#c27242', path: '#f0c89a', edge: '#8a4a2a', dots: '#e0a06a',
+    texture: mix(dot('#8a4a2a', 1.6), dot('#e0a06a', 1.2)),
+    extras: (w, b) => ({ back: canyonSides(w, b), keepRightOf: 66, keepLeftOf: w - 44 }),
+    props: () => [
+      [() => raft(), 2], [() => eagle(), 2], [() => rock('#c8572a'), 5], [() => cactus(0.6), 3], [() => pine('#3f7f4a', '#2f6a3c', false, 0.9), 3],
+      [() => tumbleweed(), 2], [() => signpost('RAPIDS'), 1],
+    ],
+  },
+  // 34 · Northern Lights: night snow under green and violet skies, an arctic fox and ice.
+  {
+    ground: '#5f7d99', dark: '#55718c', light: '#6a89a5', path: '#dcebf5', edge: '#9fb6ca', dots: '#ffffff',
+    texture: mix(dot('#ffffff', 1.1), dot('#9fd8ec', 1.4)),
+    sparse: true,
+    extras: (w, b) => ({ back: aurora(w, b) }),
+    props: () => [
+      [() => pine('#2f4d5a', '#243d48', true, 1.1), 6], [() => fox(), 2], [() => iceCrystal(), 4], [() => drift(), 4], [() => icePond(), 1],
+      [() => sled(), 1], [() => moon(), 1],
+    ],
+  },
+  // 35 · The Bakery: a checkered kitchen floor, ovens, flour sacks and bread baskets.
+  {
+    ground: '#e8d6c0', dark: '#e0ccb4', light: '#f0e0cc', path: '#fff4e6', edge: '#c9b28a', dots: '#ffffff',
+    texture: dot('#ffffff', 1.4), sparse: true,
+    extras: (w, b) => ({ back: checker(w, b, '#d9c2a6', '#fff') }),
+    props: (r) => [
+      [() => oven(), 2], [() => flourSack(), 3], [() => breadBasket(), 3], [() => cake(), 1], [() => cupcake(pick(r, ['#f6b8c8', '#fff', '#b38df0'])), 4],
+      [() => mixingBowl(), 2], [() => dog('#2b2b2b', '#151515', true), 1],
+    ],
+  },
+  // 36 · Dinosaur Museum: marble floor, pillars, velvet ropes, fossils and THE bone.
+  {
+    ground: '#cfc6b8', dark: '#c6bdae', light: '#d8d0c3', path: '#a3201c', edge: '#7a1814', dots: '#ffffff',
+    texture: dot('#bdb4a4', 1.2), sparse: true,
+    extras: (w, b) => ({ back: checker(w, b, '#e2dbcf', '#fff') }),
+    props: () => [
+      [() => dinoBones(), 2], [() => pillar(), 4], [() => velvetRope(), 3], [() => fossil(), 4], [() => bench(), 1], [() => monstera(), 2],
+    ],
+  },
+  // 37 · Construction Site: dirt, a digger, girders, barriers, cones and a hard hat.
+  {
+    ground: '#b08a5a', dark: '#a37f50', light: '#bd9766', path: '#d9c4a0', edge: '#8a6a3a', dots: '#6b4529',
+    texture: mix(dot('#6b4529', 1.8), dot('#d9c4a0', 1.2)),
+    props: () => [
+      [() => digger(), 2], [() => dirtPile(), 4], [() => girders(), 2], [() => barrier(), 3], [() => cone(), 5], [() => hardHat(), 2], [() => puddle(), 2],
+    ],
+  },
+  // 38 · Train Station: grey platform, a train on the tracks, a big clock and luggage.
+  {
+    ground: '#8f97a3', dark: '#868e9a', light: '#9aa2ad', path: '#d9dde2', edge: '#6f7782', dots: '#ffc12e',
+    texture: dot('#7a828d', 1.2), sparse: true,
+    extras: (w, b) => ({ back: rails(w, b), keepLeftOf: w - 64 }),
+    props: (r) => [
+      [() => train(), 2], [() => stationClock(), 2], [() => bench(), 2], [() => suitcase(pick(r, ['#e8352f', '#2f8fe0', '#ffc12e'])), 4], [() => lamp(), 3], [() => bird('#5d6f7c'), 3],
+    ],
+  },
+  // 39 · Kite Hill: bright rolling green, kites everywhere, wind turbines and a picnic.
+  {
+    ground: '#6fbf5a', dark: '#62b04e', light: '#7ccb66', path: '#f2ead0', edge: '#bfae7a', dots: '#ffffff',
+    texture: mix(tuft('#4f9a3f'), tuft('#5aa84a'), dot('#ffffff', 1.1)),
+    props: (r) => [
+      [() => kite('#e8352f', '#a3201c'), 2], [() => kite('#2f8fe0', '#1f5f9e'), 2], [() => kite('#ffc12e', '#c49a1a'), 2], [() => turbine(), 3],
+      [() => picnic(), 1], [() => flowers(r, PETALS), 3], [() => butterfly('#fff'), 2], [() => ball(), 1],
+    ],
+  },
+  // 40 · Fireworks Night: a dark meadow, fireworks overhead, sparklers and picnic blankets.
+  {
+    ground: '#3a2f6a', dark: '#33295e', light: '#433776', path: '#9f93d6', edge: '#6f63a8', dots: '#ffffff',
+    texture: mix(dot('#ffffff', 0.9), tuft('#2f2558')),
+    sparse: true,
+    props: (r) => [
+      [() => burst(pick(r, ['#e8352f', '#ffc12e', '#5fe0a8', '#ff9cc8', '#7fd0ec'])), 8], [() => sparkler(), 4], [() => blanket('#e8352f', '#fff'), 2],
+      [() => blanket('#2f8fe0', '#fff'), 1], [() => lamp(), 2], [() => dog('#2b2b2b', '#151515', true), 1],
+    ],
+  },
 ];
 
 // ───────────────────────────── layout ─────────────────────────────
@@ -1490,6 +1817,10 @@ export function sceneryHTML(s: SceneInput): string {
     if (zi === 24) for (let i = 0; i < 18; i++) svg += `<circle class="rise" style="animation-delay:-${f(r() * 6)}s;animation-duration:${f(5 + r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 140 + r() * (b.bottom - b.top - 150))}" r="${f(1.6 + r() * 2.4)}" fill="none" stroke="#bfeaf7" stroke-width="1.2"/>`;
     if (zi === 26) for (let i = 0; i < 14; i++) svg += `<ellipse class="flake" style="animation-delay:-${f(r() * 8)}s;animation-duration:${f(7 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" rx="2.6" ry="1.6" fill="${pick(r, ['#ffc0d6', '#ff9cc8', '#fff'])}"/>`;
     if (zi === 29) for (let i = 0; i < 10; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="2" fill="#ffe14d"/>`;
+    // Levels 151 on: snow under the northern lights, mist in the greenhouse, sparks over the fireworks.
+    if (zi === 33) for (let i = 0; i < 16; i++) svg += `<circle class="flake" style="animation-delay:-${f(r() * 7)}s;animation-duration:${f(7 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + r() * (b.bottom - b.top - 140))}" r="${f(1.2 + r() * 1.4)}" fill="#fff"/>`;
+    if (zi === 31) for (let i = 0; i < 12; i++) svg += `<circle class="rise" style="animation-delay:-${f(r() * 6)}s;animation-duration:${f(7 + r() * 4)}s" cx="${f(r() * w)}" cy="${f(b.top + 140 + r() * (b.bottom - b.top - 150))}" r="${f(3 + r() * 4)}" fill="#e6f7fc" opacity=".35"/>`;
+    if (zi === 39) for (let i = 0; i < 14; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="1.8" fill="${pick(r, ['#ffc12e', '#ff9cc8', '#7fd0ec', '#fff'])}"/>`;
     if (zi === 4 || zi === 7 || zi === 11 || zi === 28) for (let i = 0; i < 8; i++) svg += `<circle class="twinkle" style="animation-delay:-${f(r() * 3)}s" cx="${f(r() * w)}" cy="${f(b.top + 20 + r() * (b.bottom - b.top - 40))}" r="1.6" fill="#fff"/>`;
 
     layers.unshift(`<svg class="zone-layer" data-zone="${zi}" viewBox="0 ${top} ${w} ${b.bottom - top}" style="top:${top}px;height:${b.bottom - top}px" preserveAspectRatio="none">${svg}</svg>`);
@@ -1640,6 +1971,17 @@ export function backdropProps(zone: number): { back: string[]; hurdle: string } 
     [[() => peak(), () => pine('#2f5f4a', '#244d3c', false, 1.1), () => goat(), () => cairn(), () => peak()], () => rock('#9aa5ad')],
     [[() => ferris(), () => bigTop(), () => cottonCandy(), () => balloon('#e8352f'), () => bigTop()], () => hay()],
     [[() => pine('#2f5a46', '#244a39', false, 1.15), () => cabin(), () => dock(), () => canoe(), () => pine('#2f5a46', '#244a39')], () => log()],
+
+    [[() => sunflower(1.1), () => scarecrow(), () => burrBush(), () => sunflower(), () => bee()], () => hay()],
+    [[() => greenhouse(), () => monstera(), () => parrot(), () => fern('#5fb37a'), () => greenhouse()], () => wateringCan()],
+    [[() => cactus(0.8), () => eagle(), () => rock('#c8572a'), () => raft(), () => pine('#3f7f4a', '#2f6a3c')], () => rock('#c8572a')],
+    [[() => pine('#2f4d5a', '#243d48', true, 1.1), () => fox(), () => iceCrystal(), () => sled(), () => pine('#2f4d5a', '#243d48', true)], () => drift()],
+    [[() => oven(), () => flourSack(), () => cake(), () => breadBasket(), () => oven()], () => mixingBowl()],
+    [[() => pillar(), () => dinoBones(), () => velvetRope(), () => fossil(), () => pillar()], () => fossil()],
+    [[() => digger(), () => girders(), () => dirtPile(), () => barrier(), () => digger()], () => cone()],
+    [[() => stationClock(), () => lamp(), () => suitcase('#e8352f'), () => bench(), () => suitcase('#2f8fe0')], () => suitcase('#ffc12e')],
+    [[() => turbine(), () => kite('#e8352f', '#a3201c'), () => picnic(), () => kite('#2f8fe0', '#1f5f9e'), () => turbine()], () => ball()],
+    [[() => burst('#e8352f'), () => lamp(), () => burst('#ffc12e'), () => blanket('#e8352f', '#fff'), () => burst('#5fe0a8')], () => sparkler()],
   ];
   const [back, hurdle] = sets[zone % sets.length];
   return { back: back.map((p) => p().svg), hurdle: hurdle().svg };

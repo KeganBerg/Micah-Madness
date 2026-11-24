@@ -14,6 +14,7 @@ import {
   newTile,
   newBox,
   hitBoxes,
+  burrsHit,
   placeBoxes,
   boxCount,
   isBox,
@@ -218,5 +219,14 @@ describe('parcels', () => {
     expect(findRuns(g).some((run) => run.kind === BOX_KIND)).toBe(false);
     expect(isBox(g[1][0])).toBe(true);
     expect(g[1][0]!.box).toBe(2);
+  });
+});
+
+describe('burrs', () => {
+  test('a match on or beside a burr picks it; one further away does not', () => {
+    const burr = Array.from({ length: 8 }, () => Array(8).fill(false));
+    burr[2][2] = burr[2][4] = burr[6][6] = true;
+    const hit = burrsHit(burr, new Set([key(2, 3), key(2, 2)]));
+    expect(hit.map(([r, c]) => `${r},${c}`).sort()).toEqual(['2,2', '2,4']);
   });
 });

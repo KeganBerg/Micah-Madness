@@ -38,6 +38,16 @@ describe('levels', () => {
     }
   });
 
+  test('burrs sit on a piece nothing else pins down', () => {
+    for (const lv of LEVELS.filter((l) => l.burrs)) {
+      expect(lv.goals.some((g) => g.type === 'burrs')).toBe(true);
+      lv.burrs!.forEach((row, r) => [...row].forEach((ch, c) => {
+        if (ch !== 'r') return;
+        for (const layer of [lv.yarn, lv.bubbles, lv.boxes]) expect(layer?.[r]?.[c] ?? '.', `L${lv.id} ${r},${c}`).toBe('.');
+      }));
+    }
+  });
+
   test('a junk goal on the map always has raccoons to throw it', () => {
     for (const lv of LEVELS.filter((l) => l.goals.some((g) => g.type === 'junk'))) expect(lv.junk, `L${lv.id}`).toBeGreaterThan(0);
   });

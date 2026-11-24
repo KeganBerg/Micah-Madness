@@ -30,18 +30,19 @@ import {
   isBox,
   placeBoxes,
   hitBoxes,
+  burrsHit,
   junkAtBottom,
   junkIn,
   junkMove,
   placeJunk,
   throwJunk,
 } from './board';
-import { BOOSTER_ICONS, BUBBLE_OVERLAY, KINDS, UI, YARN_OVERLAY, parcelSVG, svg } from './art';
+import { BOOSTER_ICONS, BUBBLE_OVERLAY, BURR_OVERLAY, KINDS, UI, YARN_OVERLAY, parcelSVG, svg } from './art';
 import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { noahsArk, owlSVG, sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, boxTotal, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
+import { LEVELS, ZONES, boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -164,6 +165,7 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'bubbles') return svg(BOOSTER_ICONS.bubbles, 'goal-icon');
   if (goal.type === 'junk') return svg(JUNK_ITEMS[0].svg, 'goal-icon');
   if (goal.type === 'boxes') return svg(BOOSTER_ICONS.boxes, 'goal-icon');
+  if (goal.type === 'burrs') return svg(BOOSTER_ICONS.burrs, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
@@ -181,6 +183,7 @@ function goalText(goal: Goal): string {
   if (goal.type === 'bubbles') return 'Pop every soap bubble';
   if (goal.type === 'junk') return `Let Micah eat ${goal.count} pieces of junk`;
   if (goal.type === 'boxes') return 'Tear open every parcel';
+  if (goal.type === 'burrs') return 'Pick out every burr';
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
@@ -203,6 +206,7 @@ const TIPS: Record<number, string> = {
   106: 'Junk! Get it down to the bottom row and Micah eats it.',
   126: 'Parcels are too heavy to swap. Match right beside one to tear it open.',
   141: 'Red tape means a parcel takes two tears.',
+  151: 'Burrs pin a piece. Match next to one to pick it out, or it spreads.',
   21: 'Yarn ties a piece down so you can\u2019t swap it. Make a match through it, or blast it, to untangle it.',
   26: 'Big score goals: chain power-ups together and let the cascades do the work.',
   31: 'Fewer moves from here on. Save your power-ups for the hardest corner.',
@@ -1254,6 +1258,7 @@ const HOW_TO: [string, string][] = [
   ['Fallen leaves', 'Match on top of a leaf to rake it. Any move that rakes none blows one more leaf in.'],
   ['Junk', 'Get it to the bottom row and Micah eats it.'],
   ['Parcels', 'Too heavy to swap. A match beside one tears it open. Red tape takes two.'],
+  ['Burrs', 'A burr pins a piece. Match next to it to pick it out. Pick none and it spreads.'],
   ['Stars', 'Spend them in Micah\u2019s Yard. Biscuits buy treats in the shop.'],
 ];
 
@@ -1684,13 +1689,18 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const leaf: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.leaves?.[r]?.[c] === 'l'));
   const leavesLeft = () => leaf.reduce((n, row) => n + row.filter(Boolean).length, 0);
   let rakedThisMove = false;
+  // Burrs: like yarn they pin a piece down, and like leaves they spread if a move picks none.
+  const burr: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.burrs?.[r]?.[c] === 'r'));
+  const burrsLeft = () => burr.reduce((n, row) => n + row.filter(Boolean).length, 0);
+  let pickedThisMove = false;
+  let burrSaid = 0;
   let blownSaid = 0;
   snowy = !!level.snow;
   const soap: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.bubbles?.[r]?.[c] === 'b'));
   // Parcels sit on the board like pieces but are too heavy to swap.
   placeBoxes(grid, level.boxes);
-  if (level.boxes && !hasMove(grid, (r, c) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]))) shuffle(grid);
-  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]);
+  if ((level.boxes || level.burrs) && !hasMove(grid, (r, c) => yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]))) shuffle(grid);
+  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]);
   let moves = level.moves;
   let score = 0;
   let busy = false;
@@ -1698,7 +1708,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   let treatMode = false;
   let dustMode = false;
   /** The board just before the last swap, for the Orthopedic Bed's undo. */
-  type Snap = { grid: Grid; mud: number[][]; yarn: boolean[][]; leaf: boolean[][]; bubble: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
+  type Snap = { grid: Grid; mud: number[][]; yarn: boolean[][]; leaf: boolean[][]; bubble: boolean[][]; burr: boolean[][]; remaining: number[]; moves: number; score: number; goalsDone: number };
   let undoSnap: Snap | null = null;
   let selected: Pos | null = null;
   let bonusPts = 0;
@@ -1716,8 +1726,9 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.target,
+    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.type === 'burrs' ? burrCount(level) : g.target,
   );
+  const syncBurrs = () => level.goals.forEach((g, i) => g.type === 'burrs' && (remaining[i] = burrsLeft()));
   const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
   // Noah's Ark: the raccoons keep junk on the board until Micah has eaten enough.
   const junkGoal = level.goals.findIndex((g) => g.type === 'junk');
@@ -1829,6 +1840,16 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     return el;
   };
   const yarnEls: (HTMLDivElement | null)[][] = yarn.map((row, r) => row.map((on, c) => (on ? makeYarnEl(r, c) : null)));
+  const makeBurrEl = (r: number, c: number) => {
+    const el = document.createElement('div');
+    el.className = 'burr';
+    el.style.left = `${(c / COLS) * 100}%`;
+    el.style.top = `${(r / ROWS) * 100}%`;
+    el.innerHTML = BURR_OVERLAY;
+    boardEl.append(el);
+    return el;
+  };
+  const burrEls: (HTMLDivElement | null)[][] = burr.map((row, r) => row.map((on, c) => (on ? makeBurrEl(r, c) : null)));
   // Soap bubbles float over the pieces too.
   const makeBubbleEl = (r: number, c: number) => {
     const el = document.createElement('div');
@@ -1946,7 +1967,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : g.type === 'burrs' ? 'burrs left' : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -2109,6 +2130,16 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       let washed = false;
       let untangled = false;
       let raked = false;
+      // Burrs on the match or right beside it get picked out.
+      for (const [r, c] of burrsHit(burr, res.cleared)) {
+        burr[r][c] = false;
+        const el = burrEls[r][c];
+        burrEls[r][c] = null;
+        el?.classList.add('snip');
+        setTimeout(() => el?.remove(), 360);
+        pickedThisMove = untangled = true;
+        bump(save, 'burrs');
+      }
       // Junk caught in a blast flies straight to Micah.
       const caught = junkGoal >= 0 ? junkIn(grid, res.cleared) : 0;
       if (caught) {
@@ -2160,6 +2191,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         level.goals.forEach((g, i) => g.type === 'bubbles' && remaining[i]--);
       }
       syncLeaves();
+      syncBurrs();
       if (raked) sfx.rustle();
       if (popped.length) sfx.bubble();
       sfx.pop(chain);
@@ -2325,6 +2357,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         say('Too heavy to move. Match right beside it.', 'sad');
         return;
       }
+      if (burr[a[0]][a[1]] || burr[b[0]][b[1]]) {
+        say('A burr has it stuck. Match next to it to pick it out.', 'sad');
+        return;
+      }
       const soapy = soap[a[0]][a[1]] || soap[b[0]][b[1]];
       const y = (soapy ? bubbleEls[a[0]][a[1]] ?? bubbleEls[b[0]][b[1]] : null) ?? yarnEls[a[0]][a[1]] ?? yarnEls[b[0]][b[1]];
       y?.classList.remove('tug');
@@ -2344,6 +2380,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         mud: mud.map((row) => [...row]),
         yarn: yarn.map((row) => [...row]),
         leaf: leaf.map((row) => [...row]),
+        burr: burr.map((row) => [...row]),
         bubble: soap.map((row) => [...row]),
         remaining: [...remaining],
         moves,
@@ -2370,8 +2407,10 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       const forced = comboClears(grid, a, b) ?? [];
       if (forced.length) renderAll();
       rakedThisMove = false;
+      pickedThisMove = false;
       await cascade([b, a], forced);
       if (!rakedThisMove && leavesLeft() > 0) blowLeaf();
+      if (!pickedThisMove && burrsLeft() > 0) spreadBurr();
     });
     if (legal) await checkEnd();
     armHint();
@@ -2448,9 +2487,21 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     }
   }
 
+  /** A burr hitches a ride onto the piece next door. */
+  function spreadBurr() {
+    const p = spreadLeaf(burr, (r, c) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]));
+    if (!p) return;
+    burrEls[p[0]][p[1]] = makeBurrEl(p[0], p[1]);
+    burrEls[p[0]][p[1]]!.classList.add('blown');
+    syncBurrs();
+    sfx.whoosh();
+    if (burrSaid++ < 2 || Math.random() < 0.2) say(burrSaid === 1 ? 'The burr stuck to the next piece. Pick one every move.' : 'Another burr!', 'sad');
+    renderHud();
+  }
+
   /** The wind blows one more leaf onto the board, next to the others. */
   function blowLeaf() {
-    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c] || isBox(grid[r][c]));
+    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]));
     if (!p) return;
     const el = cellEls[p[0]][p[1]];
     el.classList.add('leafy', 'blown');
@@ -2484,6 +2535,12 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         else if (!yarn[r][c] && yarnEls[r][c]) {
           yarnEls[r][c]!.remove();
           yarnEls[r][c] = null;
+        }
+        burr[r][c] = snap.burr[r][c];
+        if (burr[r][c] && !burrEls[r][c]?.isConnected) burrEls[r][c] = makeBurrEl(r, c);
+        else if (!burr[r][c] && burrEls[r][c]) {
+          burrEls[r][c]!.remove();
+          burrEls[r][c] = null;
         }
         soap[r][c] = snap.bubble[r][c];
         if (soap[r][c] && !bubbleEls[r][c]?.isConnected) bubbleEls[r][c] = makeBubbleEl(r, c);
@@ -2922,7 +2979,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const describe = ([r, c]: Pos) => {
     const t = grid[r][c];
     const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : isBox(t) ? ((t.box ?? 1) > 1 ? 'taped parcel' : 'parcel') : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
-    const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : '', soap[r][c] ? 'in a soap bubble' : ''].filter(Boolean).join(', ');
+    const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : '', soap[r][c] ? 'in a soap bubble' : '', burr[r][c] ? 'stuck with a burr' : ''].filter(Boolean).join(', ');
     return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
   };
   const announce = (text: string) => {

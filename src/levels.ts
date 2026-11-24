@@ -7,6 +7,7 @@ export type Goal =
   | { type: 'leaves' } // rake every fallen leaf (they spread on any move that rakes none)
   | { type: 'bubbles' } // pop every soap bubble (a match on it or right next to it pops it)
   | { type: 'junk'; count: number } // let Micah eat this much junk (it has to reach the bottom row)
+  | { type: 'burrs' } // pick out every burr (they pin a piece down, and spread to the next piece if a move picks none)
   | { type: 'boxes' } // tear open every parcel (a match right beside it, or a blast, tears off a layer)
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
@@ -28,6 +29,8 @@ export interface Level {
   junk?: number;
   /** 8 rows, 'x' marks a parcel, 'X' a taped parcel that takes two tears. Parcels fall like pieces. */
   boxes?: string[];
+  /** 8 rows, 'r' marks a burr stuck to that piece. */
+  burrs?: string[];
   /** Micah's Winter: mud is drawn as snow drifts to shovel. */
   snow?: boolean;
 }
@@ -71,6 +74,17 @@ export const ZONES: Zone[] = [
   { name: 'Mountain Hike', blurb: 'Rocky trails, wildflowers and snow on the peaks.', sky: '#a8d4f0', ground: '#7f9a6a' },
   { name: 'County Fair', blurb: 'A Ferris wheel, corn dogs and a prize ribbon.', sky: '#ffe8b0', ground: '#d9c27a' },
   { name: 'Lake Cabin', blurb: 'A dock, a canoe and loons calling at dusk.', sky: '#f2b8a8', ground: '#4f7a62' },
+  // Levels 151-200
+  { name: 'Sunflower Fields', blurb: 'Flowers taller than Micah, and burrs in her fur.', sky: '#bfe4ff', ground: '#a7b84a' },
+  { name: 'The Greenhouse', blurb: 'Warm, misty and full of leaves bigger than her head.', sky: '#d8f0e4', ground: '#3f8a5a' },
+  { name: 'Canyon River', blurb: 'Red rock walls and a very cold river.', sky: '#ffcf9a', ground: '#b5653a' },
+  { name: 'Northern Lights', blurb: 'Green skies, crunchy snow and one curious fox.', sky: '#1d2f4f', ground: '#5f7d99' },
+  { name: 'The Bakery', blurb: 'Flour on the floor. Micah will eat anything.', sky: '#ffe9d0', ground: '#e8d6c0' },
+  { name: 'Dinosaur Museum', blurb: 'The biggest bone Micah has ever seen.', sky: '#e8e2d6', ground: '#cfc6b8' },
+  { name: 'Construction Site', blurb: 'Diggers, dirt piles and a hard hat that fits.', sky: '#cfe4f2', ground: '#b08a5a' },
+  { name: 'Train Station', blurb: 'All aboard. Micah has the window seat.', sky: '#c9d8e8', ground: '#8f97a3' },
+  { name: 'Kite Hill', blurb: 'Windy, green and full of kites to chase.', sky: '#a8dcff', ground: '#6fbf5a' },
+  { name: 'Fireworks Night', blurb: 'Big bangs, bright sparks, one brave dog.', sky: '#1a1440', ground: '#3a2f6a' },
 ];
 
 const BONE = 0, BALL = 1, PAW = 2, BOWL = 3, LOBSTER = 4, CAP = 5;
@@ -153,6 +167,12 @@ const TAPE_MIX = ['........', '.X....X.', '........', '...xx...', '...xx...', '.
 const TAPE_ROW = ['........', '........', 'XxXxXxXx', '........', '........', '........', '........', '........'];
 const TAPE_CORNERS = ['XX....XX', 'X......X', '........', '........', '........', '........', 'X......X', 'XX....XX'];
 const TAPE_LOW = ['........', '........', '........', '........', '........', '........', '.XxXXxX.', '........'];
+// Burrs ('r'): pin a piece down like yarn, and stick to the next piece over if a move picks none.
+const BURR_TWO = ['........', '........', '..r.....', '........', '........', '.....r..', '........', '........'];
+const BURR_CORNERS = ['r......r', '........', '........', '........', '........', '........', '........', 'r......r'];
+const BURR_CENTER = ['........', '........', '........', '...rr...', '...rr...', '........', '........', '........'];
+const BURR_ROW = ['........', '........', '........', '........', '........', '........', 'r.r.r.r.', '........'];
+const BURR_SCATTER = ['...r....', '......r.', '.r......', '........', '......r.', '........', '...r....', 'r.......'];
 const TAPE_CENTER = ['........', '........', '...XX...', '..xXXx..', '..xXXx..', '...XX...', '........', '........'];
 
 const L = (
@@ -186,12 +206,14 @@ const F: Goal = { type: 'leaves' };
 const B: Goal = { type: 'bubbles' };
 const _ = undefined;
 const X: Goal = { type: 'boxes' };
+const R: Goal = { type: 'burrs' };
 const J = (count: number): Goal => ({ type: 'junk', count });
-interface Extra { mud?: string[]; yarn?: string[]; leaves?: string[]; bubbles?: string[]; boxes?: string[]; junk?: number }
+interface Extra { mud?: string[]; yarn?: string[]; leaves?: string[]; bubbles?: string[]; boxes?: string[]; burrs?: string[]; junk?: number }
 /** Levels 101 on: the same as L, with the board layouts named. */
 const N = (id: number, moves: number, kinds: number, goals: Goal[], stars: [number, number, number], o: Extra = {}): Level => ({
   ...L(id, moves, kinds, goals, stars, o.mud, o.yarn, o.leaves, o.bubbles),
   ...(o.boxes ? { boxes: o.boxes } : {}),
+  ...(o.burrs ? { burrs: o.burrs } : {}),
   ...(o.junk ? { junk: o.junk } : {}),
 });
 
@@ -401,6 +423,76 @@ export const LEVELS: Level[] = [
   N(148, 35, 5, [J(6), B, Y], [6400, 14300, 18900], { junk: 2, bubbles: BUB_FEW, yarn: YARN_CORNERS }),
   N(149, 42, 6, [S(10000), X], [10000, 11400, 12800], { boxes: TAPE_CORNERS }),
   N(150, 44, 6, [M, Y, B, X], [4600, 10200, 12500], { mud: DEEP_RIVER, yarn: YARN_CORNERS, bubbles: BUB_FEW, boxes: TAPE_LOW }),
+
+  // Sunflower Fields: burrs arrive.
+  N(151, 21, 6, [R, C(BONE, 20)], [2200, 4800, 6200], { burrs: BURR_TWO }),
+  N(152, 22, 6, [R, C(BALL, 26)], [2400, 5300, 6800], { burrs: BURR_CORNERS }),
+  N(153, 30, 6, [R, M], [3000, 6700, 8900], { burrs: BURR_CENTER, mud: MUD_BOTTOM }),
+  N(154, 41, 6, [R, Y], [4100, 9200, 11100], { burrs: BURR_TWO, yarn: YARN_CORNERS }),
+  N(155, 31, 6, [R, F, P('bark', 2)], [3300, 7200, 8300], { burrs: BURR_ROW, leaves: LEAF_TOP }),
+
+  // The Greenhouse
+  N(156, 26, 6, [B, C(PAW, 30)], [2900, 6400, 7700], { bubbles: BUB_DOTS }),
+  N(157, 25, 6, [R, B, C(PAW, 30)], [2900, 6400, 7800], { burrs: BURR_CENTER, bubbles: BUB_CORNERS }),
+  N(158, 26, 6, [M, R], [2700, 6000, 7300], { mud: DEEP_PUDDLES, burrs: BURR_ROW }),
+  N(159, 31, 6, [Y, R, C(LOBSTER, 24)], [2900, 6500, 8700], { yarn: YARN_BAND, burrs: BURR_CORNERS }),
+  N(160, 35, 6, [B, R, F], [3400, 7600, 10100], { bubbles: BUB_SIDES, burrs: BURR_CENTER, leaves: LEAF_GATE }),
+
+  // Canyon River
+  N(161, 30, 6, [M, C(CAP, 26)], [3200, 7100, 8500], { mud: DEEP_RIVER }),
+  N(162, 27, 5, [J(5), R], [4700, 10500, 15300], { junk: 2, burrs: BURR_TWO }),
+  N(163, 25, 6, [X, R, C(BALL, 30)], [3000, 6700, 7900], { boxes: BOX_ROW, burrs: BURR_CORNERS }),
+  N(164, 27, 6, [M, X, C(BOWL, 24)], [2700, 6100, 8600], { mud: MUD_TOP, boxes: TAPE_LOW }),
+  N(165, 32, 5, [R, J(6), Y], [6300, 14000, 18000], { burrs: BURR_CENTER, junk: 2, yarn: YARN_CORNERS }),
+
+  // Northern Lights
+  N(166, 34, 6, [R, S(8000)], [8000, 9200, 10200], { burrs: BURR_TWO }),
+  N(167, 45, 6, [M, R], [4700, 10400, 12400], { mud: DEEP_ALL, burrs: BURR_CENTER }),
+  N(168, 25, 6, [B, X, C(BONE, 32)], [3000, 6600, 8000], { bubbles: BUB_ROW, boxes: TAPE_ROW }),
+  N(169, 31, 6, [R, P('micah', 1)], [2500, 5600, 7800], { burrs: BURR_SCATTER }),
+  N(170, 36, 6, [M, R, B, Y], [3800, 8500, 10600], { mud: DEEP_SIDES, burrs: BURR_ROW, bubbles: BUB_FEW, yarn: YARN_PAIR }),
+
+  // The Bakery: Micah will eat anything.
+  N(171, 30, 5, [J(5), C(BONE, 22)], [5000, 11200, 15400], { junk: 2 }),
+  N(172, 28, 5, [X, J(5)], [4700, 10400, 14400], { boxes: BOX_PAIRS, junk: 2 }),
+  N(173, 25, 6, [R, X, C(LOBSTER, 30)], [2800, 6300, 7600], { burrs: BURR_SCATTER, boxes: BOX_CENTER }),
+  N(174, 30, 5, [B, J(6), R], [5500, 12200, 16100], { bubbles: BUB_CORNERS, junk: 2, burrs: BURR_CENTER }),
+  N(175, 34, 6, [M, X, R, P('bark', 2)], [3800, 8400, 10500], { mud: MUD_BOTTOM, boxes: BOX_TOP, burrs: BURR_CENTER }),
+
+  // Dinosaur Museum
+  N(176, 27, 6, [R, C(BONE, 34)], [3200, 7000, 8700], { burrs: BURR_TWO }),
+  N(177, 32, 6, [Y, X], [3400, 7600, 9200], { yarn: YARN_DIAMOND, boxes: BOX_CENTER }),
+  N(178, 27, 6, [M, R, C(CAP, 24)], [3200, 7100, 8500], { mud: DEEP_PUMPKIN, burrs: BURR_CORNERS }),
+  N(179, 41, 6, [S(11000), R], [11000, 12100, 13100], { burrs: BURR_ROW }),
+  N(180, 42, 6, [M, Y, R, X], [4400, 9700, 12800], { mud: DEEP_RIVER, yarn: YARN_CORNERS, burrs: BURR_TWO, boxes: TAPE_LOW }),
+
+  // Construction Site
+  N(181, 45, 6, [M, C(BALL, 28)], [4100, 9200, 12200], { mud: MUD_FRAME }),
+  N(182, 43, 6, [X, M], [4200, 9300, 11600], { boxes: TAPE_CENTER, mud: MUD_FRAME }),
+  N(183, 34, 5, [J(6), M], [6100, 13600, 18100], { junk: 2, mud: MUD_BOTTOM }),
+  N(184, 27, 6, [R, X, F], [2600, 5700, 7100], { burrs: BURR_CORNERS, boxes: BOX_ROW, leaves: LEAF_TOP }),
+  N(185, 30, 5, [M, X, R, J(6)], [5800, 12900, 17100], { mud: MUD_GUTTER, boxes: BOX_PAIRS, burrs: BURR_CENTER, junk: 2 }),
+
+  // Train Station
+  N(186, 25, 6, [Y, C(CAP, 26)], [2800, 6100, 7500], { yarn: YARN_ROW }),
+  N(187, 28, 6, [R, B, C(CAP, 34)], [3200, 7100, 8700], { burrs: BURR_SCATTER, bubbles: BUB_ROW }),
+  N(188, 35, 6, [X, Y, R], [3600, 8000, 10400], { boxes: TAPE_CORNERS, yarn: YARN_PAIR, burrs: BURR_TWO }),
+  N(189, 31, 5, [J(6), X, B], [5800, 13000, 17800], { junk: 2, boxes: BOX_PAIRS, bubbles: BUB_INSIDE }),
+  N(190, 23, 6, [M, R, X, C(LOBSTER, 26)], [2800, 6300, 7700], { mud: DEEP_PUDDLE, burrs: BURR_CORNERS, boxes: TAPE_LOW }),
+
+  // Kite Hill
+  N(191, 29, 6, [F, C(BOWL, 28)], [3000, 6600, 8300], { leaves: LEAF_TWO }),
+  N(192, 27, 6, [R, F, C(BALL, 30)], [2800, 6200, 7700], { burrs: BURR_CENTER, leaves: LEAF_CORNER }),
+  N(193, 22, 6, [X, P('zoomies', 7)], [2700, 6000, 7300], { boxes: TAPE_MIX }),
+  N(194, 33, 5, [R, Y, J(6)], [6000, 13300, 16700], { burrs: BURR_TWO, yarn: YARN_TENT, junk: 2 }),
+  N(195, 33, 6, [M, R, F, B], [3300, 7200, 9000], { mud: DEEP_BOTTOM, burrs: BURR_CORNERS, leaves: LEAF_TOP, bubbles: BUB_FEW }),
+
+  // Fireworks Night: the end of the second trip.
+  N(196, 37, 6, [S(9000), C(LOBSTER, 26)], [9000, 10500, 11400]),
+  N(197, 21, 6, [R, X, C(PAW, 24)], [2400, 5300, 6600], { burrs: BURR_CENTER, boxes: TAPE_ROW }),
+  N(198, 40, 6, [M, Y, B], [4000, 9000, 10700], { mud: DEEP_MOON, yarn: YARN_STARS, bubbles: BUB_INSIDE }),
+  N(199, 30, 5, [J(6), R, P('micah', 1)], [5800, 13000, 17000], { junk: 2, burrs: BURR_CENTER }),
+  N(200, 23, 6, [M, B, X, R], [2300, 5100, 7300], { mud: MUD_TOP, bubbles: BUB_FEW, boxes: TAPE_LOW, burrs: BURR_CENTER }),
 ];
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
@@ -420,6 +512,10 @@ export function leafCount(level: Level): number {
 
 export function bubbleCount(level: Level): number {
   return (level.bubbles ?? []).join('').split('').filter((ch) => ch === 'b').length;
+}
+
+export function burrCount(level: Level): number {
+  return (level.burrs ?? []).join('').split('').filter((ch) => ch === 'r').length;
 }
 
 /** Parcels on the board at the start (a taped parcel counts once). */
