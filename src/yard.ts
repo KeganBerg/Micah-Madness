@@ -522,44 +522,96 @@ const house = (time: YardTime, snowy = false) => {
       <rect x="134" y="206" width="92" height="4" rx="2" fill="#ffffff"/>` : ''}`;
 };
 
-/** Yoshi's Corner: Grace's house behind her, a beige three-decker with stacked porches, a bay and a lamp post. */
+/**
+ * Yoshi's Corner: Grace's house behind her. A beige three-decker with white trim: stacked porches on the
+ * left (a narrower balcony up top, dark railings, white posts, brick steps with rails, lattice skirt),
+ * a three-sided bay on the right with an air conditioner in one window, a white cornice and the lamp post.
+ */
 const graceHouse = (time: YardTime, snowy = false) => {
   const night = time === 'night';
   const wall = night ? '#8f8673' : '#dccfb2';
-  const line = night ? '#7d7563' : '#c6b898';
-  const deep = night ? '#6f6858' : '#c2b496';
-  const glass = night ? '#ffd56a' : '#5b7c93';
-  const trim = night ? '#d9d6cf' : '#ffffff';
-  let siding = '';
-  for (let y = 16; y < 96; y += 5) siding += `<path d="M20 ${y} H232" stroke="${line}" stroke-width="1"/>`;
-  const win = (x: number, y: number, w = 16, h = 20) =>
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${glass}" stroke="${trim}" stroke-width="2.4"/><path d="M${x} ${y + h / 2} H${x + w}" stroke="${trim}" stroke-width="1.4"/>`;
-  const rail = (y: number, x0 = 22, x1 = 98) => {
-    let bars = '';
-    for (let x = x0 + 4; x < x1; x += 4) bars += `<path d="M${x} ${y} V${y + 8}"/>`;
-    return `<g stroke="#2a2826" stroke-width="1"><path d="M${x0} ${y} H${x1}" stroke-width="2"/>${bars}</g>`;
+  const line = night ? '#7f7766' : '#c9bb9c';
+  const deep = night ? '#6f6858' : '#c4b597';
+  const side = night ? '#7a7262' : '#cbbd9f';
+  const trim = night ? '#dad6cc' : '#ffffff';
+  const iron = '#24221f';
+  // Which windows are lit at night (by floor, left to right), so the house looks lived in.
+  const lit = [
+    [1, 0, 1, 1, 0, 1, 0],
+    [0, 1, 1, 0, 1, 1, 1],
+    [1, 1, 0, 1, 1, 0, 1],
+  ];
+  const glassFor = (f: number, i: number) => (night ? (lit[f][i] ? '#ffd56a' : '#3d4f5d') : i % 2 ? '#6d8ea4' : '#5b7c93');
+  /** A one-over-one sash window with white trim, a sill and a lighter top pane. */
+  const win = (x: number, y: number, w: number, h: number, f: number, i: number) => {
+    const g = glassFor(f, i);
+    return `<rect x="${x - 1.5}" y="${y - 1.5}" width="${w + 3}" height="${h + 3}" fill="${trim}"/>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${g}"/>
+      ${night ? '' : `<path d="M${x + 1} ${y + h * 0.42} L${x + w * 0.6} ${y + 1} H${x + w - 1} L${x + 1} ${y + h * 0.9} Z" fill="#ffffff" opacity=".12"/>`}
+      <rect x="${x - 1}" y="${y + h / 2 - 0.8}" width="${w + 2}" height="1.6" fill="${trim}"/>
+      <rect x="${x - 2.5}" y="${y + h + 1}" width="${w + 5}" height="2" fill="${trim}"/>`;
   };
-  const floors = [12, 40, 68];
-  return `<rect x="20" y="10" width="212" height="86" fill="${wall}"/>${siding}
-    <rect x="22" y="12" width="78" height="84" fill="${deep}"/>
-    ${floors.map((y) => `${win(108, y + 4)}${win(134, y + 4)}`).join('')}
-    <path d="M164 10 L176 6 H220 L232 10 V96 H164 Z" fill="${wall}"/>
-    <path d="M164 10 L176 6 V96 H164 Z M220 6 L232 10 V96 H220 Z" fill="${deep}" opacity=".7"/>
-    ${floors.map((y) => `${win(168, y + 4, 6)}${win(181, y + 4, 14)}${win(201, y + 4, 14)}${win(222, y + 4, 6)}`).join('')}
-    ${win(30, 44, 12, 18)}${win(30, 72, 12, 18)}
-    <rect x="52" y="42" width="14" height="22" fill="${glass}" stroke="${trim}" stroke-width="2"/>
-    <rect x="52" y="70" width="15" height="24" fill="#1c1d22" stroke="${trim}" stroke-width="2"/><circle cx="64" cy="83" r="1" fill="#c9a640"/>
-    <rect x="72" y="14" width="14" height="22" fill="${glass}" stroke="${trim}" stroke-width="2"/>
-    ${rail(28)}${rail(56)}${rail(84, 22, 48)}${rail(84, 72, 98)}
-    <g fill="${trim}"><rect x="20" y="36" width="82" height="4"/><rect x="20" y="64" width="82" height="4"/>
-      <rect x="22" y="12" width="3" height="84"/><rect x="56" y="40" width="3" height="24"/><rect x="96" y="12" width="3" height="84"/></g>
-    <rect x="14" y="4" width="224" height="7" fill="${trim}"/><path d="M164 4 L176 0 H222 L238 4 Z" fill="${trim}"/>
-    <path d="M48 96 h22 v-3 h-22 Z M50 93 h18 v-3 h-18 Z" fill="#a0533f"/>
-    <g fill="${night ? '#2c5a3a' : '#3f7d4a'}"><ellipse cx="34" cy="94" rx="14" ry="6"/><ellipse cx="88" cy="94" rx="12" ry="5"/><ellipse cx="190" cy="95" rx="22" ry="5"/></g>
-    ${snowy ? `<g fill="#ffffff"><rect x="12" y="1" width="228" height="5" rx="2.5"/><rect x="18" y="34" width="86" height="3" rx="1.5"/><rect x="18" y="62" width="86" height="3" rx="1.5"/><ellipse cx="34" cy="89" rx="12" ry="3"/><ellipse cx="88" cy="90" rx="10" ry="2.6"/><ellipse cx="190" cy="91" rx="20" ry="3"/></g>` : ''}
-    <g><rect x="258" y="34" width="3.4" height="62" fill="#1c1d22"/><rect x="255" y="92" width="9.4" height="5" rx="1.5" fill="#1c1d22"/>
-      <path d="M254 30 h11 l-2 -10 h-7 Z" fill="${night ? '#fff3c4' : '#eef2f4'}" stroke="#1c1d22" stroke-width="1.4"/><path d="M256 19 h7 l-3.5 -4 Z" fill="#1c1d22"/>
-      ${night ? '<circle cx="259.7" cy="25" r="16" fill="#ffe27a" opacity=".25"/>' : ''}</g>`;
+  const rail = (y: number, x0: number, x1: number) => {
+    let bars = '';
+    for (let x = x0 + 3; x < x1 - 1; x += 3) bars += `M${x} ${y + 1} V${y + 8} `;
+    return `<path d="${bars}" stroke="${iron}" stroke-width=".9"/><rect x="${x0}" y="${y - 0.5}" width="${x1 - x0}" height="2" fill="${iron}"/><rect x="${x0}" y="${y + 7.5}" width="${x1 - x0}" height="1.2" fill="${iron}"/>`;
+  };
+  const post = (x: number, y0: number, y1: number) => `<rect x="${x}" y="${y0}" width="3.2" height="${y1 - y0}" fill="${trim}"/><rect x="${x - 0.8}" y="${y1 - 2}" width="4.8" height="2" fill="${trim}"/>`;
+  // Floors: tops of the window rows.
+  const F = [14, 42, 70];
+  let siding = '';
+  for (let y = 13; y < 92; y += 4.5) siding += `M4 ${y.toFixed(1)} H250 `;
+  let lattice = '';
+  for (let x = 24; x < 106; x += 5) lattice += `M${x} 89 l5 6 M${x + 5} 89 l-5 6 `;
+  return `<g class="grace-house">
+    <rect x="4" y="10" width="246" height="84" fill="${wall}"/>
+    <path d="${siding}" stroke="${line}" stroke-width=".9"/>
+    <rect x="24" y="12" width="82" height="78" fill="${deep}"/>
+    <path d="M24 12 H106 M24 38 H106 M24 66 H106" stroke="#000" stroke-width="3" opacity=".08"/>
+    ${F.map((y, f) => win(8, y + 2, 11, 18, f, 0)).join('')}
+    ${win(28, 16, 11, 16, 0, 1)}
+    <rect x="62" y="14" width="13" height="22" fill="${trim}"/><rect x="64" y="16" width="9" height="20" fill="${glassFor(0, 2)}"/>
+    <rect x="44" y="42" width="13" height="22" fill="${trim}"/><rect x="46" y="44" width="9" height="20" fill="${glassFor(1, 2)}"/><path d="M46 54 H55" stroke="${trim}" stroke-width="1"/>
+    ${win(30, 46, 9, 14, 1, 0)}${win(84, 46, 11, 16, 1, 3)}
+    <rect x="58" y="69" width="16" height="21" fill="${trim}"/><rect x="60" y="71" width="12" height="19" fill="#1a1b1f"/>
+    <path d="M61.5 73 h9 v6 h-9 Z M61.5 81 h9 v7 h-9 Z" fill="none" stroke="#33353b" stroke-width=".8"/><circle cx="70" cy="81" r=".9" fill="#c9a640"/>
+    <rect x="77" y="74" width="5" height="7" fill="#f2efe6" stroke="#b9b2a2" stroke-width=".5"/>
+    ${win(32, 72, 10, 14, 2, 1)}${win(88, 72, 9, 14, 2, 2)}
+    <g fill="${trim}"><rect x="22" y="37" width="86" height="4"/><rect x="22" y="65" width="86" height="4"/><rect x="22" y="86.5" width="86" height="3"/></g>
+    ${rail(29, 44, 106)}${rail(57, 25, 106)}${rail(78, 25, 54)}${rail(78, 76, 106)}
+    ${post(24, 12, 37)}${post(44, 12, 37)}${post(103, 12, 37)}
+    ${post(24, 41, 65)}${post(103, 41, 65)}
+    ${post(24, 69, 87)}${post(53, 69, 87)}${post(75, 69, 87)}${post(103, 69, 87)}
+    <path d="${lattice}" stroke="${trim}" stroke-width=".9"/><rect x="22" y="89" width="86" height="6" fill="none" stroke="${trim}" stroke-width="1"/>
+    <g fill="#a0533f"><rect x="55" y="89" width="22" height="2.6"/><rect x="54" y="91.6" width="24" height="2.6"/><rect x="53" y="94.2" width="26" height="2.4"/></g>
+    <path d="M55 88 V96 M77 88 V96 M54 81 L54 89 M78 81 L78 89" stroke="${trim}" stroke-width="1.1"/>
+    ${F.map((y, f) => win(116, y + 2, 13, 19, f, 3) + win(138, y + 2, 13, 19, f, 4)).join('')}
+    <path d="M160 10 L172 6 H212 L224 10 V94 H160 Z" fill="${wall}"/>
+    <path d="M160 10 L172 6 V94 H160 Z" fill="${side}"/><path d="M212 6 L224 10 V94 H212 Z" fill="${deep}"/>
+    ${F.map((y, f) => `<path d="M162 ${y + 3} L170 ${y + 1.5} V${y + 21} L162 ${y + 22} Z" fill="${trim}"/><path d="M163.4 ${y + 4.6} L168.6 ${y + 3.4} V${y + 19.6} L163.4 ${y + 20.4} Z" fill="${glassFor(f, 4)}"/>
+      ${win(184, y + 1, 16, 20, f, 5)}
+      <path d="M214 ${y + 1.5} L222 ${y + 3} V${y + 22} L214 ${y + 21} Z" fill="${trim}"/><path d="M215.4 ${y + 3.4} L220.6 ${y + 4.6} V${y + 20.4} L215.4 ${y + 19.6} Z" fill="${glassFor(f, 6)}"/>`).join('')}
+    ${F.map((y, f) => win(232, y + 2, 12, 19, f, 6)).join('')}
+    <rect x="230.5" y="57" width="15" height="7" rx="1" fill="#e9ebec" stroke="#9aa3a8" stroke-width=".8"/><path d="M233 59 h10 M233 61 h10" stroke="#9aa3a8" stroke-width=".6"/>
+    <rect x="2" y="3" width="250" height="8" fill="${trim}"/><path d="M158 3 L171 -1 H213 L226 3 Z" fill="${trim}"/>
+    <path d="M2 11 H252" stroke="#000" stroke-width="2" opacity=".1"/><path d="M2 3 H252" stroke="#c9c4b8" stroke-width="1"/>
+    <rect x="4" y="10" width="2.5" height="84" fill="${trim}"/><rect x="247.5" y="10" width="2.5" height="84" fill="${trim}"/>
+    <rect x="4" y="92" width="246" height="3" fill="${night ? '#6d6a63' : '#a9a298'}"/>
+    <g fill="${night ? '#2c5a3a' : '#3f7d4a'}"><ellipse cx="14" cy="93" rx="12" ry="5"/><ellipse cx="42" cy="94" rx="10" ry="4"/><ellipse cx="94" cy="94" rx="9" ry="4"/><ellipse cx="176" cy="94" rx="18" ry="5"/><ellipse cx="208" cy="93" rx="12" ry="6"/><ellipse cx="238" cy="94" rx="10" ry="4"/></g>
+    <g fill="${night ? '#356b46' : '#4f9a58'}"><ellipse cx="12" cy="91" rx="6" ry="2.4"/><ellipse cx="172" cy="92" rx="8" ry="2.4"/><ellipse cx="206" cy="90" rx="5" ry="2"/></g>
+    ${snowy ? `<g fill="#ffffff"><rect x="0" y="0" width="254" height="5" rx="2.5"/><path d="M156 1 L171 -3 H213 L228 1 Z"/><rect x="20" y="35.5" width="90" height="2.6" rx="1.3"/><rect x="20" y="63.5" width="90" height="2.6" rx="1.3"/><rect x="43" y="27.6" width="64" height="1.8" rx=".9"/><rect x="24" y="55.6" width="83" height="1.8" rx=".9"/>${F.map((y) => `<rect x="6" y="${y + 22}" width="15" height="1.8" rx=".9"/><rect x="114" y="${y + 23}" width="17" height="1.8" rx=".9"/><rect x="136" y="${y + 23}" width="17" height="1.8" rx=".9"/><rect x="182" y="${y + 22}" width="20" height="1.8" rx=".9"/>`).join('')}<ellipse cx="14" cy="89" rx="10" ry="2.6"/><ellipse cx="176" cy="90" rx="16" ry="2.6"/><ellipse cx="208" cy="88" rx="10" ry="2.6"/><ellipse cx="94" cy="91" rx="8" ry="2"/></g>` : ''}
+    </g>
+    <g class="lamp-post">
+      ${night ? '<circle cx="268" cy="22" r="20" fill="#ffe27a" opacity=".22"/><circle cx="268" cy="22" r="10" fill="#fff3c4" opacity=".35"/>' : ''}
+      <path d="M266 36 H270 L271 92 H265 Z" fill="${iron}"/>
+      <path d="M263 92 H273 L275 97 H261 Z" fill="${iron}"/><rect x="264.5" y="58" width="7" height="2.4" rx="1" fill="${iron}"/>
+      <path d="M264 36 h8 l-1 -3 h-6 Z" fill="${iron}"/>
+      <ellipse cx="268" cy="24" rx="6.5" ry="9" fill="${night ? '#fff6d0' : '#f4f6f6'}" stroke="${iron}" stroke-width="1.2"/>
+      <path d="M262.6 18 Q268 14.5 273.4 18" fill="none" stroke="${iron}" stroke-width="1"/>
+      <path d="M263.5 15.5 Q268 11 272.5 15.5 Z" fill="${iron}"/><path d="M268 11.5 V8" stroke="${iron}" stroke-width="1.3" stroke-linecap="round"/><circle cx="268" cy="7.4" r="1.3" fill="${iron}"/>
+      ${night ? '' : '<path d="M265 21 q1 -3 3 -4" stroke="#ffffff" stroke-width="1.4" fill="none" stroke-linecap="round"/>'}
+      ${snowy ? '<path d="M263.2 15.4 Q268 10.6 272.8 15.4 Q268 13.4 263.2 15.4 Z" fill="#ffffff"/>' : ''}
+    </g>`;
 };
 
 /** Snow that settles on things in winter, in each item's 100x100 box. */
@@ -653,7 +705,7 @@ function sceneLights(area: YardArea, lamp: Lamp): string {
       // On Noah's Ark someone gave up halfway: the string droops off the roof and dangles (and comes on last).
       + `<g class="ark-lights">${festoon([[170, 54], [200, 34], [226, 50]], 6, 3, lamp, 0.9, 0, 2.2)}${festoon([[226, 50], [232, 70]], 2, 2, lamp, 0.9, 6, 2.6)}</g>`;
   if (area === 'yoshi')
-    return runOfLights(14, 238, 9, 32, 5, lamp) + festoon([[22, 28], [98, 28]], 3, 7, lamp, 1, 0, 1) + festoon([[22, 56], [98, 56]], 3, 7, lamp, 1, 3, 1.2);
+    return runOfLights(2, 252, 10, 36, 5, lamp) + festoon([[44, 29], [106, 29]], 3, 6, lamp, 1, 0, 1) + festoon([[25, 57], [106, 57]], 3, 7, lamp, 1, 3, 1.2);
   if (area === 'garden')
     return runOfLights(0, 360, 50, 36, 6, lamp) + festoon([[232, 92], [236, 54], [258, 30], [280, 54], [284, 92]], 3, 2, lamp, 1, 4, 1.6);
   return runOfLights(0, 360, 14, 30, 6, lamp) + festoon([[156, 22], [180, 18], [204, 22]], 3, 3, lamp, 1, 1, 1.8);
