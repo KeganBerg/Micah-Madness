@@ -312,6 +312,18 @@ describe('sound', () => {
       expect(new Set([0, 1, 2, 3].map((z) => s.trackFor('level', z))).size).toBe(4);
     });
 
+    it('plays the holiday track on the map in winter, and leaves the levels alone', async () => {
+      const s = await boot();
+      const normal = s.trackFor('map');
+      const level = s.trackFor('level', 1);
+      s.setHolidayMusic(true);
+      expect(s.trackFor('map')).not.toBe(normal);
+      expect(s.trackFor('map')).toContain('holiday');
+      expect(s.trackFor('level', 1)).toBe(level);
+      s.setHolidayMusic(false);
+      expect(s.trackFor('map')).toBe(normal);
+    });
+
     it('falls back to the synth tunes when a track will not load', async () => {
       withRecordings(false);
       const s = await boot();

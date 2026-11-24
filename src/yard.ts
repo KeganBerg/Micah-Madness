@@ -351,16 +351,21 @@ const SNOW_CAPS: Record<string, string> = {
 
 const BULBS = ['#e8352f', '#ffd23f', '#3fae5a', '#2f8fe0', '#ffffff'];
 
-/** One bulb hanging at (x, y), tilted along the wire. Bulbs twinkle in three groups; at night they glow. */
-const bulb = (x: number, y: number, i: number, night: boolean, s = 1) => {
+/** Off in daylight, on (and twinkling) from sunset, glowing at night. */
+export type Lamp = 'off' | 'on' | 'glow';
+export const lampFor = (time: YardTime): Lamp => (time === 'day' ? 'off' : time === 'dusk' ? 'on' : 'glow');
+
+/** One bulb hanging at (x, y). Lit bulbs twinkle in three groups; at night they glow. */
+const bulb = (x: number, y: number, i: number, lamp: Lamp, s = 1) => {
   const c = BULBS[i % BULBS.length];
-  return `<g class="bulb t${i % 3}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s})">
-    ${night ? `<circle cy="3.5" r="6" fill="${c}" opacity=".4"/>` : ''}
-    <rect x="-1.2" y="-.6" width="2.4" height="2" fill="#2d3b45"/><ellipse cy="3.6" rx="1.9" ry="2.8" fill="${c}" stroke="#00000033" stroke-width=".5"/></g>`;
+  return `<g class="bulb${lamp === 'off' ? ' off' : ` t${i % 3}`}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s})">
+    ${lamp === 'glow' ? `<circle class="bulb-glow" cy="3.5" r="6" fill="${c}" opacity=".4"/>` : ''}
+    <rect x="-1.2" y="-.6" width="2.4" height="2" fill="#2d3b45"/><ellipse cy="3.6" rx="1.9" ry="2.8" fill="${c}" opacity="${lamp === 'off' ? '.4' : '1'}" stroke="#00000033" stroke-width=".5"/></g>`;
 };
 
-/** A string of lights sagging between the given points, with `per` bulbs on each span. */
-export function festoon(pts: [number, number][], sag: number, per: number, night: boolean, s = 1, start = 0): string {
+/** A string of lights sagging between the given points, with `per` bulbs on each span.
+ * Lit strings switch on in turn, left to right (`delay` seconds after the yard opens). */
+export function festoon(pts: [number, number][], sag: number, per: number, lamp: Lamp, s = 1, start = 0, delay = 0): string {
   let wire = `M${pts[0][0]} ${pts[0][1]}`;
   let bulbs = '';
   let n = start;
@@ -374,10 +379,10 @@ export function festoon(pts: [number, number][], sag: number, per: number, night
       const t = j / (per + 1);
       const x = (1 - t) ** 2 * ax + 2 * (1 - t) * t * cx + t * t * bx;
       const yy = (1 - t) ** 2 * ay + 2 * (1 - t) * t * cy + t * t * by;
-      bulbs += bulb(x, yy, n++, night, s);
+      bulbs += bulb(x, yy, n++, lamp, s);
     }
   }
-  return `<g class="xmas-lights" pointer-events="none"><path d="${wire}" stroke="#2d3b45" stroke-width="${(1.1 * s).toFixed(2)}" fill="none"/>${bulbs}</g>`;
+  return `<g class="xmas-lights${lamp === 'off' ? '' : ' lit'}" style="--on:${delay.toFixed(2)}s" pointer-events="none"><path d="${wire}" stroke="#2d3b45" stroke-width="${(1.1 * s).toFixed(2)}" fill="none"/>${bulbs}</g>`;
 }
 
 const spans = (x0: number, x1: number, y: number, step: number): [number, number][] => {
@@ -386,27 +391,34 @@ const spans = (x0: number, x1: number, y: number, step: number): [number, number
   return out;
 };
 
-/** Lights on built things, in each item's 100x100 box. */
-const ITEM_LIGHTS: Record<string, (night: boolean) => string> = {
-  doghouse: (n) => festoon([[12, 46], [50, 13], [88, 46]], 6, 4, n, 2.2),
-  tree: (n) => festoon([[24, 22], [76, 30]], 10, 4, n, 2.4) + festoon([[18, 46], [82, 52]], 10, 5, n, 2.4, 2),
-  mailbox: (n) => festoon([[18, 30], [82, 30]], 8, 4, n, 1.8),
-  lamp: (n) => festoon([[50, 40], [50, 92]], 0, 4, n, 1.8),
-  rocker: (n) => festoon([[30, 12], [66, 12]], 6, 3, n, 1.6),
-  swing: (n) => festoon([[10, 31], [90, 31]], 6, 6, n, 1.6),
-  barrow: (n) => festoon([[66, 60], [96, 52]], 4, 2, n, 1.6),
+/** The long strings, one span at a time so each switches on a beat after the last. */
+const runOfLights = (x0: number, x1: number, y: number, step: number, sag: number, lamp: Lamp, t0 = 0.3): string => {
+  const pts = spans(x0, x1, y, step);
+  let out = '';
+  for (let k = 0; k < pts.length - 1; k++) out += festoon([pts[k], pts[k + 1]], sag, 3, lamp, 1, k * 3, t0 + k * 0.12);
+  return out;
+};
+
+/** Lights on built things, in each item's 100x100 box. They come on after the big strings. */
+const ITEM_LIGHTS: Record<string, (l: Lamp) => string> = {
+  doghouse: (l) => festoon([[12, 46], [50, 13], [88, 46]], 6, 4, l, 2.2, 0, 1.5),
+  tree: (l) => festoon([[24, 22], [76, 30]], 10, 4, l, 2.4, 0, 1.7) + festoon([[18, 46], [82, 52]], 10, 5, l, 2.4, 2, 1.85),
+  mailbox: (l) => festoon([[18, 30], [82, 30]], 8, 4, l, 1.8, 0, 1.6),
+  lamp: (l) => festoon([[50, 40], [50, 92]], 0, 4, l, 1.8, 0, 1.5),
+  rocker: (l) => festoon([[30, 12], [66, 12]], 6, 3, l, 1.6, 0, 1.7),
+  swing: (l) => festoon([[10, 31], [90, 31]], 6, 6, l, 1.6, 0, 1.8),
+  barrow: (l) => festoon([[66, 60], [96, 52]], 4, 2, l, 1.6, 0, 1.6),
 };
 
 /** Per part of the yard: the big strings along the fence, the hedge or the porch eaves. */
-function sceneLights(area: YardArea, night: boolean): string {
+function sceneLights(area: YardArea, lamp: Lamp): string {
   if (area === 'back')
-    return festoon(spans(0, 360, 60, 40), 7, 3, night)
-      // On Noah's Ark someone gave up halfway: the string droops off the roof and dangles.
-      + `<g class="ark-lights">${festoon([[170, 54], [200, 34], [226, 50]], 6, 3, night, 0.9)}${festoon([[226, 50], [232, 70]], 2, 2, night, 0.9, 6)}</g>`;
+    return runOfLights(0, 360, 60, 40, 7, lamp)
+      // On Noah's Ark someone gave up halfway: the string droops off the roof and dangles (and comes on last).
+      + `<g class="ark-lights">${festoon([[170, 54], [200, 34], [226, 50]], 6, 3, lamp, 0.9, 0, 2.2)}${festoon([[226, 50], [232, 70]], 2, 2, lamp, 0.9, 6, 2.6)}</g>`;
   if (area === 'garden')
-    return festoon(spans(0, 360, 50, 36), 6, 3, night)
-      + festoon([[232, 92], [236, 54], [258, 30], [280, 54], [284, 92]], 3, 2, night, 1, 4);
-  return festoon(spans(0, 360, 14, 30), 6, 3, night) + festoon([[156, 22], [180, 18], [204, 22]], 3, 3, night, 1, 1);
+    return runOfLights(0, 360, 50, 36, 6, lamp) + festoon([[232, 92], [236, 54], [258, 30], [280, 54], [284, 92]], 3, 2, lamp, 1, 4, 1.6);
+  return runOfLights(0, 360, 14, 30, 6, lamp) + festoon([[156, 22], [180, 18], [204, 22]], 3, 3, lamp, 1, 1, 1.8);
 }
 
 /** A snowman for Micah's Winter, missing his carrot nose. Base centred on (0,0). */
@@ -463,7 +475,7 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
     const s = d.w / 100;
     const art = d.id === 'shelf' ? museum(opts.ate) : d.svg;
     if (has)
-      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${art}${snowy && SNOW_CAPS[d.id] ? `<g class="snow-cap" fill="#fff">${SNOW_CAPS[d.id]}</g>` : ''}${snowy && ITEM_LIGHTS[d.id] ? ITEM_LIGHTS[d.id](time === 'night') : ''}</g></g></g>`;
+      return `<g class="yard-item" data-id="${d.id}" data-bottom="${d.y + d.w * 0.9}" role="button" aria-label="${d.name}"><g transform="translate(${d.x} ${d.y}) scale(${s})"><g class="yard-item-art">${art}${snowy && SNOW_CAPS[d.id] ? `<g class="snow-cap" fill="#fff">${SNOW_CAPS[d.id]}</g>` : ''}${snowy && ITEM_LIGHTS[d.id] ? ITEM_LIGHTS[d.id](lampFor(time)) : ''}</g></g></g>`;
     const cx = d.x + d.w / 2;
     const cy = d.y + d.w / 2;
     return `<g opacity=".7"><circle cx="${cx}" cy="${cy}" r="${Math.min(22, d.w / 3)}" fill="#00000014" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="5 5"/>
@@ -488,7 +500,7 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
   const built = here.filter((d) => owned.includes(d.id)).length;
   return `<svg viewBox="0 0 360 300" class="yard-scene yard-${area} yard-${time}" role="img" aria-label="Micah's ${label} with ${built} of ${here.length} things built">
     ${back}
-    ${snowy ? sceneLights(area, time === 'night') : ''}
+    ${snowy ? sceneLights(area, lampFor(time)) : ''}
     <g class="paws"></g>
     <g class="yard-layer">
       ${snowy && area === 'back' ? `<g class="yard-item snowman" data-id="snowman" data-bottom="146" role="button" aria-label="Snowman"><g transform="translate(282 146)"><g class="yard-item-art">${SNOWMAN}</g></g></g>` : ''}

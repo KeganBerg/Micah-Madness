@@ -6,6 +6,7 @@ import fetchTrack from './assets/music/fetch.mp3';
 import puddleTrack from './assets/music/puddle-hop.mp3';
 import rainyTrack from './assets/music/rainy-day-sniffs.mp3';
 import partyTrack from './assets/music/birthday-zoomies.mp3';
+import holidayTrack from './assets/music/holiday.mp3';
 // Sound effects and background music have their own on/off switches and their own volume bus.
 
 let ctx: AudioContext | null = null;
@@ -684,9 +685,15 @@ const RECORDED_VOL = 0.6;
 const MAP_TRACK = mapTrack;
 const LEVEL_TRACKS = [fetchTrack, puddleTrack, rainyTrack, partyTrack];
 
+/** Micah's Winter: the map and the Yard play the holiday track instead. */
+let holiday = false;
+export function setHolidayMusic(on: boolean): void {
+  holiday = on;
+}
+
 /** Which recording a mood/zone plays (zones 5-8 replay zones 1-4). Exported for tests. */
 export function trackFor(mood: Mood, zone = 0): string {
-  if (mood === 'map') return MAP_TRACK;
+  if (mood === 'map') return holiday ? holidayTrack : MAP_TRACK;
   const z = ((zone % 8) + 8) % 8;
   return LEVEL_TRACKS[z % 4];
 }
