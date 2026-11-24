@@ -1,4 +1,11 @@
-// All of the game's audio, synthesized with Web Audio (no audio files, nothing copyrighted).
+// All of the game's audio. Effects are synthesized with Web Audio. Music is real recorded tracks
+// (CC0, credited in CREDITS.md), with the original synth tunes below as the backup.
+
+import mapTrack from './assets/music/map.mp3';
+import fetchTrack from './assets/music/fetch.mp3';
+import puddleTrack from './assets/music/puddle-hop.mp3';
+import rainyTrack from './assets/music/rainy-day-sniffs.mp3';
+import partyTrack from './assets/music/birthday-zoomies.mp3';
 // Sound effects and background music have their own on/off switches and their own volume bus.
 
 let ctx: AudioContext | null = null;
@@ -628,7 +635,7 @@ function startMusic(mood: Mood): void {
   const a = ctx;
   if (!a || a.state !== 'running' || !musicBus) return;
   const zone = mood === 'level' ? wantZone : 0;
-  if (playing && playing.mood === mood && playing.zone === zone && timer !== undefined) {
+  if (playing && playing.mood === mood && playing.zone === zone && (timer !== undefined || track)) {
     musicBus.gain.setTargetAtTime(MUSIC_VOL, a.currentTime, 0.3);
     return;
   }
@@ -637,26 +644,111 @@ function startMusic(mood: Mood): void {
   musicBus.gain.cancelScheduledValues(a.currentTime);
   musicBus.gain.setTargetAtTime(0, a.currentTime, fresh ? 0.01 : 0.22);
   stopScheduler();
+  // Start fetching the recording now, so it loads while the old tune fades out.
+  const url = trackFor(mood, zone);
+  const loaded = loadTrack(a, url);
+  const wanted = () =>
+    !!playing && playing.mood === mood && playing.zone === zone && musicOn && !!ctx && ctx.state === 'running';
   const begin = () => {
-    if (!playing || playing.mood !== mood || playing.zone !== zone || !musicOn || !ctx || ctx.state !== 'running') return;
-    tune = tuneFor(mood, zone);
-    sc = score(tune);
-    byStep = new Map();
-    for (const h of sc.melody) byStep.set(h.step, [...(byStep.get(h.step) ?? []), h]);
-    step = 0;
-    nextTime = ctx.currentTime + 0.1;
-    musicBus!.gain.cancelScheduledValues(ctx.currentTime);
-    musicBus!.gain.setTargetAtTime(MUSIC_VOL, ctx.currentTime, fresh ? 1.2 : 0.7);
-    timer = window.setInterval(tick, 25);
-    tick();
+    if (!wanted()) return;
+    if (!loaded) return playSynth(mood, zone, fresh);
+    void loaded.then((buf) => {
+      if (!wanted() || timer !== undefined || track) return;
+      if (buf) playRecorded(ctx!, buf, url, fresh);
+      else playSynth(mood, zone, fresh);
+    });
   };
   if (fresh) begin();
   else later(800, begin);
 }
 
+/** The hand-written synth tunes: the backup when a recording can't load (offline first run, old browser). */
+function playSynth(mood: Mood, zone: number, fresh: boolean): void {
+  if (!ctx) return;
+  tune = tuneFor(mood, zone);
+  sc = score(tune);
+  byStep = new Map();
+  for (const h of sc.melody) byStep.set(h.step, [...(byStep.get(h.step) ?? []), h]);
+  step = 0;
+  nextTime = ctx.currentTime + 0.1;
+  musicBus!.gain.cancelScheduledValues(ctx.currentTime);
+  musicBus!.gain.setTargetAtTime(MUSIC_VOL, ctx.currentTime, fresh ? 1.2 : 0.7);
+  timer = window.setInterval(tick, 25);
+  tick();
+}
+
+// ── Recorded music: real tracks by human composers (CC0, see CREDITS.md), looped ──
+
+/** Recordings are about 5 dB hotter than the synth band, so they sit a little lower. */
+const RECORDED_VOL = 0.6;
+const MAP_TRACK = mapTrack;
+const LEVEL_TRACKS = [fetchTrack, puddleTrack, rainyTrack, partyTrack];
+
+/** Which recording a mood/zone plays (zones 5-8 replay zones 1-4). Exported for tests. */
+export function trackFor(mood: Mood, zone = 0): string {
+  if (mood === 'map') return MAP_TRACK;
+  const z = ((zone % 8) + 8) % 8;
+  return LEVEL_TRACKS[z % 4];
+}
+
+/** Decoded tracks. A decoded minute is ~10 MB, so keep only the map plus the current level. */
+const decoded = new Map<string, Promise<AudioBuffer | null>>();
+let decodedFor: AudioContext | null = null;
+const broken = new Set<string>();
+let track: { src: AudioBufferSourceNode; url: string } | null = null;
+
+/** Null (straight away) when this browser can't play recordings or this one already failed. */
+function loadTrack(a: AudioContext, url: string): Promise<AudioBuffer | null> | null {
+  if (decodedFor !== a) {
+    decoded.clear();
+    decodedFor = a;
+  }
+  const hit = decoded.get(url);
+  if (hit) return hit;
+  if (broken.has(url) || typeof fetch !== 'function' || typeof a.decodeAudioData !== 'function') return null;
+  const p = fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(`music ${r.status}`);
+      return r.arrayBuffer();
+    })
+    // The callback form, because older iOS Safari never resolves the promise form.
+    .then((bytes) => new Promise<AudioBuffer>((res, rej) => a.decodeAudioData(bytes, res, rej)))
+    .catch(() => {
+      broken.add(url);
+      decoded.delete(url);
+      return null;
+    });
+  for (const k of [...decoded.keys()]) if (k !== MAP_TRACK && k !== url) decoded.delete(k);
+  decoded.set(url, p);
+  return p;
+}
+
+function playRecorded(a: AudioContext, buf: AudioBuffer, url: string, fresh: boolean): void {
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const g = a.createGain();
+  g.gain.value = RECORDED_VOL;
+  src.connect(g).connect(musicBus!);
+  src.start(a.currentTime + 0.05);
+  track = { src, url };
+  musicBus!.gain.cancelScheduledValues(a.currentTime);
+  musicBus!.gain.setTargetAtTime(MUSIC_VOL, a.currentTime, fresh ? 0.6 : 0.5);
+}
+
 function stopScheduler(): void {
   if (timer !== undefined) window.clearInterval(timer);
   timer = undefined;
+  if (track) {
+    // Let it ride under the bus fade-out, then stop it.
+    const { src } = track;
+    track = null;
+    try {
+      src.stop(ctx ? ctx.currentTime + 0.9 : 0);
+    } catch {
+      /* already stopped */
+    }
+  }
 }
 
 function stopMusic(): void {
