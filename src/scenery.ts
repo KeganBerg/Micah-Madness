@@ -1166,17 +1166,29 @@ export function wireScenery(root: HTMLElement, play: (sound: string) => void, on
     }
     const fx = p.dataset.fx && FX[p.dataset.fx];
     if (fx) {
+      // The burst starts near the top of the prop and is drawn on top of the whole area,
+      // so hearts and friends pop up over Micah and the props instead of hiding behind them.
       const box = p.getBBox();
-      const cy = box.y + box.height * 0.4;
+      const hearts = p.dataset.fx === 'heart';
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height * (hearts ? 0.12 : 0.4);
       let bits = '';
       for (let i = 0; i < 6; i++) {
-        const a = -Math.PI / 2 + (i - 2.5) * 0.45;
-        bits += `<g class="fx-bit" style="--dx:${f(Math.cos(a) * 26)}px;--dy:${f(Math.sin(a) * 26)}px;animation-delay:${i * 20}ms"><g transform="translate(0 ${f(cy)})">${fx(i)}</g></g>`;
+        const a = -Math.PI / 2 + (i - 2.5) * (hearts ? 0.3 : 0.45);
+        const dist = hearts ? 30 + (i % 3) * 8 : 26;
+        bits += `<g class="fx-bit${hearts ? ' fx-float' : ''}" style="--dx:${f(Math.cos(a) * dist)}px;--dy:${f(Math.sin(a) * dist)}px;animation-delay:${i * (hearts ? 60 : 20)}ms"><g transform="translate(${f(cx)} ${f(cy)})${hearts ? ' scale(1.4)' : ''}">${fx(i)}</g></g>`;
       }
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.innerHTML = bits;
-      p.parentElement!.appendChild(g);
-      setTimeout(() => g.remove(), 900);
+      const svg = p.ownerSVGElement;
+      const from = p.parentElement instanceof SVGGraphicsElement ? p.parentElement.getCTM() : null;
+      const to = svg?.getCTM();
+      if (svg && from && to) {
+        const m = to.inverse().multiply(from);
+        g.setAttribute('transform', `matrix(${[m.a, m.b, m.c, m.d, m.e, m.f].map((n) => f(n)).join(' ')})`);
+        svg.appendChild(g);
+      } else p.parentElement!.appendChild(g);
+      setTimeout(() => g.remove(), hearts ? 1500 : 900);
     }
   };
   root.addEventListener('click', onTap);
