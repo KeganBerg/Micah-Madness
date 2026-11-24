@@ -94,3 +94,27 @@ export function claimWinter(s: SaveData, n: number, now = new Date()): { biscuit
   if (hat) s.wardrobe.push('santa');
   return { biscuits: WINTER_BISCUITS, won, antlers, hat };
 }
+
+/** The outfit every player is given when Micah's Winter opens. */
+export const WINTER_GIFT = 'scarf';
+
+/** Snow falls on the map from 1 December to 6 January (or when previewing). */
+export const winterSnowing = (now = new Date(), preview = false) => preview || winterSeason(now) !== null;
+
+/**
+ * The once-a-winter hello: the seen key to record if it hasn't been shown this season, otherwise null.
+ * Waits until the player has cleared a level, so it never sits on top of the welcome card.
+ */
+export function winterHello(s: SaveData, now = new Date(), preview = false): string | null {
+  const season = winterSeason(now) ?? (preview ? now.getFullYear() : null);
+  if (season === null || cleared(s) === 0) return null;
+  const key = `winter-hello:${season}`;
+  return s.seen.includes(key) ? null : key;
+}
+
+/** Hands over the winter gift outfit. Returns false if Micah already has it. */
+export function giveWinterGift(s: SaveData): boolean {
+  if (s.wardrobe.includes(WINTER_GIFT)) return false;
+  s.wardrobe.push(WINTER_GIFT);
+  return true;
+}

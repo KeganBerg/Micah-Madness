@@ -2,7 +2,7 @@
 // is drawn over a hand-drawn Micah (a black dog with a grey muzzle) in a 100x100 box.
 import micahPhoto from './assets/micah.png';
 
-export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number } | { winter: number };
+export type Unlock = { free: true } | { level: number } | { biscuits: number } | { weekly: number } | { winter: number } | { gift: string };
 
 export interface Costume {
   id: string;
@@ -158,6 +158,21 @@ const winterScarf = `
   <path d="M58 64 L62 84 L54 84 L52 66 Z" fill="#e8352f"/>
   <path d="M34 61 H40 M46 64 H52 M58 62 H64 M55 74 H61" stroke="#fff" stroke-width="2.2"/>`;
 
+// The December gift every player gets when Micah's Winter opens: a knitted bobble hat and scarf.
+const bobbleHat = `
+  <path d="M27 28 C26 9 74 9 73 28 Z" fill="#e8352f" stroke="#a3201c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M31 19 Q50 13 69 19 M29 24 Q50 18 71 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-dasharray="3 2.4"/>
+  <path d="M25 27 Q50 20 75 27 L75 33 Q50 26 25 33 Z" fill="#fff" stroke="#d4e6f1" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M30 29 V32 M36 27.6 V30.6 M42 26.6 V29.6 M48 26.2 V29.2 M54 26.4 V29.4 M60 27 V30 M66 28 V31 M71 29 V32" stroke="#d4e6f1" stroke-width="1.2"/>
+  <circle cx="50" cy="9" r="6.5" fill="#fff" stroke="#d4e6f1" stroke-width="1.5"/>
+  <path d="M46 7 Q50 4 54 7" fill="none" stroke="#d4e6f1" stroke-width="1.2"/>`;
+const knitScarf = `
+  <path d="M29 57 Q50 69 71 57 L71 65 Q50 77 29 65 Z" fill="#e8352f"/>
+  <path d="M33 60 V67 M41 63 V70 M50 64.5 V71.5 M59 63 V70 M67 60 V67" stroke="#fff" stroke-width="3"/>
+  <path d="M56 66 L63 88 L54 89 L50 68 Z" fill="#e8352f"/>
+  <path d="M57.4 72 L52.2 73 M59.4 78 L53.4 79 M61.4 84 L54.4 85" stroke="#fff" stroke-width="2.6"/>
+  <path d="M54 89 L54 92 M57 88.7 L57.5 91.7 M60 88.3 L61 91.2 M63 88 L64.2 90.8" stroke="#e8352f" stroke-width="1.6" stroke-linecap="round"/>`;
+
 export const COSTUMES: Costume[] = [
   { id: 'lobster', name: 'Lobster Suit', desc: 'The classic. Claws and all.', unlock: { free: true } },
   { id: 'cap', name: 'Orange Cap', desc: 'Her everyday look.', unlock: { free: true }, front: cap },
@@ -173,6 +188,7 @@ export const COSTUMES: Costume[] = [
   { id: 'raincoat', name: 'Rain Slicker', desc: 'For the walker who goes out every week, rain or shine.', unlock: { weekly: 4 }, suit: raincoatSuit, front: raincoatHood },
   { id: 'antlers', name: 'Reindeer Antlers', desc: 'With a nose so bright she can find her treats in the dark.', unlock: { winter: 8 }, front: antlers },
   { id: 'santa', name: 'Santa Hat', desc: 'For finishing all of Micah\u2019s Winter. Ho ho woof.', unlock: { winter: 15 }, suit: winterScarf, front: santaHat },
+  { id: 'scarf', name: 'Holiday Knits', desc: 'A bobble hat and scarf, knitted in lobster red. A December gift for Micah.', unlock: { gift: 'winter' }, suit: knitScarf, front: bobbleHat },
   { id: 'champion', name: 'Champion', desc: 'For walking all the way home, from the backyard to the front porch. The goodest girl.', unlock: { level: 80 }, suit: championSash, front: championMedal },
   { id: 'pjs', name: 'Cozy Pyjamas', desc: 'For clearing level 100. Moons, stars and the comfiest nap of all.', unlock: { level: 100 }, suit: pjSuit, front: nightcap },
 ];
@@ -212,6 +228,7 @@ export function unlockText(c: Costume): string {
   if ('free' in c.unlock) return 'Free';
   if ('level' in c.unlock) return `Clear level ${c.unlock.level}`;
   if ('weekly' in c.unlock) return `Win ${c.unlock.weekly} Weekly Walks`;
+  if ('gift' in c.unlock) return 'A December gift';
   if ('winter' in c.unlock) return c.unlock.winter >= 15 ? 'Finish Micah\u2019s Winter (December)' : `Win ${c.unlock.winter} levels of Micah\u2019s Winter`;
   return `${c.unlock.biscuits} biscuits`;
 }

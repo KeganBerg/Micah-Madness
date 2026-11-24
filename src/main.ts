@@ -64,7 +64,7 @@ import { shareCard } from './share';
 import { cleanCode, download, newCode, prettyCode, progressOf, startAutoSync, upload, validCode, whenCloudIsNewer } from './cloud';
 import { STAMPS_FOR_COAT, WEEKLY_BISCUITS, WEEKLY_ID, claimWeekly, weeklyLevel, weeklyOpen, weeklyWonThisWeek } from './weekly';
 import { STICKERS, freshStickers, markStickersSeen, stickerEarned, stickerHint, stickersEarned, type Sticker } from './stickers';
-import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_LEVELS, claimWinter, isWinterLevel, winterNext, winterNumber, winterOpen, winterWon } from './winter';
+import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_GIFT, WINTER_LEVELS, WINTER_UNLOCK, claimWinter, giveWinterGift, isWinterLevel, winterHello, winterNext, winterNumber, winterOpen, winterSnowing, winterWon } from './winter';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -221,7 +221,8 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="wallet" data-act="shop" aria-label="${save.biscuits} biscuits. Open the Treat Shop">${icon('biscuit', 'biscuit-icon')}<b>${save.biscuits}</b><span class="add">${UI.plus}</span></button>
         <button class="round-btn" data-act="settings" aria-label="Settings and how to play">${UI.settings}</button>
       </header>
-      <div class="map-stage">
+      <div class="map-stage ${winterSnowing(new Date(), WINTER_PREVIEW) ? 'snowy' : ''}">
+      ${winterSnowing(new Date(), WINTER_PREVIEW) ? '<div class="map-snow" aria-hidden="true"><i></i><i></i></div>' : ''}
       <div class="map-scroll ${Object.keys(save.stars).length === 0 ? 'has-welcome' : ''}">
         <div class="map" style="height:${height}px">
           <div class="scenery" aria-hidden="true"></div>
@@ -279,8 +280,15 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
   screen.querySelector('[data-act="collar"]')!.addEventListener('click', () => showCollar());
   screen.querySelector('[data-act="closet"]')!.addEventListener('click', () => showWardrobe(() => showMap()));
   screen.querySelector('[data-act="album"]')!.addEventListener('click', () => showAlbum());
+  // The first visit each winter says hello and hands over the holiday knits.
+  const hello = winterHello(save, new Date(), WINTER_PREVIEW);
+  if (hello) {
+    window.setTimeout(() => {
+      if (screen.isConnected && !document.querySelector('.modal')) showWinterHello(hello);
+    }, 1200);
+  }
   // A freshly finished area shows off its sticker, once nothing else is on screen.
-  if (freshStickers(save).length) {
+  else if (freshStickers(save).length) {
     window.setTimeout(() => {
       if (screen.isConnected && !document.querySelector('.modal')) revealSticker(freshStickers(save)[0]);
     }, 1800);
@@ -1339,6 +1347,44 @@ function showWinter(): void {
     b.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[Number(b.dataset.n) - 1]))),
   );
   m.querySelector('[data-act="go"]')?.addEventListener('click', () => (m.remove(), showLevelIntro(WINTER_LEVELS[next - 1])));
+}
+
+/** Once a winter: the snow has arrived, here is a gift, and here are the snowy levels. */
+function showWinterHello(key: string): void {
+  if (!save.seen.includes(key)) save.seen.push(key);
+  const gifted = giveWinterGift(save);
+  persist(save);
+  sfx.star(3);
+  const open = winterOpen(save, new Date(), WINTER_PREVIEW);
+  const wearing = save.costume === WINTER_GIFT;
+  const toGo = WINTER_UNLOCK - Object.values(save.stars).filter((v) => v > 0).length;
+  const m = modal(`
+    <div class="modal-head">
+      <img class="modal-avatar cheer" src="${costumeUrl(WINTER_GIFT)}" alt="Micah in a red bobble hat and scarf">
+      <div><p class="eyebrow">It’s snowing!</p><h2>Micah’s Winter is here</h2></div>
+      <button class="close" aria-label="Close">${UI.close}</button>
+    </div>
+    <div class="winter-hello">
+      <div class="winter-hello-gift"><img src="${costumeUrl(WINTER_GIFT)}" alt="Micah in a red bobble hat and scarf"><span><b>Holiday Knits</b><small>${gifted ? 'A gift for Micah. It’s in her Closet.' : 'Already in Micah’s Closet'}</small></span></div>
+      <p class="body">${open
+        ? `${WINTER_COUNT} snowy levels are open until 6 January. Each one pays <b>${WINTER_BISCUITS} biscuits</b>, and there are Reindeer Antlers and a Santa Hat to win.`
+        : `${WINTER_COUNT} snowy levels open once you’ve cleared ${WINTER_UNLOCK} levels. ${toGo === 1 ? 'Just 1 more to go!' : `${toGo} more to go!`} They’re here until 6 January.`}</p>
+    </div>
+    <div class="actions">
+      ${wearing ? '' : '<button class="btn" data-act="wear">Put the knits on Micah</button>'}
+      ${open ? `<button class="btn ${wearing ? '' : 'secondary'}" data-act="winter">See the winter levels</button>` : `<button class="btn ${wearing ? '' : 'secondary'}" data-act="ok">Back to the map</button>`}
+    </div>`, () => {});
+  const close = () => m.remove();
+  m.querySelector('.close')!.addEventListener('click', close);
+  m.querySelector('[data-act="ok"]')?.addEventListener('click', close);
+  m.querySelector('[data-act="winter"]')?.addEventListener('click', () => (m.remove(), showWinter()));
+  m.querySelector('[data-act="wear"]')?.addEventListener('click', () => {
+    save.costume = WINTER_GIFT;
+    persist(save);
+    m.remove();
+    showMap();
+    toast('<span>Micah is wearing her <b>Holiday Knits</b>. Toasty!</span>');
+  });
 }
 
 // ───────────────────────────── Sharing and the finale ─────────────────────────────
