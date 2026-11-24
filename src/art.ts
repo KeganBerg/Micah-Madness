@@ -153,6 +153,18 @@ export const parcelSVG = (taped: boolean) => `
   <path d="M14 52 L50 66 L86 52" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 5" opacity=".7"/>` : ''}`;
 BOOSTER_ICONS.boxes = parcelSVG(false);
 
+/** A prickly burr, the kind that comes home in Micah's fur. */
+const burrBall = (cx: number, cy: number, r: number) => {
+  let spikes = '';
+  for (let i = 0; i < 12; i++) {
+    const a = (i * 30) * Math.PI / 180;
+    spikes += `M${(cx + Math.cos(a) * r * 0.7).toFixed(1)} ${(cy + Math.sin(a) * r * 0.7).toFixed(1)} L${(cx + Math.cos(a) * r * 1.35).toFixed(1)} ${(cy + Math.sin(a) * r * 1.35).toFixed(1)} `;
+  }
+  return `<path d="${spikes}" stroke="#6b5a1e" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#9a8a2e" stroke="#6b5a1e" stroke-width="2.4"/><circle cx="${cx - r * 0.3}" cy="${cy - r * 0.3}" r="${r * 0.28}" fill="#c9b64a"/>`;
+};
+BOOSTER_ICONS.burrs = burrBall(50, 52, 26);
+export const BURR_OVERLAY = `<svg viewBox="0 0 100 100" class="burr-art" aria-hidden="true">${burrBall(22, 24, 11)}${burrBall(78, 76, 11)}${burrBall(80, 22, 7)}</svg>`;
+
 export const BUBBLE_OVERLAY = `<svg viewBox="0 0 100 100" class="soap-film" aria-hidden="true">
   <circle cx="50" cy="50" r="44" fill="#d8f4ff" fill-opacity=".38" stroke="#5fc0e4" stroke-width="6"/>
   <circle cx="50" cy="50" r="44" fill="none" stroke="#ffb8d9" stroke-width="2" stroke-dasharray="40 240" stroke-dashoffset="-120" opacity=".8"/>

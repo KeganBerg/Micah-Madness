@@ -25,7 +25,7 @@ interface Look {
   chase: Chase;
   outfit: Outfit;
   /** What sits on the horizon: rolling hills by default. */
-  horizon?: 'sea' | 'mesa' | 'peaks' | 'reef' | 'city' | 'lake';
+  horizon?: 'sea' | 'mesa' | 'peaks' | 'reef' | 'city' | 'lake' | 'aurora' | 'wall' | 'canyon';
 }
 
 /** One look per area, in the order of ZONES in levels.ts. Skies are a shade deeper than the map's so the white cards stand out. */
@@ -61,6 +61,17 @@ export const LOOKS: Look[] = [
   { sky: '#7fbde6', far: '#7b8794', hill: '#738e5f', ground: '#7f9a6a', path: '#cfc6b2', speck: ['#5f7a4f', '#ffffff'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'squirrel', outfit: 'scarf', horizon: 'peaks' },
   { sky: '#ffd88a', far: '#e8a3b8', hill: '#cfb76d', ground: '#d9c27a', path: '#fff3d6', speck: ['#c4a54a', '#e8352f'], sun: 'sun', cloud: '#fff4e4', weather: 'confetti', chase: 'balloon', outfit: 'rosette' },
   { sky: '#e8907a', far: '#3a6f8f', hill: '#2f5a46', ground: '#4f7a62', path: '#d9c4a8', speck: ['#3a6a50', '#f2b8a8'], sun: 'sunset', cloud: '#ffc8b0', weather: '', chase: 'firefly', outfit: 'scarf', horizon: 'lake' },
+  // Levels 151-200
+  { sky: '#9fd6f5', far: '#d9c24a', hill: '#8fa53a', ground: '#a7b84a', path: '#e9d9a6', speck: ['#7f9a3a', '#ffc12e'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'butterfly', outfit: 'cap' },
+  { sky: '#cfeadf', far: '#9fd3b4', hill: '#3f8a5a', ground: '#3f8a5a', path: '#c9a66b', speck: ['#2f6a45', '#bfeaf7'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'butterfly', outfit: 'bandana' },
+  { sky: '#ffcf8a', far: '#a8462a', hill: '#3f8fc4', ground: '#b5653a', path: '#f0c89a', speck: ['#8a4a2a', '#e0a06a'], sun: 'sun', cloud: '', weather: '', chase: 'ball', outfit: 'raincoat', horizon: 'canyon' },
+  { sky: '#14213f', far: '#2a3d5a', hill: '#4f6a85', ground: '#5f7d99', path: '#dcebf5', speck: ['#ffffff', '#9fd8ec'], sun: 'moon', cloud: '', weather: 'snow', chase: 'snowball', outfit: 'scarf', horizon: 'aurora' },
+  { sky: '#f6e3c8', far: '#e8c9a0', hill: '#c9b28a', ground: '#e8d6c0', path: '#fff4e6', speck: ['#d9c2a6', '#ffffff'], sun: '', cloud: '', weather: '', chase: 'ball', outfit: 'party', horizon: 'wall' },
+  { sky: '#e2dbcf', far: '#cfc6b8', hill: '#a3201c', ground: '#cfc6b8', path: '#a3201c', speck: ['#bdb4a4', '#ffffff'], sun: '', cloud: '', weather: '', chase: 'ball', outfit: 'rosette', horizon: 'wall' },
+  { sky: '#a9d3ee', far: '#8a95a6', hill: '#d9a03a', ground: '#b08a5a', path: '#d9c4a0', speck: ['#6b4529', '#d9c4a0'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'ball', outfit: 'cap', horizon: 'city' },
+  { sky: '#c9d6e3', far: '#6f7782', hill: '#5d6f7c', ground: '#8f97a3', path: '#d9dde2', speck: ['#7a828d', '#ffc12e'], sun: '', cloud: '#eef2f6', weather: 'rain', chase: 'ball', outfit: 'raincoat', horizon: 'city' },
+  { sky: '#7fd0f5', far: '#a9e08a', hill: '#5fb34a', ground: '#6fbf5a', path: '#f2ead0', speck: ['#4f9a3f', '#ffffff'], sun: 'sun', cloud: '#ffffff', weather: '', chase: 'balloon', outfit: 'bandana' },
+  { sky: '#1a1640', far: '#2a2458', hill: '#33295e', ground: '#3a2f6a', path: '#9f93d6', speck: ['#ffffff', '#2f2558'], sun: 'moon', cloud: '', weather: 'confetti', chase: 'star', outfit: 'party' },
 ];
 
 // ───────────────────────────── Micah, side on ─────────────────────────────
@@ -215,6 +226,10 @@ function hills(look: Look, zone: number): string {
   if (h === 'peaks') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 V40 L50 8 L90 36 L140 2 L200 38 L250 14 L300 34 L350 4 L400 30 V60 Z" fill="${look.far}"/><path d="M40 14.5 L50 8 L60 14 L54 13 L50 16 Z M130 8.5 L140 2 L152 9.5 L145 8 L140 12 Z M340 10.5 L350 4 L360 10 L354 9 L350 12 Z" fill="#fff"/><path d="M0 46 Q70 30 150 44 T300 40 T400 42 V60 H0 Z" fill="${look.hill}"/></svg>`;
   if (h === 'reef') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 V36 Q30 28 60 38 T140 34 T240 38 T330 32 T400 36 V60 Z" fill="${look.far}"/><path d="M30 60 V40 Q26 30 32 22 M70 60 V44 Q76 32 70 24 M180 60 V42 Q174 30 182 20 M300 60 V40 Q306 28 300 18 M360 60 V44 Q356 34 362 28" stroke="${look.hill}" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;
   if (h === 'city') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 V34 H24 V20 H50 V30 H70 V14 H96 V36 H120 V24 H150 V40 H176 V18 H206 V30 H230 V10 H252 V32 H280 V22 H310 V38 H330 V16 H360 V30 H400 V60 Z" fill="${look.far}"/><path d="M0 48 H400 V60 H0 Z" fill="${look.hill}"/></svg>`;
+  if (h === 'canyon') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60 V6 H40 V16 H70 V28 H110 V40 H290 V28 H330 V14 H360 V4 H400 V60 Z" fill="${look.far}"/><path d="M0 18 H40 M0 30 H70 M330 26 H400 M360 14 H400" stroke="#0002" stroke-width="2"/><path d="M110 48 Q200 40 290 48 V60 H110 Z" fill="${look.hill}"/><path d="M130 52 q15 -3 30 0 t30 0 t30 0 t30 0" stroke="#fff" stroke-width="1.5" fill="none" opacity=".6"/></svg>`;
+  if (h === 'aurora') return `<svg class="bd-hills bd-aurora" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true" style="overflow:visible"><path d="M0 -30 Q60 -60 120 -36 T240 -40 T400 -34" stroke="#5fe0a8" stroke-width="14" fill="none" opacity=".45" stroke-linecap="round"/><path d="M0 -16 Q80 -44 170 -22 T320 -30 T400 -18" stroke="#b38df0" stroke-width="10" fill="none" opacity=".4" stroke-linecap="round"/><path d="M0 60 V40 L50 12 L90 36 L140 6 L200 38 L250 18 L300 34 L350 8 L400 30 V60 Z" fill="${look.far}"/><path d="M40 18 L50 12 L60 18 L50 20 Z M130 12 L140 6 L152 13 L140 15 Z M340 14 L350 8 L360 14 L350 16 Z" fill="#fff"/><path d="M0 46 Q70 32 150 44 T300 40 T400 42 V60 H0 Z" fill="${look.hill}"/></svg>`;
+  // Indoors: a wall with tall windows and a skirting board.
+  if (h === 'wall') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="400" height="60" fill="${look.far}"/>${[30, 130, 230, 330].map((x) => `<rect x="${x}" y="8" width="40" height="34" rx="3" fill="#bfe3f5" stroke="#fff" stroke-width="3"/><path d="M${x + 20} 8 V42 M${x} 25 H${x + 40}" stroke="#fff" stroke-width="2"/>`).join('')}<rect x="0" y="50" width="400" height="10" fill="${look.hill}"/></svg>`;
   // The beach, the clifftop and the lake get water on the horizon instead of distant hills.
   if (h === 'sea' || h === 'lake') return `<svg class="bd-hills" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="22" width="400" height="40" fill="${look.far}"/><path d="M0 24 q12 -5 25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0 t25 0" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>${h === 'lake' ? `<path d="M0 30 Q40 12 90 24 T200 20 T300 26 T400 22 V30 H0 Z" fill="${look.hill}"/>` : ''}</svg>`;
   // The beach gets the sea on the horizon instead of distant hills.

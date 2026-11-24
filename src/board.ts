@@ -99,6 +99,18 @@ export function hitBoxes(grid: Grid, cleared: Set<number>): { broken: Pos[]; den
   return { broken, dented };
 }
 
+/** Burrs picked by a clear: any burr on a cleared cell or right beside one. */
+export function burrsHit(burr: boolean[][], cleared: Set<number>): Pos[] {
+  const hit = new Set<number>();
+  for (const k of cleared) {
+    const [r, c] = unkey(k);
+    for (const [dr, dc] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (burr[r + dr]?.[c + dc]) hit.add(key(r + dr, c + dc));
+    }
+  }
+  return [...hit].map(unkey);
+}
+
 export function randomKind(rng: Rng, kinds = KIND_COUNT): number {
   return Math.floor(rng() * kinds);
 }
