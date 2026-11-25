@@ -36,13 +36,23 @@ import {
   junkMove,
   placeJunk,
   throwJunk,
+  placeHoles,
+  placeBoss,
+  removeBoss,
+  bossDamage,
+  isFixed,
+  JUNK_KIND,
+  isBossCell,
+  isHole,
+  newBox,
 } from './board';
+import { BOSSES, bossSvg } from './bosses';
 import { BOOSTER_ICONS, BUBBLE_OVERLAY, BURR_OVERLAY, KINDS, UI, YARN_OVERLAY, parcelSVG, svg } from './art';
 import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { noahsArk, owlSVG, sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Goal, type Level, type Power } from './levels';
+import { LEVELS, ZONES, boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type BossId, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -157,6 +167,8 @@ const levelTitle = (lv: Level) =>
 
 /** Set while a winter level is on screen: mud is drawn and described as snow. */
 let snowy = false;
+/** The boss of the level being shown, for its goal chip and text. */
+let bossNow: BossId = 'raccoon';
 function goalIcon(goal: Goal): string {
   if (goal.type === 'collect') return svg(KINDS[goal.kind].svg, 'goal-icon');
   if (goal.type === 'mud') return svg(BOOSTER_ICONS[snowy ? 'snow' : 'mud'], 'goal-icon');
@@ -167,6 +179,7 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'boxes') return svg(BOOSTER_ICONS.boxes, 'goal-icon');
   if (goal.type === 'burrs') return svg(BOOSTER_ICONS.burrs, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
+  if (goal.type === 'boss') return bossSvg(bossNow, 'goal-icon boss-icon');
   return `<span class="goal-score">${UI.star}</span>`;
 }
 const POWER_NAMES: Record<Power, [string, string]> = {
@@ -184,6 +197,7 @@ function goalText(goal: Goal): string {
   if (goal.type === 'junk') return `Let Micah eat ${goal.count} pieces of junk`;
   if (goal.type === 'boxes') return 'Tear open every parcel';
   if (goal.type === 'burrs') return 'Pick out every burr';
+  if (goal.type === 'boss') return `Chase off ${BOSSES[bossNow].name}`;
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
@@ -290,6 +304,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
             const state = lv.id < unlocked || stars > 0 ? 'done' : lv.id === unlocked ? 'current' : 'locked';
             return `<button class="node ${state}" data-level="${lv.id}" aria-label="Level ${lv.id}, ${state === 'locked' ? 'locked' : `${stars} of 3 stars`}" style="left:${(p.x / width) * 100}%;top:${p.y}px" ${state === 'locked' ? 'disabled' : ''}>
                 <span class="num">${state === 'locked' ? UI.lock : lv.id}</span>
+                ${lv.boss && !stars ? `<span class="node-boss" aria-hidden="true">${bossSvg(lv.boss.who, '')}</span>` : ''}
                 ${state === 'locked' ? '' : `<span class="node-stars">${stars3(stars)}</span>`}
               </button>`;
           }).join('')}
@@ -1036,6 +1051,7 @@ function modal(inner: string, onClose?: () => void): HTMLElement {
 
 function showLevelIntro(level: Level): void {
   snowy = !!level.snow;
+  if (level.boss) bossNow = level.boss.who;
   const picks: Record<'zoomies' | 'micah', boolean> = { zoomies: false, micah: false };
   const zone = ZONES[level.zone];
   const m = modal(
@@ -1681,6 +1697,12 @@ const BIG_CHEERS = ['ZOOMIES!', 'Micah Madness!', 'Who\u2019s a good player?', '
 function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): void {
   const kinds = level.kinds;
   let grid: Grid = createGrid(ROWS, COLS, Math.random, kinds);
+  // Shaped levels cut cells out of the square; boss levels put the boss on a 2x2 block.
+  placeHoles(grid, level.shape);
+  if (level.boss) {
+    bossNow = level.boss.who;
+    placeBoss(grid, level.boss.at);
+  }
   // Washes left at each cell: 0 clean, 1 mud, 2 deep mud.
   const mud: number[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => mudDepth(level, r, c)));
   const yarn: boolean[][] = Array.from({ length: ROWS }, (_, r) =>
@@ -1699,8 +1721,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const soap: boolean[][] = Array.from({ length: ROWS }, (_, r) => Array.from({ length: COLS }, (_, c) => level.bubbles?.[r]?.[c] === 'b'));
   // Parcels sit on the board like pieces but are too heavy to swap.
   placeBoxes(grid, level.boxes);
-  if ((level.boxes || level.burrs) && !hasMove(grid, (r, c) => yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]))) shuffle(grid);
-  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]);
+  const locked = (r: number, c: number) => yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]) || isFixed(grid[r][c]);
+  if ((level.boxes || level.burrs || level.shape || level.boss) && !hasMove(grid, locked)) shuffle(grid);
   let moves = level.moves;
   let score = 0;
   let busy = false;
@@ -1726,7 +1748,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.type === 'burrs' ? burrCount(level) : g.target,
+    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.type === 'burrs' ? burrCount(level) : g.type === 'boss' ? level.boss?.hp ?? 0 : g.target,
   );
   const syncBurrs = () => level.goals.forEach((g, i) => g.type === 'burrs' && (remaining[i] = burrsLeft()));
   const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
@@ -1780,7 +1802,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         </div>
         <div class="goals${level.goals.length > 2 ? ' many' : ''}"></div>
       </div>
-      <div class="board-wrap"><div class="board ${level.snow ? 'snowy' : ''}"></div></div>
+      <div class="board-wrap"><div class="board ${level.snow ? 'snowy' : ''} ${level.shape ? 'shaped' : ''}"></div></div>
       <p class="sr-only board-status" aria-live="polite"></p>
       <div class="tools"></div>
     </div>`);
@@ -1816,13 +1838,25 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const ro = new ResizeObserver(fitBoard);
   ro.observe(screen);
 
+  // A shaped board draws its own outline: a dark frame behind every cell that is part of it.
+  if (level.shape) {
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        if (level.shape[r][c] !== '#') continue;
+        const f = document.createElement('div');
+        f.className = 'cell-frame';
+        f.style.left = `${(c / COLS) * 100}%`;
+        f.style.top = `${(r / ROWS) * 100}%`;
+        boardEl.append(f);
+      }
+  }
   // Cell backgrounds (including mud layer).
   const cellEls: HTMLDivElement[][] = [];
   for (let r = 0; r < ROWS; r++) {
     cellEls.push([]);
     for (let c = 0; c < COLS; c++) {
       const cell = document.createElement('div');
-      cell.className = `cell ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''} ${mud[r][c] > 1 ? 'deep' : ''} ${leaf[r][c] ? 'leafy' : ''}`;
+      cell.className = `cell ${isHole(grid[r][c]) ? 'hole' : ''} ${(r + c) % 2 ? 'alt' : ''} ${mud[r][c] ? 'mud' : ''} ${mud[r][c] > 1 ? 'deep' : ''} ${leaf[r][c] ? 'leafy' : ''}`;
       cell.style.left = `${(c / COLS) * 100}%`;
       cell.style.top = `${(r / ROWS) * 100}%`;
       boardEl.append(cell);
@@ -1863,6 +1897,120 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   };
   const bubbleEls: (HTMLDivElement | null)[][] = soap.map((row, r) => row.map((on, c) => (on ? makeBubbleEl(r, c) : null)));
 
+  // The area boss stands on its 2x2 block with a health bar over its head.
+  const bossGoal = level.goals.findIndex((g) => g.type === 'boss');
+  const bossInfo = level.boss ? BOSSES[level.boss.who] : null;
+  let bossEl: HTMLDivElement | null = null;
+  let movesSinceThrow = 0;
+  if (level.boss) {
+    bossEl = document.createElement('div');
+    bossEl.className = `boss boss-${level.boss.who}`;
+    bossEl.style.left = `${(level.boss.at[1] / COLS) * 100}%`;
+    bossEl.style.top = `${(level.boss.at[0] / ROWS) * 100}%`;
+    bossEl.innerHTML = `${bossSvg(level.boss.who)}<div class="boss-hp" role="img"><i></i><b></b></div>`;
+    boardEl.append(bossEl);
+  }
+  const bossAlive = () => grid.some((row) => row.some((t) => isBossCell(t)));
+  /** Bring the boss's picture and health bar in line with the board (also after an undo). */
+  function syncBoss() {
+    if (!bossEl || !level.boss) return;
+    const left = Math.max(0, remaining[bossGoal]);
+    bossEl.hidden = !bossAlive();
+    bossEl.classList.remove('beaten');
+    bossEl.querySelector<HTMLElement>('.boss-hp i')!.style.width = `${(left / level.boss.hp) * 100}%`;
+    bossEl.querySelector<HTMLElement>('.boss-hp b')!.textContent = String(left);
+    bossEl.querySelector<HTMLElement>('.boss-hp')!.setAttribute('aria-label', `${bossInfo!.name}: ${left} health left`);
+  }
+  syncBoss();
+  /** The boss takes a hit: its bar drops, it flinches, and the damage floats off it. */
+  function hurtBoss(dmg: number) {
+    if (!bossEl || !level.boss) return;
+    remaining[bossGoal] -= dmg;
+    syncBoss();
+    replay(bossEl, 'hit');
+    const n = document.createElement('div');
+    n.className = 'boss-dmg';
+    n.textContent = `-${dmg}`;
+    n.style.left = `${((level.boss.at[1] + 1) / COLS) * 100}%`;
+    n.style.top = `${((level.boss.at[0] + 0.4) / ROWS) * 100}%`;
+    boardEl.append(n);
+    setTimeout(() => n.remove(), 900);
+    if (remaining[bossGoal] > 0 && remaining[bossGoal] <= level.boss.hp * 0.3 && !bossEl.classList.contains('low')) {
+      bossEl.classList.add('low');
+      say(`${bossInfo!.name.replace(/^\w/, (ch) => ch.toUpperCase())} is nearly beaten. Keep going!`, 'big');
+    }
+  }
+  /** Chased off: the boss runs away and the pieces above fall into its spot. */
+  async function beatBoss() {
+    if (!bossEl || !level.boss) return;
+    bossEl.classList.add('beaten');
+    sfx.popper();
+    haptic.win();
+    callout(boardEl, 'Chased off!', 4, '');
+    confetti(boardEl, ((level.boss.at[1] + 1) / COLS) * 100, ((level.boss.at[0] + 1) / ROWS) * 100, 40, 1.1);
+    hearts(mascot, 4);
+    say(bossInfo!.bye, 'big');
+    bump(save, 'bosses');
+    score += 1000;
+    removeBoss(grid);
+    await wait(650);
+    bossEl.hidden = true;
+  }
+  /** Every few moves the boss throws its nuisance onto a random piece. */
+  async function bossThrows() {
+    if (!bossEl || !level.boss || !bossInfo || over || !bossAlive()) return;
+    if (++movesSinceThrow < level.boss.every) return;
+    movesSinceThrow = 0;
+    const atk = bossInfo.attack;
+    const spots: Pos[] = [];
+    grid.forEach((row, r) =>
+      row.forEach((t, c) => {
+        if (!t || t.kind < 0 || t.special !== 'none' || locked(r, c)) return;
+        // Junk needs room to fall, so it never lands in a column's bottom cell.
+        if (atk.kind === 'junk' && r >= ROWS - 1) return;
+        spots.push([r, c]);
+      }),
+    );
+    if (!spots.length) return;
+    const [r, c] = spots[Math.floor(Math.random() * spots.length)];
+    replay(bossEl, 'throw');
+    say(bossInfo.throws[Math.floor(Math.random() * bossInfo.throws.length)], 'sad');
+    sfx.whoosh();
+    // Something flies from the boss to the piece it lands on.
+    const fly = document.createElement('div');
+    fly.className = `boss-fly fly-${atk.kind}`;
+    fly.style.left = `${((level.boss.at[1] + 1) / COLS) * 100}%`;
+    fly.style.top = `${((level.boss.at[0] + 0.6) / ROWS) * 100}%`;
+    boardEl.append(fly);
+    void fly.offsetWidth;
+    fly.style.left = `${((c + 0.5) / COLS) * 100}%`;
+    fly.style.top = `${((r + 0.5) / ROWS) * 100}%`;
+    await wait(380);
+    fly.remove();
+    const t = grid[r][c]!;
+    if (atk.kind === 'junk') {
+      t.kind = JUNK_KIND;
+      t.junk = atk.items[Math.floor(Math.random() * atk.items.length)];
+    } else if (atk.kind === 'box') {
+      grid[r][c] = newBox(1);
+      tileEls.get(t.id)?.remove();
+      tileEls.delete(t.id);
+    } else {
+      soap[r][c] = true;
+      bubbleEls[r][c] = makeBubbleEl(r, c);
+      bubbleEls[r][c]!.classList.add('blown');
+    }
+    renderAll();
+    const el = tileEls.get(grid[r][c]!.id);
+    el?.classList.add('born');
+    ring(boardEl, ((c + 0.5) / COLS) * 100, ((r + 0.5) / ROWS) * 100, '#e8352f', 1);
+    if (!hasMove(grid, locked)) {
+      await wait(300);
+      shuffle(grid);
+      renderAll();
+    }
+  }
+
   const tileEls = new Map<number, HTMLDivElement>();
   const specialClass = (s: Special) => (s === 'none' ? '' : `sp-${s}`);
   // Micah keeps her picture even after a combo spends her power (kind -1 has no regular art).
@@ -1895,7 +2043,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     const live = new Set<number>();
     grid.forEach((row, r) =>
       row.forEach((t, c) => {
-        if (!t) return;
+        if (!t || isFixed(t)) return;
         live.add(t.id);
         syncTileEl(t, r, c);
       }),
@@ -1967,7 +2115,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : g.type === 'burrs' ? 'burrs left' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : g.type === 'burrs' ? 'burrs left' : g.type === 'boss' ? 'health left' : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -2127,6 +2275,15 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       if (torn.dented.length && !torn.broken.length) sfx.snip();
       const points = res.cleared.size * 20 * chain + res.created.length * 100;
       score += points;
+      // Matches right beside the boss (and blasts into it) knock its health down.
+      let bossBeaten = false;
+      if (bossGoal >= 0 && remaining[bossGoal] > 0) {
+        const dmg = bossDamage(grid, res.cleared, res.fired);
+        if (dmg) {
+          hurtBoss(dmg);
+          bossBeaten = remaining[bossGoal] <= 0;
+        }
+      }
       let washed = false;
       let untangled = false;
       let raked = false;
@@ -2241,6 +2398,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
         }
       }
       applyClear(grid, res);
+      if (bossBeaten) await beatBoss();
       for (const { tile } of res.created) {
         bump(save, tile.special === 'bark' ? 'bark' : tile.special === 'micah' ? 'micah' : 'zoomies');
       }
@@ -2273,6 +2431,8 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       if (!el) {
         el = makeTileEl(d.tile);
         el.classList.add('no-anim');
+        // On a shaped board new pieces fade in, so none slide in over a gap.
+        if (level.shape) el.classList.add('drop-in');
         placeEl(el, d.from[0], d.from[1]);
       }
     }
@@ -2349,6 +2509,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   async function trySwap(a: Pos, b: Pos) {
     if (busy || over || !isAdjacent(a, b)) return;
+    if (isHole(grid[a[0]][a[1]]) || isHole(grid[b[0]][b[1]])) return selectCell(null);
+    if (isBossCell(grid[a[0]][a[1]]) || isBossCell(grid[b[0]][b[1]])) {
+      selectCell(null);
+      sfx.bad();
+      if (bossEl) replay(bossEl, 'hit');
+      say('Micah can\u2019t move that! Match right beside it to chase it off.', 'sad');
+      return;
+    }
     if (locked(...a) || locked(...b)) {
       selectCell(null);
       sfx.bad();
@@ -2411,6 +2579,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       await cascade([b, a], forced);
       if (!rakedThisMove && leavesLeft() > 0) blowLeaf();
       if (!pickedThisMove && burrsLeft() > 0) spreadBurr();
+      if (!goalsMet()) await bossThrows();
     });
     if (legal) await checkEnd();
     armHint();
@@ -2489,7 +2658,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   /** A burr hitches a ride onto the piece next door. */
   function spreadBurr() {
-    const p = spreadLeaf(burr, (r, c) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]));
+    const p = spreadLeaf(burr, (r, c) => yarn[r][c] || soap[r][c] || isBox(grid[r][c]) || isFixed(grid[r][c]));
     if (!p) return;
     burrEls[p[0]][p[1]] = makeBurrEl(p[0], p[1]);
     burrEls[p[0]][p[1]]!.classList.add('blown');
@@ -2501,7 +2670,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   /** The wind blows one more leaf onto the board, next to the others. */
   function blowLeaf() {
-    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]));
+    const p = spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || soap[r][c] || burr[r][c] || isBox(grid[r][c]) || isFixed(grid[r][c]));
     if (!p) return;
     const el = cellEls[p[0]][p[1]];
     el.classList.add('leafy', 'blown');
@@ -2553,6 +2722,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     for (const el of tileEls.values()) el.remove();
     tileEls.clear();
     renderAll();
+    syncBoss();
     for (const el of tileEls.values()) el.classList.add('born');
     renderHud();
   }
@@ -2924,7 +3094,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   boardEl.addEventListener('pointerdown', (e) => {
     if (busy || over) return;
     const p = cellAt(e);
-    if (!p) return;
+    if (!p || isFixed(grid[p[0]][p[1]])) return;
     if (treatMode) {
       void eatTile(p);
       return;
@@ -3042,14 +3212,20 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   renderAll();
   renderHud();
-  say(level.goals.map((g, i) => (i ? goalText(g).replace(/^\w/, (ch) => ch.toLowerCase()) : goalText(g))).join(', then ') + '.');
+  if (bossInfo) {
+    // The boss gets an entrance: a callout over the board and its own hello.
+    say(bossInfo.hello, 'big');
+    callout(boardEl, 'Boss level!', 3, bossInfo.name.replace(/^\w/, (ch) => ch.toUpperCase()));
+    sfx.warn();
+    replay(bossEl, 'throw');
+  } else say(level.goals.map((g, i) => (i ? goalText(g).replace(/^\w/, (ch) => ch.toLowerCase()) : goalText(g))).join(', then ') + '.');
   armHint();
   if (level.id === 1 && !save.seen.includes('guide')) window.setTimeout(showGuide, 700);
   else if (newTool) {
     window.setTimeout(() => {
       if (over) return;
       say(`New tool: ${BOOSTERS[newTool].name}! ${BOOSTERS[newTool].desc}`, 'big');
-    }, 2200);
+    }, bossInfo ? 4200 : 2200);
   }
   // Safety: a fresh board never starts with a match, but boosters could create none anyway.
   if (findRuns(grid).length) void runLocked(() => cascade([]));
