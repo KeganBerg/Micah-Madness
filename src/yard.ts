@@ -499,6 +499,26 @@ const grass = (y0: number, time: YardTime, snowy = false) => {
   return s;
 };
 
+/**
+ * A far-off taco place, glimpsed over the back fence: a little purple pole sign with a bell on it.
+ * Hazy in the daytime, lit from sunset, glowing pink at night. Drawn behind the fence so only the top peeks out.
+ */
+export const tacoSign = (time: YardTime, snowy = false) => {
+  const lit = time !== 'day';
+  const night = time === 'night';
+  const panel = night ? '#7d3cc0' : lit ? '#7436b0' : '#6a3a98';
+  const bell = lit ? '#ff9ad5' : '#f08cc6';
+  return `<g class="yard-taco live" role="button" aria-label="A sign far away" opacity="${lit ? 1 : 0.78}">
+    ${night ? '<circle cx="104" cy="36" r="17" fill="#ff6fc4" opacity=".2"/><circle cx="104" cy="36" r="10" fill="#c58bff" opacity=".22"/>' : ''}
+    <rect x="102.8" y="44" width="2.4" height="22" fill="${night ? '#3b3f4a' : '#6f7883'}"/>
+    <rect x="96" y="29" width="16" height="15" rx="2.6" fill="${panel}" stroke="${night ? '#e3c4ff' : '#4d2770'}" stroke-width="${night ? 0.9 : 0.7}"/>
+    <path d="M100.2 40.4 Q100.4 33 104 33 Q107.6 33 107.8 40.4 Z" fill="${bell}"/>
+    <rect x="99.4" y="40" width="9.2" height="1.4" rx=".7" fill="${bell}"/><circle cx="104" cy="42.2" r=".9" fill="${bell}"/>
+    ${snowy ? '<rect x="95" y="27.6" width="18" height="3" rx="1.5" fill="#ffffff"/>' : ''}
+    <rect x="90" y="24" width="28" height="44" fill="transparent"/>
+  </g>`;
+};
+
 /** A worn wooden fence with one loose plank, and the hole Micah dug under it. */
 const fence = (snowy = false) => {
   let s = '';
@@ -847,7 +867,7 @@ export function yardScene(owned: string[], micahUrl: string, opts: SceneOptions 
     back = `${sky(time)}
       <g class="yard-ark live" role="button" aria-label="Noah's Ark, over the back fence" transform="translate(214 84) scale(.7)">${noahsArk().svg}</g>
       ${time === 'night' ? '<rect x="189" y="34" width="6" height="6" fill="#ffd56a" opacity=".9"/>' : ''}
-      ${grass(80, time, snowy)}${fence(snowy)}
+      ${tacoSign(time, snowy)}${grass(80, time, snowy)}${fence(snowy)}
       ${trail('M70 170 C100 200 160 186 190 214 S 250 258 300 252 M190 214 C 210 194 236 196 258 212 M70 170 C 76 206 66 228 60 248', snowy)}`;
   } else if (area === 'yoshi') {
     back = `${sky(time)}${grass(92, time, snowy)}${graceHouse(time, snowy)}
