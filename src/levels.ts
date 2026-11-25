@@ -9,10 +9,24 @@ export type Goal =
   | { type: 'junk'; count: number } // let Micah eat this much junk (it has to reach the bottom row)
   | { type: 'burrs' } // pick out every burr (they pin a piece down, and spread to the next piece if a move picks none)
   | { type: 'boxes' } // tear open every parcel (a match right beside it, or a blast, tears off a layer)
+  | { type: 'boss' } // chase the area's boss off: match right beside it until its health runs out
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
 
 export type Power = 'zoomies' | 'bark' | 'micah';
+
+/** Who guards the end of an area. Each one has a nuisance it throws at the board every few moves. */
+export type BossId = 'raccoon' | 'squirrel' | 'tub' | 'postbox';
+
+export interface Boss {
+  who: BossId;
+  /** Health: one point per piece cleared right beside it, three per power-up that blasts into it. */
+  hp: number;
+  /** Top-left cell of the 2x2 block it sits on. */
+  at: [number, number];
+  /** It throws something every this many moves. */
+  every: number;
+}
 
 export interface Level {
   id: number;
@@ -33,6 +47,10 @@ export interface Level {
   burrs?: string[];
   /** Micah's Winter: mud is drawn as snow drifts to shovel. */
   snow?: boolean;
+  /** 8 rows: '#' is part of the board, '.' is cut out. A level without one is a full square. */
+  shape?: string[];
+  /** The area finale's boss. */
+  boss?: Boss;
 }
 
 export interface Zone {
@@ -227,7 +245,7 @@ const N = (id: number, moves: number, kinds: number, goals: Goal[], stars: [numb
   ...(o.junk ? { junk: o.junk } : {}),
 });
 
-export const LEVELS: Level[] = [
+const BASE_LEVELS: Level[] = [
   L(1, 20, 5, [{ type: 'collect', kind: BONE, count: 15 }], [1500, 3000, 4500]),
   L(2, 20, 5, [{ type: 'score', target: 3000 }], [3000, 5000, 7000]),
   L(3, 22, 5, [{ type: 'collect', kind: BALL, count: 18 }, { type: 'collect', kind: PAW, count: 18 }], [2500, 4500, 6500]),
@@ -565,6 +583,235 @@ export const LEVELS: Level[] = [
   N(249, 40, 6, [X, R, F, P('micah', 1)], [3700, 8200, 10200], { boxes: TAPE_LOW, burrs: BURR_TWO, leaves: LEAF_TOP }),
   N(250, 42, 5, [J(8), M, X, R], [7400, 16400, 20200], { junk: 2, mud: MUD_TOP, boxes: TAPE_LOW, burrs: BURR_CENTER }),
 ];
+
+// ───────────────────────────── Board shapes ─────────────────────────────
+// Up to three levels in every area (from area 3 on) are cut into a shape, so the board itself changes.
+// '#' is board, '.' is cut away. Pieces fall straight past the gaps.
+export const SHAPES: Record<string, string[]> = {
+  heart: ['.##..##.', '########', '########', '########', '########', '.######.', '..####..', '...##...'],
+  bone: ['##....##', '###..###', '.######.', '.######.', '.######.', '.######.', '###..###', '##....##'],
+  ball: ['..####..', '.######.', '########', '########', '########', '########', '.######.', '..####..'],
+  donut: ['########', '########', '########', '###..###', '###..###', '########', '########', '########'],
+  hourglass: ['########', '########', '.######.', '..####..', '..####..', '.######.', '########', '########'],
+  plus: ['..####..', '..####..', '########', '########', '########', '########', '..####..', '..####..'],
+  twins: ['###..###', '###..###', '###..###', '###..###', '###..###', '###..###', '###..###', '###..###'],
+  doghouse: ['...##...', '..####..', '.######.', '########', '########', '########', '###..###', '###..###'],
+  stairs: ['####....', '#####...', '######..', '#######.', '.#######', '..######', '...#####', '....####'],
+  claws: ['##....##', '##....##', '.##..##.', '.######.', '########', '########', '.######.', '..####..'],
+  bowl: ['##....##', '##....##', '###..###', '########', '########', '########', '.######.', '..####..'],
+};
+const SHAPE_ORDER = Object.keys(SHAPES);
+
+/** Every cell a level's layouts put something on (mud, yarn, leaves, bubbles, parcels, burrs). */
+function usedCells(lv: Level): Set<number> {
+  const used = new Set<number>();
+  for (const layer of [lv.mud, lv.yarn, lv.leaves, lv.bubbles, lv.boxes, lv.burrs]) {
+    layer?.forEach((row, r) => [...row].forEach((ch, c) => ch !== '.' && used.add(r * 8 + c)));
+  }
+  return used;
+}
+
+const fits = (shape: string[], used: Set<number>) => [...used].every((k) => shape[Math.floor(k / 8)][k % 8] === '#');
+
+// ───────────────────────────── Area bosses ─────────────────────────────
+// The last level of every area is a boss: chase it off the board, plus one of the area's goals.
+const BOSS_ORDER: BossId[] = ['squirrel', 'raccoon', 'tub', 'postbox'];
+/** Areas with an obvious boss. Index = zone. */
+const ZONE_BOSS: Record<number, BossId> = { 13: 'raccoon', 16: 'tub', 21: 'raccoon', 25: 'postbox', 49: 'raccoon' };
+/** The goal a boss level keeps from the old finale, where the first one isn't the best fit. */
+const KEEP: Record<number, Goal['type']> = { 85: 'power', 250: 'boxes' };
+/** What each boss throws would muddle a goal that counts the same thing, so they never share a level. */
+const BOSS_CLASH: Record<BossId, Goal['type']> = { raccoon: 'junk', squirrel: 'junk', tub: 'bubbles', postbox: 'boxes' };
+const LAYER_OF: Partial<Record<Goal['type'], keyof Level>> = { mud: 'mud', yarn: 'yarn', leaves: 'leaves', bubbles: 'bubbles', boxes: 'boxes', burrs: 'burrs' };
+// Near the top in the middle looks best; any free 2x2 block will do if those are taken.
+const BOSS_SPOTS: [number, number][] = [[1, 3], [2, 3], [0, 3], [1, 1], [1, 5], [3, 3], [4, 3],
+  ...Array.from({ length: 49 }, (_, i): [number, number] => [Math.floor(i / 7), i % 7])];
+
+/** Tuned with scripts/tune.test.ts: move limits and star thresholds for shaped and boss levels. */
+const TUNED: Record<number, { moves: number; stars: [number, number, number]; hp?: number }> = {
+  5: { moves: 22, stars: [2600, 5700, 7100] },
+  10: { moves: 38, stars: [3800, 8500, 10500] },
+  13: { moves: 29, stars: [2500, 5600, 7000] },
+  14: { moves: 42, stars: [3500, 7900, 8700] },
+  15: { moves: 24, stars: [2800, 6200, 7800] },
+  17: { moves: 40, stars: [2900, 6500, 7600] },
+  19: { moves: 45, stars: [2900, 6500, 7400] },
+  20: { moves: 43, stars: [4400, 9700, 12000] },
+  22: { moves: 26, stars: [2200, 4900, 6000] },
+  23: { moves: 18, stars: [1200, 2700, 3700] },
+  24: { moves: 25, stars: [1900, 4300, 5300] },
+  25: { moves: 44, stars: [4100, 9100, 11300] },
+  27: { moves: 25, stars: [1800, 4100, 5100] },
+  28: { moves: 39, stars: [3300, 7300, 8700] },
+  29: { moves: 45, stars: [2300, 5200, 6100] },
+  30: { moves: 43, stars: [4100, 9200, 11200] },
+  33: { moves: 36, stars: [3600, 8000, 8800] },
+  35: { moves: 35, stars: [3700, 8200, 10000] },
+  37: { moves: 39, stars: [3500, 7800, 9500] },
+  39: { moves: 45, stars: [3500, 7900, 8700] },
+  40: { moves: 33, stars: [3300, 7400, 8900] },
+  42: { moves: 29, stars: [2400, 5400, 6400] },
+  43: { moves: 33, stars: [2500, 5600, 6900] },
+  44: { moves: 45, stars: [3800, 8500, 10300] },
+  45: { moves: 34, stars: [3400, 7600, 9400] },
+  48: { moves: 37, stars: [2700, 5900, 7200] },
+  50: { moves: 43, stars: [4100, 9100, 12000] },
+  53: { moves: 28, stars: [2700, 5900, 7100] },
+  55: { moves: 31, stars: [3400, 7500, 9000] },
+  60: { moves: 42, stars: [4500, 9900, 12000] },
+  63: { moves: 45, stars: [2900, 6300, 8400] },
+  65: { moves: 23, stars: [2500, 5600, 7300] },
+  67: { moves: 30, stars: [2400, 5300, 6700] },
+  70: { moves: 34, stars: [2900, 6400, 8100] },
+  75: { moves: 21, stars: [2400, 5400, 6500] },
+  78: { moves: 40, stars: [3700, 8200, 10100] },
+  80: { moves: 22, stars: [2500, 5500, 6700] },
+  82: { moves: 28, stars: [2900, 6400, 8100] },
+  83: { moves: 40, stars: [2600, 5800, 6800] },
+  84: { moves: 25, stars: [2400, 5300, 6500] },
+  85: { moves: 21, stars: [2500, 5600, 6700] },
+  87: { moves: 29, stars: [2300, 5200, 6700] },
+  90: { moves: 24, stars: [2500, 5500, 6900] },
+  93: { moves: 42, stars: [2800, 6300, 8700] },
+  95: { moves: 18, stars: [2200, 4900, 6100] },
+  97: { moves: 32, stars: [2800, 6200, 7600] },
+  98: { moves: 38, stars: [3200, 7000, 8900] },
+  100: { moves: 42, stars: [4400, 9700, 12200] },
+  102: { moves: 43, stars: [2700, 5900, 7300] },
+  104: { moves: 27, stars: [2400, 5400, 7100] },
+  105: { moves: 19, stars: [2200, 5000, 6100] },
+  107: { moves: 27, stars: [4300, 9500, 11800] },
+  108: { moves: 29, stars: [4200, 9300, 12300] },
+  109: { moves: 43, stars: [5500, 12200, 15000] },
+  110: { moves: 33, stars: [5900, 13200, 16900] },
+  113: { moves: 35, stars: [3200, 7100, 8700] },
+  115: { moves: 20, stars: [2300, 5000, 6400] },
+  117: { moves: 44, stars: [3500, 7700, 9600] },
+  118: { moves: 34, stars: [2900, 6400, 8400] },
+  120: { moves: 21, stars: [3600, 8100, 10700], hp: 39 },
+  122: { moves: 37, stars: [2400, 5400, 6500] },
+  125: { moves: 21, stars: [3500, 7700, 9900], hp: 39 },
+  127: { moves: 27, stars: [2400, 5300, 6900] },
+  130: { moves: 27, stars: [2900, 6400, 7800] },
+  132: { moves: 41, stars: [2600, 5700, 6800] },
+  133: { moves: 28, stars: [4100, 9100, 12100] },
+  134: { moves: 35, stars: [2900, 6500, 8000] },
+  135: { moves: 21, stars: [2400, 5400, 6500] },
+  139: { moves: 34, stars: [5100, 11200, 15000] },
+  140: { moves: 28, stars: [3100, 6800, 8400] },
+  142: { moves: 26, stars: [2400, 5300, 6300] },
+  143: { moves: 40, stars: [2400, 5300, 6700] },
+  144: { moves: 43, stars: [5200, 11500, 14000] },
+  145: { moves: 32, stars: [3000, 6700, 8400] },
+  150: { moves: 45, stars: [4700, 10400, 12900], hp: 24 },
+  152: { moves: 27, stars: [2400, 5300, 6500] },
+  154: { moves: 44, stars: [3500, 7700, 9400] },
+  155: { moves: 24, stars: [2700, 5900, 7300] },
+  157: { moves: 31, stars: [2800, 6200, 7600] },
+  158: { moves: 27, stars: [2300, 5000, 6600] },
+  159: { moves: 40, stars: [3200, 7000, 8600] },
+  160: { moves: 25, stars: [2700, 6000, 7600] },
+  162: { moves: 28, stars: [4000, 8800, 11600] },
+  164: { moves: 31, stars: [2500, 5600, 7000] },
+  165: { moves: 22, stars: [3600, 7900, 10600], hp: 46 },
+  168: { moves: 30, stars: [2900, 6400, 7700] },
+  170: { moves: 26, stars: [2700, 5900, 6900] },
+  172: { moves: 28, stars: [4200, 9300, 12000] },
+  174: { moves: 34, stars: [4400, 9900, 13200] },
+  175: { moves: 26, stars: [2900, 6300, 8000] },
+  177: { moves: 34, stars: [3100, 6800, 8300] },
+  180: { moves: 40, stars: [4000, 8800, 10900] },
+  183: { moves: 43, stars: [5500, 12300, 15100] },
+  185: { moves: 19, stars: [3300, 7400, 9800] },
+  188: { moves: 44, stars: [3500, 7700, 9400] },
+  189: { moves: 36, stars: [4800, 10600, 13700] },
+  190: { moves: 29, stars: [2800, 6200, 7800] },
+  193: { moves: 36, stars: [2700, 6000, 7000] },
+  194: { moves: 35, stars: [5100, 11400, 14600] },
+  195: { moves: 28, stars: [3000, 6600, 7800] },
+  197: { moves: 23, stars: [2200, 5000, 6300] },
+  199: { moves: 35, stars: [5500, 12200, 15200] },
+  200: { moves: 25, stars: [2700, 6100, 7400] },
+  202: { moves: 34, stars: [3000, 6700, 8000] },
+  203: { moves: 30, stars: [2600, 5800, 7400] },
+  205: { moves: 27, stars: [2700, 6000, 7500] },
+  208: { moves: 39, stars: [5100, 11300, 15000] },
+  210: { moves: 45, stars: [4200, 9400, 12000], hp: 31 },
+  212: { moves: 25, stars: [1800, 3900, 5000] },
+  213: { moves: 28, stars: [2900, 6400, 7700] },
+  215: { moves: 27, stars: [2900, 6400, 8300] },
+  219: { moves: 32, stars: [4500, 10000, 13000] },
+  220: { moves: 45, stars: [4500, 10100, 12200] },
+  222: { moves: 35, stars: [3400, 7500, 9100] },
+  223: { moves: 44, stars: [5700, 12700, 16600] },
+  224: { moves: 36, stars: [3100, 7000, 8100] },
+  225: { moves: 39, stars: [3600, 8000, 9300] },
+  230: { moves: 38, stars: [6400, 14300, 18500] },
+  232: { moves: 25, stars: [1900, 4100, 5300] },
+  235: { moves: 30, stars: [3100, 6800, 8300] },
+  237: { moves: 37, stars: [2600, 5700, 6900] },
+  239: { moves: 45, stars: [3600, 7900, 9700] },
+  240: { moves: 45, stars: [4400, 9900, 11800] },
+  242: { moves: 42, stars: [3200, 7100, 8600] },
+  243: { moves: 45, stars: [5700, 12600, 16000] },
+  245: { moves: 39, stars: [6300, 14000, 17800] },
+  250: { moves: 23, stars: [3800, 8300, 11600] },
+};
+
+function bossLevel(lv: Level): Level {
+  const zone = lv.zone;
+  const area = Math.floor((lv.id - 1) / 5);
+  // Keep the finale's most interesting goal: an obstacle first, then mud or a collect goal.
+  const keep =
+    lv.goals.find((g) => g.type === KEEP[lv.id]) ??
+    lv.goals.find((g) => !['score', 'mud', 'collect', 'power'].includes(g.type)) ??
+    lv.goals.find((g) => g.type !== 'score');
+  let who = ZONE_BOSS[zone] ?? BOSS_ORDER[zone % BOSS_ORDER.length];
+  for (let i = 0; keep && BOSS_CLASH[who] === keep.type && i < 4; i++) who = BOSS_ORDER[(BOSS_ORDER.indexOf(who) + 1) % BOSS_ORDER.length];
+  const out: Level = { id: lv.id, zone, moves: lv.moves, kinds: lv.kinds, goals: [{ type: 'boss' }], stars: lv.stars };
+  if (keep) {
+    out.goals.push(keep);
+    const layer = LAYER_OF[keep.type];
+    if (layer) (out as unknown as Record<string, unknown>)[layer] = lv[layer];
+    if (keep.type === 'junk') out.junk = lv.junk;
+  }
+  const used = usedCells(out);
+  const at = BOSS_SPOTS.find(([r, c]) => [0, 1].every((dr) => [0, 1].every((dc) => !used.has((r + dr) * 8 + c + dc)))) ?? [1, 3];
+  out.boss = { who, hp: Math.round(14 + area * 0.6), at, every: area < 4 ? 4 : 3 };
+  return out;
+}
+
+/** Shaped levels that played too hard (sim bot) stay square. */
+const NO_SHAPE = new Set<number>([12, 148, 169, 228, 18, 38, 58, 88, 103, 138, 233, 238, 32, 47, 49, 52, 54, 62, 64, 77, 79, 124, 149, 179, 204, 207, 214, 227, 234, 247, 249]);
+
+function shapedLevel(lv: Level): Level {
+  if (NO_SHAPE.has(lv.id)) return lv;
+  const used = usedCells(lv);
+  // Leaves and burrs spread and junk has to reach the bottom, so those levels only get the roomier shapes.
+  const roomy = lv.goals.some((g) => g.type === 'leaves' || g.type === 'burrs' || g.type === 'junk');
+  const cells = (sh: string[]) => sh.join('').split('').filter((ch) => ch === '#').length;
+  const start = (lv.id * 7) % SHAPE_ORDER.length;
+  for (let i = 0; i < SHAPE_ORDER.length; i++) {
+    const name = SHAPE_ORDER[(start + i) % SHAPE_ORDER.length];
+    if (fits(SHAPES[name], used) && (!roomy || cells(SHAPES[name]) >= 52)) return { ...lv, shape: SHAPES[name] };
+  }
+  return lv;
+}
+
+/** Which levels get a boss or a shape. */
+export const isBossId = (id: number) => id % 5 === 0;
+export const isShapedId = (id: number) => id > 10 && id % 5 >= 2;
+
+export const LEVELS: Level[] = BASE_LEVELS.map((lv) => {
+  const out = isBossId(lv.id) ? bossLevel(lv) : isShapedId(lv.id) ? shapedLevel(lv) : lv;
+  const t = TUNED[lv.id];
+  if (t) {
+    out.moves = t.moves;
+    out.stars = t.stars;
+    if (t.hp && out.boss) out.boss.hp = t.hp;
+  }
+  return out;
+});
 
 /** Washes needed at one cell: 0, 1 for mud, 2 for deep mud. */
 export function mudDepth(level: Level, r: number, c: number): number {

@@ -1,7 +1,8 @@
 // Level-balance bot used by scripts/sim.test.ts. Pure logic, no DOM.
 import { boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
 import { JUNK_ITEMS } from '../src/ark';
-import { burrsHit, hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
+import { BOSSES } from '../src/bosses';
+import { bossDamage, isBossCell, isFixed, newBox, placeBoss, placeHoles, removeBoss, JUNK_KIND, burrsHit, hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -9,6 +10,10 @@ const powerOf = (sp: string): Power | null => (sp === 'bark' ? 'bark' : sp === '
 
 export function play(lv: Level, smart = true): Outcome {
   const grid: Grid = createGrid(8, 8, Math.random, lv.kinds);
+  placeHoles(grid, lv.shape);
+  if (lv.boss) placeBoss(grid, lv.boss.at);
+  const bossGoal = lv.goals.findIndex((g) => g.type === 'boss');
+  let sinceThrow = 0;
   const junkGoal = lv.goals.findIndex((g) => g.type === 'junk');
   const junkWant = () => (junkGoal < 0 ? 0 : Math.min(lv.junk ?? 2, Math.max(0, rem[junkGoal])));
   const mud = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => mudDepth(lv, r, c)));
@@ -19,12 +24,12 @@ export function play(lv: Level, smart = true): Outcome {
   const burr = Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => lv.burrs?.[r]?.[c] === 'r'));
   const burrsLeft = () => burr.flat().filter(Boolean).length;
   let picked = false;
-  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c]);
-  if ((lv.boxes || lv.burrs) && !hasMove(grid, locked)) shuffle(grid);
+  const locked = (r: number, c: number) => yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c]) || isFixed(grid[r][c]);
+  if ((lv.boxes || lv.burrs || lv.shape || lv.boss) && !hasMove(grid, locked)) shuffle(grid);
   const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : g.type === 'boxes' ? boxTotal(lv) : g.type === 'burrs' ? burrCount(lv) : 0);
   const leavesLeft = () => leaf.flat().filter(Boolean).length;
   let raked = false;
-  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : total(g)));
+  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : g.type === 'boss' ? lv.boss?.hp ?? 0 : total(g)));
   const syncLeaves = () => lv.goals.forEach((g, i) => (g.type === 'leaves' && (rem[i] = leavesLeft())) || (g.type === 'burrs' && (rem[i] = burrsLeft())));
   if (junkGoal >= 0) placeJunk(grid, junkWant(), JUNK_ITEMS.length);
   const fall = () => { const drops = applyGravity(grid, Math.random, lv.kinds); throwJunk(grid, drops, junkWant(), JUNK_ITEMS.length); };
@@ -44,6 +49,11 @@ export function play(lv: Level, smart = true): Outcome {
         fall();
         continue;
       }
+      let beaten = false;
+      if (bossGoal >= 0 && rem[bossGoal] > 0) {
+        rem[bossGoal] -= bossDamage(grid, res.cleared, res.fired);
+        beaten = rem[bossGoal] <= 0;
+      }
       const torn = hitBoxes(grid, res.cleared).broken.length;
       lv.goals.forEach((g, i) => g.type === 'boxes' && (rem[i] -= torn));
       score += res.cleared.size * 20 * chain + res.created.length * 100;
@@ -62,7 +72,9 @@ export function play(lv: Level, smart = true): Outcome {
       const popped = popBubbles(bubble, res.cleared).length;
       lv.goals.forEach((g, i) => g.type === 'bubbles' && (rem[i] -= popped));
       syncLeaves();
-      applyClear(grid, res); fall();
+      applyClear(grid, res);
+      if (beaten) { removeBoss(grid); score += 1000; }
+      fall();
       chain++; pref = []; forced = [];
     }
   };
@@ -101,6 +113,7 @@ export function play(lv: Level, smart = true): Outcome {
       v += (hits.broken.length * 6 + hits.dented.length * 4) * (smart ? 1 : 0.6);
     }
     v += burrsHit(burr, res.cleared).length * (smart ? 7 : 3);
+    if (bossGoal >= 0 && rem[bossGoal] > 0) v += bossDamage(g2, res.cleared, res.fired) * (smart ? 4 : 2);
     if (lv.goals.some((g, i) => g.type === 'bubbles' && rem[i] > 0)) v += popBubbles(bubble.map((row) => [...row]), res.cleared).length * (smart ? 5 : 3);
     for (const cr of res.created) lv.goals.forEach((g, i) => { if (g.type === 'power' && rem[i] > 0 && g.power === powerOf(cr.tile.special)) v += smart ? 8 : 4; });
     lv.goals.forEach((g, i) => { if (g.type === 'collect' && rem[i] > 0) v += res.collected[g.kind] * 1.5; });
@@ -128,6 +141,19 @@ export function play(lv: Level, smart = true): Outcome {
     cascade([b, a], forced);
     if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c])); syncLeaves(); }
     if (!picked && burrsLeft() > 0) { spreadLeaf(burr, (r, c) => yarn[r][c] || bubble[r][c] || isBox(grid[r][c])); syncLeaves(); }
+    // The boss throws its nuisance every few moves, as in main.ts.
+    if (lv.boss && !done() && grid.some((row) => row.some((t) => isBossCell(t))) && ++sinceThrow >= lv.boss.every) {
+      sinceThrow = 0;
+      const atk = BOSSES[lv.boss.who].attack;
+      const spots: Pos[] = [];
+      grid.forEach((row, r) => row.forEach((t, c) => { if (t && t.kind >= 0 && t.special === 'none' && !locked(r, c) && !(atk.kind === 'junk' && r >= 7)) spots.push([r, c]); }));
+      if (spots.length) {
+        const [r, c] = spots[Math.floor(Math.random() * spots.length)];
+        if (atk.kind === 'junk') { grid[r][c]!.kind = JUNK_KIND; grid[r][c]!.junk = atk.items[0]; }
+        else if (atk.kind === 'box') grid[r][c] = newBox(1);
+        else bubble[r][c] = true;
+      }
+    }
     let n = 0; while (!hasMove(grid, locked) && n++ < 20) shuffle(grid);
   }
   const won = done();

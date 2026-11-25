@@ -17,6 +17,17 @@ export const JUNK_KIND = -2;
  */
 export const BOX_KIND = -3;
 
+/**
+ * Kind value for a cell that isn't part of the board at all (a shaped level's cut-out).
+ * It never moves, never matches and pieces fall straight past it.
+ */
+export const HOLE_KIND = -4;
+/**
+ * Kind value for a cell under an area boss (a raccoon, a squirrel...). Like a hole it never
+ * moves and pieces fall past it; matches right beside it knock the boss's health down.
+ */
+export const BOSS_KIND = -5;
+
 export type Special = 'none' | 'zoomRow' | 'zoomCol' | 'bark' | 'micah';
 
 export interface Tile {
@@ -44,6 +55,62 @@ export function newJunk(item: number): Tile {
 }
 export const isJunk = (t: Cell | undefined): boolean => !!t && t.kind === JUNK_KIND;
 
+export const isHole = (t: Cell | undefined): boolean => !!t && t.kind === HOLE_KIND;
+export const isBossCell = (t: Cell | undefined): boolean => !!t && t.kind === BOSS_KIND;
+/** Cells that stay put whatever happens: holes and the boss. */
+export const isFixed = (t: Cell | undefined): boolean => !!t && (t.kind === HOLE_KIND || t.kind === BOSS_KIND);
+
+/** Cut a shaped level's board out: every '.' in the 8-row shape becomes a hole. */
+export function placeHoles(grid: Grid, shape?: string[]): void {
+  shape?.forEach((row, r) =>
+    [...row].forEach((ch, c) => {
+      if (ch === '.' && grid[r]?.[c] !== undefined) grid[r][c] = { id: nextId++, kind: HOLE_KIND, special: 'none' };
+    }),
+  );
+}
+
+/** Put the boss on the board: a 2x2 block with its top-left corner at `at`. */
+export function placeBoss(grid: Grid, at: Pos): void {
+  for (let r = at[0]; r < at[0] + 2; r++) for (let c = at[1]; c < at[1] + 2; c++) grid[r][c] = { id: nextId++, kind: BOSS_KIND, special: 'none' };
+}
+
+/** The boss is beaten: its cells become empty, ready for pieces to fall in. */
+export function removeBoss(grid: Grid): void {
+  grid.forEach((row, r) => row.forEach((t, c) => isBossCell(t) && (grid[r][c] = null)));
+}
+
+/**
+ * How hard one step hit the boss: one point for every cleared piece right beside it
+ * (up, down, left or right), and three for every power-up whose blast runs into it.
+ */
+export function bossDamage(grid: Grid, cleared: Set<number>, fired: { pos: Pos; special: Special }[]): number {
+  const cells: Pos[] = [];
+  grid.forEach((row, r) => row.forEach((t, c) => isBossCell(t) && cells.push([r, c])));
+  if (!cells.length) return 0;
+  const isBoss = (r: number, c: number) => cells.some((p) => p[0] === r && p[1] === c);
+  let dmg = 0;
+  for (const k of cleared) {
+    const [r, c] = unkey(k);
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => isBoss(r + dr, c + dc))) dmg++;
+  }
+  for (const f of fired) {
+    const [r, c] = f.pos;
+    const hits =
+      f.special === 'micah' ||
+      (f.special === 'zoomRow' && cells.some((p) => p[0] === r)) ||
+      (f.special === 'zoomCol' && cells.some((p) => p[1] === c)) ||
+      (f.special === 'bark' && cells.some((p) => Math.abs(p[0] - r) <= 1 && Math.abs(p[1] - c) <= 1));
+    if (hits) dmg += 3;
+  }
+  return dmg;
+}
+
+/** The lowest row in a column that is part of the board (where Micah eats junk). */
+export function bottomRow(grid: Grid, c: number): number {
+  for (let r = grid.length - 1; r >= 0; r--) if (!isFixed(grid[r][c])) return r;
+  return -1;
+}
+
 export function newBox(layers = 1): Tile {
   return { id: nextId++, kind: BOX_KIND, special: 'none', box: layers };
 }
@@ -53,7 +120,7 @@ export const isBox = (t: Cell | undefined): boolean => !!t && t.kind === BOX_KIN
 export function placeBoxes(grid: Grid, layout?: string[]): void {
   layout?.forEach((row, r) =>
     [...row].forEach((ch, c) => {
-      if ((ch === 'x' || ch === 'X') && grid[r]?.[c] !== undefined) grid[r][c] = newBox(ch === 'X' ? 2 : 1);
+      if ((ch === 'x' || ch === 'X') && grid[r]?.[c] !== undefined && !isFixed(grid[r][c])) grid[r][c] = newBox(ch === 'X' ? 2 : 1);
     }),
   );
 }
@@ -202,7 +269,7 @@ export function isLegalSwap(grid: Grid, a: Pos, b: Pos): boolean {
   if (!isAdjacent(a, b)) return false;
   const ta = grid[a[0]][a[1]];
   const tb = grid[b[0]][b[1]];
-  if (!ta || !tb) return false;
+  if (!ta || !tb || isFixed(ta) || isFixed(tb)) return false;
   // Micah won't fetch junk: swapping her onto it is just an ordinary swap.
   if ((ta.special === 'micah' && isJunk(tb)) || (tb.special === 'micah' && isJunk(ta))) {
     swap(grid, a, b);
@@ -330,7 +397,7 @@ export function expandClears(grid: Grid, seed: Iterable<number>, rng: Rng = Math
     if (cleared.has(k)) continue;
     const [r, c] = unkey(k);
     const t = grid[r]?.[c];
-    if (!t) continue;
+    if (!t || isFixed(t)) continue;
     cleared.add(k);
     if (t.special === 'none') continue;
     fired.push({ pos: [r, c], special: t.special });
@@ -404,27 +471,33 @@ export interface Drop {
   to: Pos;
 }
 
-/** Let tiles fall and fill the gaps from the top. */
+/** Let tiles fall and fill the gaps from the top. Pieces drop straight past holes and the boss. */
 export function applyGravity(grid: Grid, rng: Rng = Math.random, kinds = KIND_COUNT): Drop[] {
   const drops: Drop[] = [];
   const rows = grid.length;
   for (let c = 0; c < grid[0].length; c++) {
-    let write = rows - 1;
-    for (let r = rows - 1; r >= 0; r--) {
+    // The rows of this column that are part of the board, top to bottom.
+    const open: number[] = [];
+    for (let r = 0; r < rows; r++) if (!isFixed(grid[r][c])) open.push(r);
+    let write = open.length - 1;
+    for (let i = open.length - 1; i >= 0; i--) {
+      const r = open[i];
       const t = grid[r][c];
       if (!t) continue;
-      if (write !== r) {
-        grid[write][c] = t;
+      const to = open[write];
+      if (to !== r) {
+        grid[to][c] = t;
         grid[r][c] = null;
-        drops.push({ tile: t, from: [r, c], to: [write, c] });
+        drops.push({ tile: t, from: [r, c], to: [to, c] });
       }
       write--;
     }
     const spawnCount = write + 1;
-    for (let r = write; r >= 0; r--) {
+    for (let i = write; i >= 0; i--) {
       const t = newTile(randomKind(rng, kinds));
-      grid[r][c] = t;
-      drops.push({ tile: t, from: [r - spawnCount, c], to: [r, c] });
+      const to = open[i];
+      grid[to][c] = t;
+      drops.push({ tile: t, from: [open[0] - spawnCount + i, c], to: [to, c] });
     }
   }
   return drops;
@@ -432,14 +505,14 @@ export function applyGravity(grid: Grid, rng: Rng = Math.random, kinds = KIND_CO
 
 /** Shuffle regular tiles in place until the board has a move and no matches. */
 export function shuffle(grid: Grid, rng: Rng = Math.random): void {
-  const tiles = grid.flat().filter((t): t is Tile => !!t);
+  const tiles = grid.flat().filter((t): t is Tile => !!t && !isFixed(t));
   for (let tries = 0; tries < 200; tries++) {
     for (let i = tiles.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
       [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
     }
     let n = 0;
-    for (const row of grid) for (let c = 0; c < row.length; c++) row[c] = tiles[n++];
+    for (const row of grid) for (let c = 0; c < row.length; c++) if (!isFixed(row[c])) row[c] = tiles[n++];
     if (findRuns(grid).length === 0 && hasMove(grid)) return;
   }
 }
@@ -533,9 +606,11 @@ export function junkCount(grid: Grid): number {
 
 /** Junk sitting in the bottom row, ready for Micah to eat. */
 export function junkAtBottom(grid: Grid): Pos[] {
-  const r = grid.length - 1;
   const out: Pos[] = [];
-  grid[r].forEach((t, c) => isJunk(t) && out.push([r, c]));
+  for (let c = 0; c < grid[0].length; c++) {
+    const r = bottomRow(grid, c);
+    if (r >= 0 && isJunk(grid[r][c])) out.push([r, c]);
+  }
   return out;
 }
 
@@ -545,7 +620,7 @@ export function junkAtBottom(grid: Grid): Pos[] {
  */
 export function throwJunk(grid: Grid, drops: Drop[], want: number, items: number, rng: Rng = Math.random): Tile[] {
   // The raccoons aim for the deepest gap, so new junk lands as low as a fresh piece can.
-  const fresh = drops.filter((d) => d.from[0] < 0 && d.tile.special === 'none' && d.to[0] < grid.length - 1);
+  const fresh = drops.filter((d) => d.from[0] < 0 && d.tile.special === 'none' && d.to[0] < bottomRow(grid, d.to[1]));
   const thrown: Tile[] = [];
   let have = junkCount(grid);
   while (have < want && fresh.length) {
@@ -567,7 +642,7 @@ export function placeJunk(grid: Grid, count: number, items: number, rng: Rng = M
   for (let i = 0; i < count && cols.length; i++) {
     const c = cols.splice(Math.floor(rng() * cols.length), 1)[0];
     const r = Math.floor(rng() * 3);
-    if ((grid[r][c]?.kind ?? 0) < 0) continue; // a parcel is already there
+    if ((grid[r][c]?.kind ?? 0) < 0) continue; // a parcel or a hole is already there
     grid[r][c] = newJunk(Math.floor(rng() * items));
   }
 }
