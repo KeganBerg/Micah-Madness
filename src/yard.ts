@@ -53,26 +53,49 @@ export function yardTime(d: Date = new Date()): YardTime {
 // ───────────────────────────── Backyard ─────────────────────────────
 
 const doghouse = `
-<path d="M10 46 L50 12 L90 46 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
-<rect x="18" y="44" width="64" height="46" fill="#c98a4b" stroke="#7a4f25" stroke-width="3"/>
+<path d="M18 44 H82 V90 H18 Z" fill="#c98a4b" stroke="#7a4f25" stroke-width="3"/>
+<path d="M66 46 H80 V88 H66 Z" fill="#b07638"/>
 <path d="M18 58 H82 M18 72 H82" stroke="#7a4f25" stroke-width="2" opacity=".5"/>
-<path d="M38 90 V68 A12 12 0 0 1 62 68 V90 Z" fill="#3b2a1d"/>
-<rect x="34" y="48" width="32" height="10" rx="2" fill="#fff"/>
-<text x="50" y="56" text-anchor="middle" font-size="8" font-weight="900" fill="#173a52" font-family="sans-serif">MICAH</text>`;
+<path d="M30 52 v4 M58 64 v5 M26 80 v5 M72 78 v5" stroke="#7a4f25" stroke-width="1.6" opacity=".45" stroke-linecap="round"/>
+<circle cx="24" cy="66" r="1.3" fill="#7a4f25" opacity=".6"/><circle cx="76" cy="54" r="1.3" fill="#7a4f25" opacity=".6"/>
+<path d="M38 90 V68 A12 12 0 0 1 62 68 V90 Z" fill="#3b2a1d" stroke="#7a4f25" stroke-width="2.5"/>
+<path d="M41 90 V69 A9 9 0 0 1 50 59.5" fill="none" stroke="#000" stroke-width="3" opacity=".25"/>
+<path d="M14 90 H86" stroke="#7a4f25" stroke-width="3" stroke-linecap="round"/>
+<path d="M10 46 L50 12 L90 46 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+<path d="M50 12 L90 46 H70 Z" fill="#c92a25"/>
+<path d="M22 40 L50 17 M30 42 L50 25" stroke="#ff8a7a" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>
+<path d="M10 46 L50 12 L90 46" fill="none" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+<rect x="34" y="48" width="32" height="10" rx="2" fill="#fff" stroke="#7a4f25" stroke-width="1"/>
+<text x="50" y="56" text-anchor="middle" font-size="8" font-weight="900" fill="#173a52" font-family="sans-serif">MICAH</text>
+<g transform="translate(70 84)"><path d="M-6 2 L-4 -3 h12 L10 2 Z" fill="#2f8fe0" stroke="#17599a" stroke-width="1.5" stroke-linejoin="round"/><path d="M-3 -3.5 q5 -2 10 0" fill="none" stroke="#a86b35" stroke-width="2"/></g>`;
 
 const tree = `
-<rect x="44" y="56" width="12" height="38" rx="3" fill="#7a4f25"/>
+<path d="M44 94 L45 58 H55 L56 94 Q60 95 63 97 H37 Q40 95 44 94 Z" fill="#7a4f25"/>
+<path d="M51 58 H55 L56 94 Q60 95 63 97 H52 Z" fill="#5e3a1a"/>
+<path d="M48 66 v6 M47 80 v5 M53 74 v4" stroke="#5e3a1a" stroke-width="1.6" stroke-linecap="round"/>
 <circle cx="50" cy="38" r="30" fill="#4f9a4a"/>
+<path d="M80 40 A30 30 0 0 1 30 61 Q58 64 80 40 Z" fill="#3f8040"/>
 <circle cx="34" cy="48" r="18" fill="#5fae57"/><circle cx="66" cy="46" r="18" fill="#5fae57"/>
-<circle cx="40" cy="30" r="5" fill="#e8352f"/><circle cx="62" cy="26" r="5" fill="#e8352f"/><circle cx="56" cy="50" r="5" fill="#e8352f"/>`;
+<circle cx="46" cy="24" r="12" fill="#5fae57"/>
+<path d="M78 50 A14 14 0 0 1 62 61 M46 60 A14 14 0 0 1 28 62 M56 28 A10 10 0 0 1 48 35" fill="none" stroke="#3f8040" stroke-width="2.2" stroke-linecap="round"/>
+<ellipse cx="40" cy="18" rx="6" ry="3.6" fill="#fff" opacity=".22"/><ellipse cx="27" cy="40" rx="5" ry="3" fill="#fff" opacity=".18"/>
+<g stroke="#a3201c" stroke-width="1.2"><circle cx="40" cy="30" r="5" fill="#e8352f"/><circle cx="62" cy="26" r="5" fill="#e8352f"/><circle cx="56" cy="50" r="5" fill="#e8352f"/><circle cx="24" cy="54" r="4.5" fill="#e8352f"/></g>
+<g fill="#fff" opacity=".7"><circle cx="38.4" cy="28.4" r="1.4"/><circle cx="60.4" cy="24.4" r="1.4"/><circle cx="54.4" cy="48.4" r="1.4"/><circle cx="22.6" cy="52.6" r="1.2"/></g>
+<path d="M40 25 q1 -3 3 -4 M62 21 q1 -3 3 -4" stroke="#4f3a1a" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+<g transform="translate(72 92)"><circle r="4.5" fill="#e8352f" stroke="#a3201c" stroke-width="1.2"/><path d="M-1 -4 q1 -3 3 -3" stroke="#4f3a1a" stroke-width="1.3" fill="none"/><path d="M1 -1.5 l2.5 2 l-1 2 Z" fill="#f6e7c8"/></g>`;
 
 const ballPit = `
-<path d="M8 50 H92 L84 90 H16 Z" fill="#2f8fe0" stroke="#17599a" stroke-width="3" stroke-linejoin="round"/>
 <g transform="translate(10 18) scale(.36)">${KINDS[1].svg}</g>
 <g transform="translate(34 12) scale(.36)">${KINDS[1].svg}</g>
 <g transform="translate(58 18) scale(.36)">${KINDS[1].svg}</g>
 <g transform="translate(22 30) scale(.32)">${KINDS[1].svg}</g>
-<g transform="translate(48 30) scale(.32)">${KINDS[1].svg}</g>`;
+<g transform="translate(48 30) scale(.32)">${KINDS[1].svg}</g>
+<path d="M8 50 H92 L84 90 H16 Z" fill="#2f8fe0" stroke="#17599a" stroke-width="3" stroke-linejoin="round"/>
+<path d="M74 52 H90 L83 88 H70 Z" fill="#2274c2"/>
+<path d="M6 50 H94" stroke="#8fd0ff" stroke-width="5" stroke-linecap="round"/>
+<path d="M6 50 H94" stroke="#17599a" stroke-width="1.5" stroke-linecap="round" transform="translate(0 3)" opacity=".6"/>
+<path d="M20 58 L24 82" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+<g fill="#fff" opacity=".9"><ellipse cx="50" cy="73" rx="5" ry="4"/><circle cx="44" cy="67" r="2"/><circle cx="48" cy="64" r="2"/><circle cx="53" cy="64" r="2"/><circle cx="57" cy="67" r="2"/></g>`;
 
 const sprinkler = `
 <rect x="44" y="60" width="12" height="30" rx="3" fill="#8a96a0"/>
@@ -80,10 +103,19 @@ const sprinkler = `
 <path d="M50 50 Q30 20 10 30 M50 50 Q50 14 50 8 M50 50 Q70 20 90 30" stroke="#6fc3f0" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="2 7"/>`;
 
 const hydrant = `
+<ellipse cx="50" cy="94" rx="26" ry="4" fill="#000" opacity=".15"/>
+<rect x="28" y="86" width="44" height="8" rx="3" fill="#a3201c"/>
 <rect x="34" y="34" width="32" height="54" rx="6" fill="#e8352f" stroke="#a3201c" stroke-width="3"/>
+<path d="M56 36 H63 Q65 36 65 40 V84 Q65 87 62 87 H56 Z" fill="#c92a25"/>
+<path d="M40 40 V82" stroke="#ff8a7a" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+<rect x="31" y="44" width="38" height="6" rx="2" fill="#c92a25" stroke="#a3201c" stroke-width="2"/>
 <path d="M30 34 H70 A20 16 0 0 0 30 34 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3"/>
+<path d="M38 28 Q44 22 52 21" stroke="#ff8a7a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<rect x="46" y="12" width="8" height="7" rx="1.5" fill="#a3201c"/>
 <rect x="20" y="52" width="14" height="12" rx="3" fill="#a3201c"/><rect x="66" y="52" width="14" height="12" rx="3" fill="#a3201c"/>
-<rect x="28" y="86" width="44" height="8" rx="3" fill="#a3201c"/>`;
+<circle cx="18" cy="58" r="3.5" fill="#c92a25" stroke="#7d1512" stroke-width="1.5"/><circle cx="82" cy="58" r="3.5" fill="#c92a25" stroke="#7d1512" stroke-width="1.5"/>
+<circle cx="50" cy="66" r="7" fill="#c92a25" stroke="#a3201c" stroke-width="2"/><path d="M47 66 h6 M50 63 v6" stroke="#7d1512" stroke-width="1.6"/>
+<g fill="#7d1512"><circle cx="36" cy="88" r="1.2"/><circle cx="64" cy="88" r="1.2"/></g>`;
 
 const flowers = `
 <ellipse cx="50" cy="80" rx="44" ry="14" fill="#7a5233"/>
@@ -237,18 +269,31 @@ const swing = `
 <rect x="18" y="42" width="24" height="12" rx="5" fill="#2f8fe0"/><rect x="58" y="42" width="24" height="12" rx="5" fill="#e8352f"/>`;
 
 const mailbox = `
+<ellipse cx="50" cy="94" rx="18" ry="3" fill="#000" opacity=".15"/>
 <rect x="45" y="46" width="10" height="48" fill="#7a4f25"/>
+<rect x="51" y="46" width="4" height="48" fill="#5e3a1a"/>
 <path d="M18 48 V30 A16 16 0 0 1 50 30 V48 Z" fill="#173a52" stroke="#0e2536" stroke-width="2.5"/>
-<path d="M50 48 V30 A16 16 0 0 0 18 30" fill="none"/>
 <path d="M50 48 H82 V30 A16 16 0 0 0 50 30" fill="#2b5a78" stroke="#0e2536" stroke-width="2.5"/>
+<path d="M58 26 Q64 18 74 20" stroke="#6f9fc4" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+<path d="M22 46 V32 A12 12 0 0 1 34 20" fill="none" stroke="#2b5a78" stroke-width="2"/>
+<circle cx="34" cy="36" r="2.5" fill="#ffc12e" stroke="#0e2536" stroke-width="1"/>
+<path d="M20 44 l10 -10" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".9"/><path d="M19 41 l8 -8" stroke="#e8352f" stroke-width="1.2" opacity=".9"/>
 <rect x="76" y="14" width="5" height="24" fill="#5d6f7c"/><rect x="76" y="14" width="14" height="9" fill="#e8352f"/>
+<circle cx="78.5" cy="36" r="1.8" fill="#9fb0bd"/>
 <text x="66" y="42" text-anchor="middle" font-size="7" font-weight="900" fill="#fff" font-family="sans-serif">MAIL</text>`;
 
 const pumpkin = `
+<ellipse cx="50" cy="93" rx="36" ry="4" fill="#000" opacity=".15"/>
 <ellipse cx="50" cy="66" rx="40" ry="28" fill="#f08a24" stroke="#b85f12" stroke-width="3"/>
+<path d="M72 46 Q82 66 72 88 Q86 82 89 66 Q88 50 72 46 Z" fill="#d97316"/>
+<path d="M28 46 Q18 66 28 88 Q14 82 11 66 Q12 50 28 46 Z" fill="#f59a3a"/>
 <path d="M50 40 Q36 66 50 94 M50 40 Q64 66 50 94 M28 46 Q18 66 28 88 M72 46 Q82 66 72 88" stroke="#b85f12" stroke-width="2" fill="none"/>
+<path d="M36 50 Q32 62 35 74" stroke="#ffc27a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8"/>
 <path d="M48 40 Q46 26 56 22" stroke="#4f8a3a" stroke-width="5" fill="none" stroke-linecap="round"/>
-<path d="M78 50 a9 9 0 0 1 9 14 a6 6 0 0 0 -9 -14 Z" fill="#173a52"/>`;
+<path d="M47 36 Q42 32 34 34 Q38 40 46 39" fill="#5fae57" stroke="#3f7f40" stroke-width="1.5"/>
+<path d="M56 24 q6 -4 8 2 q-4 4 -2 8" stroke="#4f8a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<path d="M78 50 a9 9 0 0 1 9 14 a6 6 0 0 0 -9 -14 Z" fill="#173a52"/>
+<path d="M80 52 l2 2 M84 56 l2 1 M85 61 l2 0" stroke="#fff2d6" stroke-width="1.6" stroke-linecap="round"/>`;
 
 const chimes = `
 <path d="M50 0 V14" stroke="#5d6f7c" stroke-width="2"/>
@@ -307,9 +352,15 @@ const telescopeArt = `
 <g transform="rotate(-28 50 56)"><rect x="14" y="48" width="64" height="16" rx="4" fill="#e8352f" stroke="#a3201c" stroke-width="2.4"/><rect x="76" y="45" width="12" height="22" rx="3" fill="#ffc12e" stroke="#c49a1a" stroke-width="2"/><rect x="6" y="51" width="10" height="10" rx="2" fill="#3b3f46"/></g>`;
 
 const beanbagArt = `
+<ellipse cx="50" cy="93" rx="40" ry="4" fill="#000" opacity=".15"/>
 <path d="M10 88 Q4 52 30 42 Q52 34 72 42 Q96 52 90 88 Q50 100 10 88 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+<path d="M72 44 Q94 54 89 87 Q72 93 60 93 Q80 80 72 44 Z" fill="#c92a25"/>
 <path d="M26 60 Q50 72 76 60" stroke="#a3201c" stroke-width="2.4" fill="none"/>
-<ellipse cx="38" cy="52" rx="10" ry="4" fill="#ff8a7a" opacity=".6"/>`;
+<path d="M30 62 Q34 78 22 88 M66 64 Q64 80 74 90" stroke="#a3201c" stroke-width="2" fill="none" opacity=".6"/>
+<path d="M50 38 V46" stroke="#a3201c" stroke-width="1.6" stroke-dasharray="2 2"/>
+<ellipse cx="38" cy="52" rx="10" ry="4" fill="#ff8a7a" opacity=".6"/>
+<path d="M16 76 Q16 64 22 58" stroke="#ff8a7a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".6"/>
+<rect x="44" y="80" width="12" height="7" rx="1.5" fill="#fff" opacity=".85"/><path d="M47 83.5 h6" stroke="#a3201c" stroke-width="1"/>`;
 
 
 // ───────────────────────────── Lakeside (opens after level 150) ─────────────────────────────
@@ -328,16 +379,25 @@ const chairArt = `
 <rect x="62" y="64" width="12" height="14" rx="3" fill="#e8352f"/>`;
 
 const canoeArt = `
+<ellipse cx="50" cy="80" rx="42" ry="4" fill="#173a52" opacity=".18"/>
 <path d="M4 58 Q50 92 96 58 Q50 70 4 58 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
+<path d="M20 70 Q50 86 82 70 Q66 84 50 85 Q32 84 20 70 Z" fill="#c92a25"/>
 <path d="M4 58 Q50 70 96 58" stroke="#ffd2cc" stroke-width="2.4" fill="none"/>
+<path d="M14 64 Q50 76 86 64" stroke="#fff" stroke-width="2" fill="none" opacity=".55"/>
 <path d="M30 66 H40 M60 66 H70" stroke="#a7784a" stroke-width="4"/>
-<path d="M58 30 L36 80" stroke="#a7784a" stroke-width="3.4" stroke-linecap="round"/><ellipse cx="34" cy="84" rx="5" ry="9" fill="#a7784a" transform="rotate(24 34 84)"/>`;
+<path d="M58 30 L36 80" stroke="#a7784a" stroke-width="3.4" stroke-linecap="round"/><path d="M57 32 L46 57" stroke="#d9b07a" stroke-width="1.2" stroke-linecap="round"/><ellipse cx="34" cy="84" rx="5" ry="9" fill="#a7784a" transform="rotate(24 34 84)"/>`;
 
 const tentArt = `
+<ellipse cx="50" cy="91" rx="46" ry="4" fill="#000" opacity=".15"/>
+<path d="M2 92 L12 88 M98 92 L88 88" stroke="#6b4529" stroke-width="2" stroke-linecap="round"/>
 <path d="M6 90 L50 14 L94 90 Z" fill="#23925a" stroke="#176a40" stroke-width="3" stroke-linejoin="round"/>
+<path d="M50 14 L94 90 H74 Z" fill="#1d7f4e"/>
 <path d="M50 14 L36 90 H64 Z" fill="#176a40"/>
+<path d="M20 70 L44 26" stroke="#5cc28a" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>
 <path d="M50 14 L50 6" stroke="#6b4529" stroke-width="3"/><path d="M50 6 L62 10 L50 13 Z" fill="#e8352f"/>
 <path d="M40 90 Q50 60 60 90" fill="#0e3d24"/>
+<path d="M36 90 Q40 70 46 62" stroke="#2fa86a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M14 88 L50 22 M86 88 L50 22" stroke="#0e3d24" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
 <text x="50" y="84" text-anchor="middle" font-size="7" font-weight="900" fill="#ffc12e" font-family="sans-serif">MICAH</text>`;
 
 const firepitArt = `
