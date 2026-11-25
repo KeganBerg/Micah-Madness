@@ -55,6 +55,8 @@ describe("Micah's Yard", () => {
   it('shows Noah’s Ark over the back fence only', () => {
     expect(yardScene([], 'm.png', { area: 'back', time: 'day', ate: [] })).toContain('yard-ark');
     expect(yardScene([], 'm.png', { area: 'garden', time: 'day', ate: [] })).not.toContain('yard-ark');
+    expect(yardScene([], 'm.png', { area: 'back', time: 'night', ate: [] })).toContain('yard-taco');
+    expect(yardScene([], 'm.png', { area: 'garden', time: 'day', ate: [] })).not.toContain('yard-taco');
   });
 
   it('puts what Micah ate on the shelf, with a ? for the rest', () => {

@@ -803,6 +803,18 @@ export function startYard(
       });
       return;
     }
+    if (target.closest('.yard-taco')) {
+      // Micah smells it from here.
+      command(async (t) => {
+        onTop = null;
+        if (!(await moveTo(112, GRASS.y0 + 6, t, 150))) return;
+        face(false);
+        setPose('sit');
+        sfx.bark();
+        say('🌮');
+      });
+      return;
+    }
     if (target.closest('.yard-ark')) {
       hooks.onArk?.();
       command(async (t) => {

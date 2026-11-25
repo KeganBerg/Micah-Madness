@@ -847,7 +847,7 @@ button, label, .tappable { --tap-scale: .9; touch-action: manipulation; -webkit-
 .yard-tab.on { background: var(--brand); box-shadow: 0 3px 0 #a3201c; }
 .yard-tab:disabled { opacity: .55; cursor: default; }
 .yard-tab:disabled b::before { content: '\1F512\FE0E  '; font-size: .8em; }
-.yard-ark { cursor: pointer; }
+.yard-ark, .yard-taco { cursor: pointer; }
 .dig-mound { cursor: pointer; }
 .yard-frame { position: relative; }
 .yard-snow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
