@@ -11,50 +11,94 @@ export interface KindInfo {
 
 const bone = `
 <g transform="rotate(-30 50 50)">
-  <rect x="26" y="41" width="48" height="18" rx="6" fill="#f6e7c8" stroke="#b8925a" stroke-width="3"/>
-  <circle cx="24" cy="40" r="11" fill="#f6e7c8" stroke="#b8925a" stroke-width="3"/>
-  <circle cx="24" cy="60" r="11" fill="#f6e7c8" stroke="#b8925a" stroke-width="3"/>
-  <circle cx="76" cy="40" r="11" fill="#f6e7c8" stroke="#b8925a" stroke-width="3"/>
-  <circle cx="76" cy="60" r="11" fill="#f6e7c8" stroke="#b8925a" stroke-width="3"/>
+  <rect x="26" y="41" width="48" height="18" rx="6" fill="#f6e7c8" stroke="#a8803f" stroke-width="3"/>
+  <circle cx="24" cy="40" r="11" fill="#f6e7c8" stroke="#a8803f" stroke-width="3"/>
+  <circle cx="24" cy="60" r="11" fill="#f6e7c8" stroke="#a8803f" stroke-width="3"/>
+  <circle cx="76" cy="40" r="11" fill="#f6e7c8" stroke="#a8803f" stroke-width="3"/>
+  <circle cx="76" cy="60" r="11" fill="#f6e7c8" stroke="#a8803f" stroke-width="3"/>
   <rect x="27" y="44" width="46" height="12" fill="#f6e7c8"/>
-  <path d="M30 46 h36" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+  <path d="M28 53 H72 V57.5 H28 Z" fill="#e4cb98"/>
+  <path d="M15.5 63 A9 9 0 0 0 32.5 63 A11 11 0 0 1 15.5 63 Z M67.5 63 A9 9 0 0 0 84.5 63 A11 11 0 0 1 67.5 63 Z" fill="#e4cb98"/>
+  <circle cx="16.5" cy="62" r="2.2" fill="#e4cb98"/><circle cx="83.5" cy="62" r="2.2" fill="#e4cb98"/>
+  <path d="M30 46.5 h36" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+  <path d="M17 37 A8 8 0 0 1 23 32" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+  <path d="M69 37 A8 8 0 0 1 75 32" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+  <circle cx="40" cy="51" r="1.2" fill="#c9a96c"/><circle cx="55" cy="49.5" r="1" fill="#c9a96c"/><circle cx="62" cy="52" r="1.2" fill="#c9a96c"/>
 </g>`;
 
 const ball = `
-<circle cx="50" cy="50" r="34" fill="#cde33b" stroke="#87981c" stroke-width="3"/>
-<path d="M22 32 C40 42 40 58 22 68" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-<path d="M78 32 C60 42 60 58 78 68" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-<ellipse cx="38" cy="30" rx="8" ry="4" fill="#fff" opacity=".45"/>`;
+<circle cx="50" cy="50" r="34" fill="#cde33b" stroke="#7a8a14" stroke-width="3"/>
+<path d="M82.5 40 A34 34 0 0 1 40 82.5 A44 44 0 0 0 82.5 40 Z" fill="#a3b91f"/>
+<path d="M22 32 C40 42 40 58 22 68" fill="none" stroke="#d6dbc4" stroke-width="7" stroke-linecap="round"/>
+<path d="M78 32 C60 42 60 58 78 68" fill="none" stroke="#d6dbc4" stroke-width="7" stroke-linecap="round"/>
+<path d="M22 32 C40 42 40 58 22 68" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+<path d="M78 32 C60 42 60 58 78 68" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+<g fill="#e4f27a" opacity=".9"><circle cx="46" cy="24" r="1.3"/><circle cx="54" cy="30" r="1.1"/><circle cx="48" cy="40" r="1.2"/><circle cx="52" cy="56" r="1.1"/><circle cx="45" cy="66" r="1.3"/><circle cx="20" cy="50" r="1.1"/></g>
+<g fill="#8fa31a" opacity=".7"><circle cx="70" cy="62" r="1.2"/><circle cx="56" cy="74" r="1.1"/><circle cx="64" cy="48" r="1"/><circle cx="80" cy="52" r="1.1"/></g>
+<ellipse cx="38" cy="29" rx="8" ry="4" transform="rotate(-25 38 29)" fill="#fff" opacity=".6"/>
+<circle cx="29" cy="38" r="2" fill="#fff" opacity=".5"/>`;
 
 const paw = `
-<ellipse cx="50" cy="63" rx="20" ry="17" fill="#8e5bd6" stroke="#5a3392" stroke-width="3"/>
-<ellipse cx="27" cy="42" rx="8" ry="10" fill="#8e5bd6" stroke="#5a3392" stroke-width="3"/>
-<ellipse cx="41" cy="29" rx="8" ry="10" fill="#8e5bd6" stroke="#5a3392" stroke-width="3"/>
-<ellipse cx="59" cy="29" rx="8" ry="10" fill="#8e5bd6" stroke="#5a3392" stroke-width="3"/>
-<ellipse cx="73" cy="42" rx="8" ry="10" fill="#8e5bd6" stroke="#5a3392" stroke-width="3"/>
-<ellipse cx="44" cy="58" rx="7" ry="4" fill="#fff" opacity=".35"/>`;
+<path d="M50 47 C38 47 29 56 30 67 C31 76 40 80 50 78 C60 80 69 76 70 67 C71 56 62 47 50 47 Z" fill="#8e5bd6" stroke="#4f2a86" stroke-width="3" stroke-linejoin="round"/>
+<path d="M32 70 C36 77 44 79 50 77.5 C57 79 65 77 68.5 70 C62 74 56 73 50 74 C44 73 38 74 32 70 Z" fill="#6c3fb5"/>
+<ellipse cx="27" cy="42" rx="8" ry="10" transform="rotate(-18 27 42)" fill="#8e5bd6" stroke="#4f2a86" stroke-width="3"/>
+<ellipse cx="41" cy="29" rx="8" ry="10" transform="rotate(-6 41 29)" fill="#8e5bd6" stroke="#4f2a86" stroke-width="3"/>
+<ellipse cx="59" cy="29" rx="8" ry="10" transform="rotate(6 59 29)" fill="#8e5bd6" stroke="#4f2a86" stroke-width="3"/>
+<ellipse cx="73" cy="42" rx="8" ry="10" transform="rotate(18 73 42)" fill="#8e5bd6" stroke="#4f2a86" stroke-width="3"/>
+<path d="M22 46 Q26 51 32 48 M36 33 Q41 38 46 34 M54 34 Q59 38 64 33 M68 48 Q74 51 78 46" fill="none" stroke="#6c3fb5" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="24.5" cy="38" rx="2.6" ry="3.6" transform="rotate(-18 24.5 38)" fill="#fff" opacity=".55"/>
+<ellipse cx="39" cy="25" rx="2.6" ry="3.6" transform="rotate(-6 39 25)" fill="#fff" opacity=".55"/>
+<ellipse cx="57" cy="25" rx="2.6" ry="3.6" transform="rotate(6 57 25)" fill="#fff" opacity=".55"/>
+<ellipse cx="71" cy="38" rx="2.6" ry="3.6" transform="rotate(18 71 38)" fill="#fff" opacity=".55"/>
+<ellipse cx="42" cy="57" rx="8" ry="4" transform="rotate(-15 42 57)" fill="#fff" opacity=".4"/>
+<circle cx="53" cy="55" r="1.8" fill="#fff" opacity=".4"/>`;
 
 const bowl = `
-<ellipse cx="50" cy="44" rx="32" ry="9" fill="#7a4a24"/>
-<circle cx="40" cy="41" r="5" fill="#a86b35"/><circle cx="52" cy="39" r="5" fill="#a86b35"/><circle cx="62" cy="42" r="5" fill="#a86b35"/><circle cx="47" cy="45" r="4" fill="#94592a"/>
-<path d="M16 46 L24 74 Q50 84 76 74 L84 46 Q50 58 16 46 Z" fill="#2f8fe0" stroke="#17599a" stroke-width="3"/>
-<path d="M24 56 Q50 66 76 56" fill="none" stroke="#fff" stroke-width="3" opacity=".6"/>
-<text x="50" y="74" text-anchor="middle" font-size="12" font-weight="900" fill="#fff" font-family="sans-serif">M</text>`;
+<ellipse cx="50" cy="46" rx="33" ry="10" fill="#17599a"/>
+<g stroke="#5a3214" stroke-width="1.2">
+<circle cx="30" cy="45" r="5" fill="#8a5428"/><circle cx="70" cy="45" r="5" fill="#8a5428"/>
+<circle cx="39" cy="41" r="5.5" fill="#a86b35"/><circle cx="61" cy="41" r="5.5" fill="#a86b35"/>
+<circle cx="50" cy="38" r="6" fill="#b87a3e"/><circle cx="44" cy="46" r="5" fill="#94592a"/><circle cx="57" cy="46" r="5" fill="#94592a"/>
+</g>
+<g fill="#e3ad73"><circle cx="48" cy="35.5" r="1.6"/><circle cx="37.5" cy="39" r="1.4"/><circle cx="59.5" cy="39" r="1.4"/><circle cx="28.5" cy="43.5" r="1.1"/><circle cx="68.5" cy="43.5" r="1.1"/></g>
+<path d="M16 46 L24 74 Q50 84 76 74 L84 46 Q50 58 16 46 Z" fill="#2f8fe0" stroke="#124b85" stroke-width="3" stroke-linejoin="round"/>
+<path d="M68 54 L64 79 Q71 77.5 75 75 L81 53 Q75 54.5 68 54 Z" fill="#2274c2"/>
+<path d="M19 49 Q50 61 81 49" fill="none" stroke="#8fd0ff" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M26 74.5 Q50 83 74 74.5" fill="none" stroke="#17599a" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>
+<path d="M24 58 L28 71" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+<text x="50" y="74" text-anchor="middle" font-size="13" font-weight="900" fill="#fff" stroke="#17599a" stroke-width="1" paint-order="stroke" font-family="sans-serif">M</text>`;
 
 const lobster = `
+<path d="M42 82 L36 92 Q50 96 64 92 L58 82 Z" fill="#c92a25" stroke="#9c1d19" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M50 84 V93 M43 84 L40 92 M57 84 L60 92" stroke="#9c1d19" stroke-width="1.6" opacity=".7"/>
+<path d="M36 50 L27 47 M35 58 L26 58 M36 66 L28 70 M64 50 L73 47 M65 58 L74 58 M64 66 L72 70" stroke="#9c1d19" stroke-width="3" stroke-linecap="round"/>
+<path d="M44 31 C40 20 32 12 22 10 M56 31 C60 20 68 12 78 10" fill="none" stroke="#9c1d19" stroke-width="2" stroke-linecap="round"/>
 <path d="M50 30 C36 30 34 50 36 62 C38 76 46 84 50 84 C54 84 62 76 64 62 C66 50 64 30 50 30 Z" fill="#e8352f" stroke="#9c1d19" stroke-width="3"/>
-<path d="M38 52 h24 M37 62 h26 M40 72 h20" stroke="#9c1d19" stroke-width="2.5" opacity=".7"/>
+<path d="M57 32 C63 38 64 50 63 62 C62 72 56 80 52 83 C56 76 58 66 58 56 C58 46 58 38 57 32 Z" fill="#c92a25"/>
+<path d="M38 52 Q50 56 62 52 M37 62 Q50 66 63 62 M40 72 Q50 76 60 72" fill="none" stroke="#9c1d19" stroke-width="2.5" opacity=".75"/>
+<path d="M42 55 Q50 58 56 55.5 M42 65 Q50 68 56 65.5" fill="none" stroke="#ff8a7a" stroke-width="2" stroke-linecap="round" opacity=".8"/>
 <path d="M36 40 C24 38 18 28 20 18 C26 24 30 22 30 16 C38 22 38 32 38 38" fill="#e8352f" stroke="#9c1d19" stroke-width="3" stroke-linejoin="round"/>
 <path d="M64 40 C76 38 82 28 80 18 C74 24 70 22 70 16 C62 22 62 32 62 38" fill="#e8352f" stroke="#9c1d19" stroke-width="3" stroke-linejoin="round"/>
+<path d="M23 23 Q24 30 30 33 M77 23 Q76 30 70 33" fill="none" stroke="#ff8a7a" stroke-width="2" stroke-linecap="round"/>
+<circle cx="25" cy="33" r="1.2" fill="#9c1d19"/><circle cx="75" cy="33" r="1.2" fill="#9c1d19"/><circle cx="29" cy="28" r="1" fill="#9c1d19"/><circle cx="71" cy="28" r="1" fill="#9c1d19"/>
+<path d="M40 46 Q42 40 47 39" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
 <circle cx="43" cy="36" r="6" fill="#fff" stroke="#222" stroke-width="2"/><circle cx="57" cy="36" r="6" fill="#fff" stroke="#222" stroke-width="2"/>
-<circle cx="44" cy="37" r="2.6" fill="#222"/><circle cx="58" cy="37" r="2.6" fill="#222"/>`;
+<circle cx="44" cy="37" r="2.6" fill="#222"/><circle cx="58" cy="37" r="2.6" fill="#222"/>
+<circle cx="43" cy="35.6" r=".9" fill="#fff"/><circle cx="57" cy="35.6" r=".9" fill="#fff"/>
+<path d="M46 45 Q50 48 54 45" fill="none" stroke="#9c1d19" stroke-width="2" stroke-linecap="round"/>`;
 
 const cap = `
-<path d="M20 60 C20 30 80 30 80 60 Z" fill="#ff7a1a" stroke="#b54d00" stroke-width="3" stroke-linejoin="round"/>
-<path d="M50 32 V60" stroke="#b54d00" stroke-width="2.5" opacity=".6"/>
-<circle cx="50" cy="31" r="4" fill="#ff9a4d" stroke="#b54d00" stroke-width="2"/>
-<path d="M14 60 H80 C88 60 92 66 88 70 C76 72 34 72 14 66 C10 64 10 60 14 60 Z" fill="#ff8f3d" stroke="#b54d00" stroke-width="3" stroke-linejoin="round"/>
-<path d="M30 44 Q38 38 46 40" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>`;
+<path d="M20 60 C20 30 80 30 80 60 Z" fill="#ff7a1a" stroke="#a84600" stroke-width="3" stroke-linejoin="round"/>
+<path d="M62 38.6 C72 40.5 80 47 80 60 L68 60 C68 51 66 44 62 38.6 Z" fill="#e8640c"/>
+<path d="M50 36 V60 M50 37 C39 41 34 49 34 60 M50 37 C61 41 66 49 66 60" fill="none" stroke="#a84600" stroke-width="2" opacity=".55"/>
+<path d="M25 58 C25 48 32 42 42 39.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.5 3" opacity=".55"/>
+<circle cx="41" cy="45" r="1.6" fill="#a84600" opacity=".7"/><circle cx="59" cy="45" r="1.6" fill="#a84600" opacity=".7"/>
+<circle cx="50" cy="31" r="4" fill="#ff9a4d" stroke="#a84600" stroke-width="2"/>
+<path d="M14 60 H80 C88 60 92 66 88 70 C76 72 34 72 14 66 C10 64 10 60 14 60 Z" fill="#ff8f3d" stroke="#a84600" stroke-width="3" stroke-linejoin="round"/>
+<path d="M16 64 C34 69 70 69.5 86 67" fill="none" stroke="#c75a10" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+<path d="M20 62.5 H78" stroke="#fff" stroke-width="1.4" stroke-dasharray="3 3" opacity=".6"/>
+<g fill="#fff" opacity=".95"><ellipse cx="50" cy="52.5" rx="4" ry="3.2"/><circle cx="44.5" cy="48" r="1.7"/><circle cx="48" cy="45.5" r="1.7"/><circle cx="52" cy="45.5" r="1.7"/><circle cx="55.5" cy="48" r="1.7"/></g>
+<path d="M30 44 Q36 38 44 39" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>`;
 
 export const KINDS: KindInfo[] = [
   { name: 'Bone', plural: 'Bones', color: '#f6e7c8', svg: bone },
@@ -86,8 +130,14 @@ export const ORTHO_BED = `
 
 /** Booster icons (shop, in-level tools). */
 export const BOOSTER_ICONS: Record<string, string> = {
-  treat: `<path d="M20 50 Q20 26 50 26 Q80 26 80 50 Q80 74 50 74 Q20 74 20 50Z" fill="#c98a4b" stroke="#7a4f25" stroke-width="3"/>
-          <circle cx="38" cy="44" r="4" fill="#7a4f25"/><circle cx="58" cy="40" r="4" fill="#7a4f25"/><circle cx="52" cy="58" r="4" fill="#7a4f25"/><circle cx="66" cy="54" r="3" fill="#7a4f25"/>`,
+  treat: `<path d="M20 54 Q20 30 50 30 Q80 30 80 54 Q80 78 50 78 Q20 78 20 54Z" fill="#9a6230"/>
+          <path d="M20 50 Q20 26 50 26 Q80 26 80 50 Q80 74 50 74 Q20 74 20 50Z" fill="#c98a4b" stroke="#6e4520" stroke-width="3"/>
+          <path d="M27 40 Q34 31 46 30" fill="none" stroke="#e8b47a" stroke-width="4" stroke-linecap="round"/>
+          <path d="M62 66 Q72 62 75 54" fill="none" stroke="#ad7038" stroke-width="3" stroke-linecap="round"/>
+          <path d="M34 44 l4 -3 l4 2 l-1 5 l-5 1 Z M55 37 l4 -2 l4 3 l-2 4 l-5 0 Z M48 55 l5 -2 l3 4 l-3 4 l-5 -1 Z M64 50 l3 -2 l3 3 l-2 3 l-4 0 Z M32 58 l3 -1 l2 3 l-3 2 Z" fill="#5a3415"/>
+          <path d="M35 43 l2 -1 M56 37 l2 -1 M49 55 l2 -1" stroke="#9a6a40" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="44" cy="64" r="1.4" fill="#8a5527"/><circle cx="68" cy="40" r="1.2" fill="#8a5527"/><circle cx="40" cy="34" r="1.1" fill="#8a5527"/>
+          <circle cx="84" cy="70" r="2" fill="#c98a4b"/><circle cx="88" cy="64" r="1.3" fill="#c98a4b"/>`,
   squirrel: `<path d="M62 78 C90 70 92 30 70 22 C58 18 52 30 60 38 C70 46 66 60 56 62" fill="#b06a2c" stroke="#6e3e14" stroke-width="3"/>
           <ellipse cx="42" cy="62" rx="16" ry="18" fill="#c27a38" stroke="#6e3e14" stroke-width="3"/>
           <circle cx="36" cy="38" r="12" fill="#c27a38" stroke="#6e3e14" stroke-width="3"/>
@@ -105,9 +155,12 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <path d="M78 26 L80 32 L86 34 L80 36 L78 42 L76 36 L70 34 L76 32 Z" fill="#ffd23f" stroke="#b58a00" stroke-width="1.5" stroke-linejoin="round"/>
           <circle cx="24" cy="30" r="3.5" fill="#ffd23f"/><circle cx="84" cy="56" r="2.5" fill="#ffd23f"/>`,
   bed: ORTHO_BED,
-  zoomies: `<circle cx="50" cy="50" r="30" fill="#ffd23f" stroke="#b58a00" stroke-width="3"/>
-          <path d="M14 40 H40 M10 50 H36 M14 60 H40" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-          <path d="M60 40 L76 50 L60 60 Z" fill="#b58a00"/>`,
+  zoomies: `<circle cx="52" cy="53" r="30" fill="#c99400"/>
+          <circle cx="50" cy="50" r="30" fill="#ffd23f" stroke="#a87e00" stroke-width="3"/>
+          <path d="M71 34 A30 30 0 0 1 54 79.7 A26 26 0 0 0 71 34 Z" fill="#f2b71c"/>
+          <path d="M14 40 H40 M8 50 H36 M14 60 H40" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <path d="M60 39 L78 50 L60 61 Q57 50 60 39 Z" fill="#a87e00" stroke="#a87e00" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M34 28 Q44 22 54 23" fill="none" stroke="#fff6c8" stroke-width="4" stroke-linecap="round"/>`,
   micah: micahFace({ cap: true }),
   bark: `<path d="M50 12 L58 30 L78 22 L72 42 L90 50 L72 58 L78 78 L58 70 L50 88 L42 70 L22 78 L28 58 L10 50 L28 42 L22 22 L42 30 Z" fill="#e8352f" stroke="#a3201c" stroke-width="3" stroke-linejoin="round"/>
           <circle cx="50" cy="50" r="18" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="6 5"/>`,
@@ -120,15 +173,25 @@ export const BOOSTER_ICONS: Record<string, string> = {
           <ellipse cx="56" cy="35" rx="5.5" ry="7" fill="#a8691a"/><ellipse cx="66" cy="44" rx="5.5" ry="7" fill="#a8691a"/>
           <path d="M28 30 Q36 20 48 18" fill="none" stroke="#fff3c8" stroke-width="4" stroke-linecap="round" opacity=".8"/>`,
   mud: `<path d="M14 60 C10 40 30 30 44 36 C54 22 82 28 82 46 C94 52 90 74 72 74 C60 84 32 82 26 74 C14 74 10 66 14 60Z" fill="#7a5233" stroke="#4f331d" stroke-width="3"/>
-          <ellipse cx="40" cy="50" rx="8" ry="4" fill="#9a7050"/><ellipse cx="62" cy="60" rx="6" ry="3" fill="#9a7050"/>`,
-  yarn: `<circle cx="50" cy="52" r="32" fill="#e86aa6" stroke="#a83a72" stroke-width="3"/>
+          <path d="M20 66 C26 72 40 76 52 74 C64 76 78 72 84 62 C86 70 80 75 72 74 C60 84 32 82 26 74 C20 74 18 70 20 66Z" fill="#5e3d24"/>
+          <ellipse cx="40" cy="50" rx="9" ry="4.5" fill="#9a7050"/><ellipse cx="62" cy="60" rx="7" ry="3.5" fill="#9a7050"/>
+          <path d="M34 48.5 Q38 46 43 47" fill="none" stroke="#e6cdb4" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="66" cy="42" r="3" fill="#a8896a" stroke="#4f331d" stroke-width="1.5"/><circle cx="28" cy="62" r="2.2" fill="#a8896a" stroke="#4f331d" stroke-width="1.2"/>
+          <circle cx="86" cy="36" r="3" fill="#7a5233"/><circle cx="92" cy="44" r="1.8" fill="#7a5233"/>`,
+  yarn: `<circle cx="50" cy="52" r="32" fill="#e86aa6" stroke="#963066" stroke-width="3"/>
+          <path d="M72 30 A32 32 0 0 1 54 83.7 A28 28 0 0 0 72 30 Z" fill="#cc4f8c"/>
           <path d="M24 40 C40 30 64 30 80 44 M20 56 C40 44 66 46 82 62 M28 74 C44 62 64 64 74 78 M44 22 C34 40 34 64 42 82" fill="none" stroke="#a83a72" stroke-width="3" stroke-linecap="round"/>
+          <path d="M26 46 C42 36 62 36 78 50 M24 64 C42 52 64 54 78 70 M50 21 C42 40 42 62 50 83" fill="none" stroke="#ff9cc8" stroke-width="2" stroke-linecap="round"/>
+          <path d="M30 34 Q38 26 48 25" fill="none" stroke="#ffd0e5" stroke-width="3.5" stroke-linecap="round"/>
           <path d="M78 74 C88 82 90 90 84 94" fill="none" stroke="#a83a72" stroke-width="3" stroke-linecap="round"/>`,
 };
 
 /** A fallen autumn leaf (the leaves goal). */
 BOOSTER_ICONS.leaves = `<path d="M50 10 L58 30 L78 22 L70 44 L90 48 L72 62 L78 80 L56 72 L50 90 L44 72 L22 80 L28 62 L10 48 L30 44 L22 22 L42 30 Z" fill="#e8892f" stroke="#a8501a" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M50 30 V92 M50 52 L66 40 M50 64 L34 52" fill="none" stroke="#a8501a" stroke-width="3" stroke-linecap="round"/>`;
+          <path d="M50 10 L58 30 L78 22 L70 44 L90 48 L72 62 L78 80 L56 72 L50 90 Z" fill="#d4741f"/>
+          <path d="M50 30 V92 M50 52 L66 40 M50 64 L34 52 M50 42 L38 32 M50 74 L64 64" fill="none" stroke="#a8501a" stroke-width="3" stroke-linecap="round"/>
+          <path d="M66 40 L76 30 M34 52 L22 46 M64 64 L74 72" fill="none" stroke="#a8501a" stroke-width="2" stroke-linecap="round"/>
+          <path d="M36 26 L42 36" stroke="#ffc27a" stroke-width="2.5" stroke-linecap="round"/>`;
 /** A snow drift (mud on winter levels). */
 BOOSTER_ICONS.snow = `<path d="M10 74 C12 54 30 46 42 52 C50 34 80 36 84 56 C94 58 94 74 88 78 Z" fill="#ffffff" stroke="#8fb3cc" stroke-width="3" stroke-linejoin="round"/>
           <path d="M30 64 Q42 58 54 64 M60 60 Q70 56 78 62" fill="none" stroke="#cfe2ee" stroke-width="3" stroke-linecap="round"/>
@@ -156,11 +219,14 @@ BOOSTER_ICONS.boxes = parcelSVG(false);
 /** A prickly burr, the kind that comes home in Micah's fur. */
 const burrBall = (cx: number, cy: number, r: number) => {
   let spikes = '';
+  let hooks = '';
   for (let i = 0; i < 12; i++) {
     const a = (i * 30) * Math.PI / 180;
+    const b = a + Math.PI / 12, hx = cx + Math.cos(b) * r * 0.55, hy = cy + Math.sin(b) * r * 0.55;
+    hooks += `M${(hx - Math.cos(b + 1.2) * r * 0.12).toFixed(1)} ${(hy - Math.sin(b + 1.2) * r * 0.12).toFixed(1)} L${(hx + Math.cos(b + 1.2) * r * 0.12).toFixed(1)} ${(hy + Math.sin(b + 1.2) * r * 0.12).toFixed(1)} `;
     spikes += `M${(cx + Math.cos(a) * r * 0.7).toFixed(1)} ${(cy + Math.sin(a) * r * 0.7).toFixed(1)} L${(cx + Math.cos(a) * r * 1.35).toFixed(1)} ${(cy + Math.sin(a) * r * 1.35).toFixed(1)} `;
   }
-  return `<path d="${spikes}" stroke="#6b5a1e" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#9a8a2e" stroke="#6b5a1e" stroke-width="2.4"/><circle cx="${cx - r * 0.3}" cy="${cy - r * 0.3}" r="${r * 0.28}" fill="#c9b64a"/>`;
+  return `<path d="${spikes}" stroke="#6b5a1e" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#9a8a2e" stroke="#6b5a1e" stroke-width="2.4"/><path d="M${cx + r * 0.95} ${cy + r * 0.3} A${r} ${r} 0 0 1 ${cx - r * 0.3} ${cy + r * 0.95} A${r * 1.2} ${r * 1.2} 0 0 0 ${cx + r * 0.95} ${cy + r * 0.3} Z" fill="#7d6f22"/><path d="${hooks}" fill="none" stroke="#5a4a14" stroke-width="${Math.max(1, r * 0.08).toFixed(1)}" stroke-linecap="round"/><circle cx="${cx - r * 0.3}" cy="${cy - r * 0.3}" r="${r * 0.28}" fill="#c9b64a"/>`;
 };
 BOOSTER_ICONS.burrs = burrBall(50, 52, 26);
 export const BURR_OVERLAY = `<svg viewBox="0 0 100 100" class="burr-art" aria-hidden="true">${burrBall(22, 24, 11)}${burrBall(78, 76, 11)}${burrBall(80, 22, 7)}</svg>`;
