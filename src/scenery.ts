@@ -44,13 +44,19 @@ const tree = (leaf: string, dark: string, s = 1): Prop => ({
   r: 30 * s, poke: 'rustle', fx: 'leaf', sfx: 'rustle',
   svg: `${shadow(26 * s)}
     <rect x="${-4 * s}" y="${-22 * s}" width="${8 * s}" height="${22 * s}" rx="2" fill="#7a5233"/>
+    <path d="M${f(1 * s)} ${f(-22 * s)} H${f(4 * s)} V${f(-1 * s)} H${f(1 * s)} Z" fill="#5e3d24"/>
+    <path d="M${f(-7 * s)} 0 Q${f(-4 * s)} ${f(-1 * s)} ${f(-3 * s)} ${f(-5 * s)} M${f(7 * s)} 0 Q${f(4 * s)} ${f(-1 * s)} ${f(3 * s)} ${f(-5 * s)}" fill="none" stroke="#7a5233" stroke-width="${f(2.4 * s)}" stroke-linecap="round"/>
+    <path d="M${f(-1.5 * s)} ${f(-16 * s)} v${f(5 * s)} M${f(-2.2 * s)} ${f(-8 * s)} v${f(4 * s)}" stroke="#5e3d24" stroke-width="${f(1.2 * s)}" stroke-linecap="round"/>
     <g class="sway">
       <circle cx="${-12 * s}" cy="${-30 * s}" r="${15 * s}" fill="${dark}"/>
       <circle cx="${12 * s}" cy="${-30 * s}" r="${15 * s}" fill="${dark}"/>
       <circle cx="0" cy="${-44 * s}" r="${18 * s}" fill="${leaf}"/>
       <circle cx="${-10 * s}" cy="${-34 * s}" r="${13 * s}" fill="${leaf}"/>
       <circle cx="${11 * s}" cy="${-35 * s}" r="${12 * s}" fill="${leaf}"/>
-      <ellipse cx="${-6 * s}" cy="${-50 * s}" rx="${6 * s}" ry="${4 * s}" fill="#fff" opacity=".18"/>
+      <path d="M${f(8 * s)} ${f(-24 * s)} Q${f(20 * s)} ${f(-26 * s)} ${f(22 * s)} ${f(-36 * s)} Q${f(16 * s)} ${f(-30 * s)} ${f(8 * s)} ${f(-30 * s)} Z" fill="${dark}" opacity=".6"/>
+      <path d="M${f(13.2 * s)} ${f(-39.2 * s)} A${f(14 * s)} ${f(14 * s)} 0 0 1 ${f(4.8 * s)} ${f(-30.8 * s)} M${f(-1.3 * s)} ${f(-29 * s)} A${f(10 * s)} ${f(10 * s)} 0 0 1 ${f(-8.3 * s)} ${f(-24.2 * s)}" fill="none" stroke="${dark}" stroke-width="${f(1.6 * s)}" stroke-linecap="round" opacity=".7"/>
+      <ellipse cx="${-6 * s}" cy="${-50 * s}" rx="${6 * s}" ry="${4 * s}" fill="#fff" opacity=".22"/>
+      <circle cx="${f(-15 * s)}" cy="${f(-39 * s)}" r="${f(2 * s)}" fill="#fff" opacity=".16"/>
     </g>`,
 });
 
@@ -62,6 +68,8 @@ const pine = (c: string, d: string, snow = false, s = 1): Prop => ({
       <path d="M0 ${-62 * s} L${16 * s} ${-34 * s} H${-16 * s} Z" fill="${c}"/>
       <path d="M0 ${-48 * s} L${21 * s} ${-20 * s} H${-21 * s} Z" fill="${d}"/>
       <path d="M0 ${-36 * s} L${24 * s} ${-9 * s} H${-24 * s} Z" fill="${c}"/>
+      <path d="M0 ${-62 * s} L${16 * s} ${-34 * s} H${f(6 * s)} L${21 * s} ${-20 * s} H${f(8 * s)} L${24 * s} ${-9 * s} H0 Z" fill="#000" opacity=".12"/>
+      <path d="M${f(-11 * s)} ${f(-37 * s)} l${f(4 * s)} ${f(3 * s)} l${f(4 * s)} ${f(-2 * s)} M${f(-15 * s)} ${f(-12 * s)} l${f(4 * s)} ${f(3 * s)} l${f(4 * s)} ${f(-2 * s)} l${f(4 * s)} ${f(2 * s)}" fill="none" stroke="#000" stroke-width="${f(1.2 * s)}" stroke-linecap="round" stroke-linejoin="round" opacity=".14"/>
       ${snow ? `<path d="M0 ${-62 * s} L${8 * s} ${-48 * s} L${3 * s} ${-50 * s} L0 ${-46 * s} L${-4 * s} ${-50 * s} L${-8 * s} ${-48 * s} Z" fill="#fff"/>
       <path d="M${-17 * s} ${-22 * s} Q0 ${-30 * s} ${17 * s} ${-22 * s} L${21 * s} ${-20 * s} H${-21 * s} Z" fill="#fff" opacity=".9"/>
       <path d="M${-20 * s} ${-11 * s} Q0 ${-18 * s} ${20 * s} ${-11 * s} L${24 * s} ${-9 * s} H${-24 * s} Z" fill="#fff" opacity=".9"/>` : ''}
@@ -73,6 +81,9 @@ const bush = (c: string, d: string, berries?: string): Prop => ({
   svg: `${shadow(17)}
     <circle cx="-9" cy="-9" r="9" fill="${d}"/><circle cx="9" cy="-9" r="9" fill="${d}"/>
     <circle cx="0" cy="-14" r="11" fill="${c}"/><circle cx="-8" cy="-8" r="8" fill="${c}"/><circle cx="8" cy="-8" r="8" fill="${c}"/>
+    <path d="M3 -2 Q11 -1 15 -8 Q12 -9 9 -5 Q6 -3 3 -2 Z" fill="${d}" opacity=".8"/>
+    <path d="M8 -20 A9 9 0 0 1 9 -12" fill="none" stroke="${d}" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="-4" cy="-19" rx="4" ry="2.4" fill="#fff" opacity=".2"/>
     ${berries ? `<circle cx="-5" cy="-15" r="2" fill="${berries}"/><circle cx="4" cy="-10" r="2" fill="${berries}"/><circle cx="7" cy="-17" r="2" fill="${berries}"/>` : ''}`,
 });
 
@@ -289,7 +300,7 @@ const log = (): Prop => ({
 
 const rock = (c: string): Prop => ({
   r: 13, poke: 'wobble', sfx: 'knock',
-  svg: `${shadow(12, 0.15)}<path d="M-12 0 Q-13 -9 -5 -12 Q3 -16 9 -10 Q14 -4 11 0 Z" fill="${c}"/><path d="M-6 -9 Q-2 -12 3 -11" stroke="#fff" stroke-width="1.6" fill="none" opacity=".35"/>`,
+  svg: `${shadow(12, 0.15)}<path d="M-12 0 Q-13 -9 -5 -12 Q3 -16 9 -10 Q14 -4 11 0 Z" fill="${c}"/><path d="M3 -13 Q10 -11 12 -5 Q13 -2 11 0 H-2 Q4 -5 3 -13 Z" fill="#000" opacity=".14"/><path d="M-1 -12 L-3 -7 L0 -4" fill="none" stroke="#000" stroke-width="1" stroke-linecap="round" opacity=".22"/><path d="M-6 -9 Q-2 -12 3 -11" stroke="#fff" stroke-width="1.6" fill="none" opacity=".35"/>`,
 });
 
 const mushroom = (): Prop => ({
