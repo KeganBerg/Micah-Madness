@@ -1502,3 +1502,27 @@ html.full-app, html.full-app body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .cc.same .ci, .order.ready, .craft-micah.hungry { animation: none; }
 }
+
+/* ── Merge levels: big and golden pieces ── */
+.tile .tier-glow { position: absolute; inset: 6%; border-radius: 50%; pointer-events: none; }
+.tile.tier-2 .tier-glow { background: radial-gradient(circle, #fff6d6 0%, #ffdf7a 52%, #ffd23f66 64%, transparent 72%); }
+.tile.tier-3 .tier-glow { inset: 5%; background: radial-gradient(circle at 38% 32%, #fffbe0 0%, #ffd23f 38%, #f0a81a 70%, #c97d00 100%); border: 2px solid #fff3b0; box-shadow: 0 0 10px 2px #ffc12e99; animation: gold-shine 2.4s ease-in-out infinite; }
+.tile.tier-2 .piece { transform: scale(1.08); filter: drop-shadow(0 1px 0 #fff); }
+.tile.tier-3 .piece { transform: scale(1.14); filter: drop-shadow(0 0 2px #fff6c9) drop-shadow(0 1px 1px #8a5a00); }
+.tile.tier-2.selected .piece, .tile.tier-3.selected .piece { transform: scale(1.22); }
+.tile .tier-pips { position: absolute; right: 4%; bottom: 3%; display: flex; gap: 1px; pointer-events: none; }
+.tile .tier-pips svg { width: 13px; height: 13px; fill: #ffc12e; stroke: #7a4a00; stroke-width: 1.5px; }
+@keyframes gold-shine { 50% { box-shadow: 0 0 16px 4px #ffd23fbb; } }
+/* A piece you picked up shows every piece it could merge with. */
+.tile.mergeable::after { content: ''; position: absolute; inset: 6%; border-radius: 10px; border: 3px dashed #ffc12e; animation: merge-pulse 1s ease-in-out infinite; }
+@keyframes merge-pulse { 50% { opacity: .45; } }
+.tile.merging { z-index: 3; transition: transform .22s cubic-bezier(.5, 0, .7, 1); }
+.tile.merging .piece { transform: scale(.85); }
+.tile.merged .piece { animation: merged .4s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes merged { 0% { transform: scale(.6); } 60% { transform: scale(1.35); } }
+.goal-tier { position: relative; display: grid; place-items: center; border-radius: 50%; }
+.goal-tier.tier-2 { background: radial-gradient(circle, #fff6d6 0%, #ffdf7a 55%, transparent 72%); }
+.goal-tier.tier-3 { background: radial-gradient(circle at 38% 32%, #fffbe0 0%, #ffd23f 40%, #f0a81a 72%, transparent 74%); }
+@media (prefers-reduced-motion: reduce) {
+  .tile.tier-3 .tier-glow, .tile.mergeable::after, .tile.merged .piece { animation: none; }
+}

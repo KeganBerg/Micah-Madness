@@ -66,3 +66,25 @@ describe('levels', () => {
     expect(mudCount(lv)).toBe([...m].filter((c) => c === 'm').length + 2 * [...m].filter((c) => c === 'M').length);
   });
 });
+
+describe('merge levels', () => {
+  const merges = LEVELS.filter((l) => l.merge);
+  test('one in every area from level 8, each with a merge goal it can reach', () => {
+    expect(merges.map((l) => l.id)).toEqual(LEVELS.filter((l) => l.id >= 8 && l.id % 5 === 3).map((l) => l.id));
+    for (const lv of merges) {
+      const g = lv.goals[0];
+      expect(g.type, `L${lv.id}`).toBe('merge');
+      if (g.type !== 'merge') continue;
+      expect(g.kind).toBeLessThan(lv.kinds);
+      expect(g.tier).toBeGreaterThanOrEqual(2);
+      expect(g.tier).toBeLessThanOrEqual(3);
+      expect(g.count).toBeGreaterThan(0);
+      expect(lv.goals.length, `L${lv.id}`).toBeLessThanOrEqual(3);
+      // It never asks you to collect the same kind it asks you to merge.
+      expect(lv.goals.some((o) => o.type === 'collect' && o.kind === g.kind), `L${lv.id}`).toBe(false);
+    }
+  });
+  test('no other level lets you merge', () => {
+    expect(LEVELS.filter((l) => !l.merge).every((l) => !l.goals.some((g) => g.type === 'merge'))).toBe(true);
+  });
+});
