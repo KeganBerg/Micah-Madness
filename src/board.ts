@@ -38,6 +38,8 @@ export interface Tile {
   junk?: number;
   /** Layers of cardboard left on a parcel (only when kind is BOX_KIND). */
   box?: number;
+  /** Merge levels: how big the piece has grown (1 plain, 2 big, 3 golden). Missing means 1. */
+  tier?: number;
 }
 
 export type Cell = Tile | null;
@@ -176,6 +178,78 @@ export function burrsHit(burr: boolean[][], cleared: Set<number>): Pos[] {
     }
   }
   return [...hit].map(unkey);
+}
+
+// ───────────────────────────── Merging ─────────────────────────────
+// On merge levels a tap on one piece, then a tap on another just like it (same kind, same size,
+// anywhere on the board), merges them: the second grows one size and the first one's cell empties.
+// Two golden pieces merge into a Micah piece.
+
+/** The biggest a piece can grow. */
+export const MAX_TIER = 3;
+export const tierOf = (t: Cell | undefined): number => t?.tier ?? 1;
+/** How much a piece counts for when it is cleared: a big one was two pieces, a golden one four. */
+export const tierWorth = (t: Cell | undefined): number => 2 ** (tierOf(t) - 1);
+
+/** A piece that can take part in a merge: a regular piece with no power, not pinned down. */
+const mergeable = (grid: Grid, p: Pos, locked: Locked): boolean => {
+  const t = grid[p[0]]?.[p[1]];
+  return !!t && t.kind >= 0 && t.special === 'none' && !locked(p[0], p[1]);
+};
+
+/** True if the piece at `a` can merge into the piece at `b`. */
+export function canMerge(grid: Grid, a: Pos, b: Pos, locked: Locked = none): boolean {
+  if (a[0] === b[0] && a[1] === b[1]) return false;
+  if (!mergeable(grid, a, locked) || !mergeable(grid, b, locked)) return false;
+  const ta = grid[a[0]][a[1]]!, tb = grid[b[0]][b[1]]!;
+  return ta.kind === tb.kind && tierOf(ta) === tierOf(tb);
+}
+
+/** Every piece the one at `a` could merge with. */
+export function mergePartners(grid: Grid, a: Pos, locked: Locked = none): Pos[] {
+  const out: Pos[] = [];
+  grid.forEach((row, r) => row.forEach((_, c) => canMerge(grid, a, [r, c], locked) && out.push([r, c])));
+  return out;
+}
+
+/**
+ * Merge the piece at `a` into the one at `b`. The cell at `a` empties (gravity fills it);
+ * `b` grows one size, or turns into a Micah piece if both were golden. Returns the piece now at `b`.
+ */
+export function mergePieces(grid: Grid, a: Pos, b: Pos): Tile {
+  const tb = grid[b[0]][b[1]]!;
+  const tier = tierOf(tb);
+  grid[a[0]][a[1]] = null;
+  const out = tier >= MAX_TIER ? newTile(MICAH_KIND, 'micah') : { ...newTile(tb.kind), tier: tier + 1 };
+  grid[b[0]][b[1]] = out;
+  return out;
+}
+
+/**
+ * A merge worth making, for hints and the bot: two pieces of `kind` (any kind if it's
+ * missing) at the biggest size that is still under `upTo`. The lower piece is the target.
+ */
+export function findMerge(grid: Grid, locked: Locked = none, kind?: number, upTo = MAX_TIER + 1): [Pos, Pos] | null {
+  let best: [Pos, Pos] | null = null;
+  let bestTier = 0;
+  for (let r = 0; r < grid.length; r++)
+    for (let c = 0; c < grid[0].length; c++) {
+      const t = grid[r][c];
+      if (!mergeable(grid, [r, c], locked) || (kind !== undefined && t!.kind !== kind)) continue;
+      const tier = tierOf(t);
+      if (tier >= upTo || tier <= bestTier) continue;
+      // Pair it with the nearest match, so the hint is easy to see.
+      let near: Pos | null = null;
+      let dist = Infinity;
+      for (const p of mergePartners(grid, [r, c], locked)) {
+        const d = Math.abs(p[0] - r) + Math.abs(p[1] - c);
+        if (d < dist) (dist = d), (near = p);
+      }
+      if (!near) continue;
+      bestTier = tier;
+      best = near[0] > r ? [[r, c], near] : [near, [r, c]];
+    }
+  return best;
 }
 
 export function randomKind(rng: Rng, kinds = KIND_COUNT): number {
@@ -380,7 +454,7 @@ export function computeClear(grid: Grid, preferred: Pos[] = [], forced: Iterable
   for (const k of cleared) {
     const [r, c] = unkey(k);
     const t = grid[r][c];
-    if (t && t.kind >= 0) collected[t.kind]++;
+    if (t && t.kind >= 0) collected[t.kind] += tierWorth(t);
   }
   return { cleared, created, fired, collected };
 }

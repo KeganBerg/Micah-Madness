@@ -10,6 +10,7 @@ export type Goal =
   | { type: 'burrs' } // pick out every burr (they pin a piece down, and spread to the next piece if a move picks none)
   | { type: 'boxes' } // tear open every parcel (a match right beside it, or a blast, tears off a layer)
   | { type: 'boss' } // chase the area's boss off: match right beside it until its health runs out
+  | { type: 'merge'; kind: number; tier: number; count: number } // merge pieces of one kind up to this size, this many times
   | { type: 'score'; target: number }
   | { type: 'power'; power: Power; count: number }; // make this many power-ups of one kind
 
@@ -51,6 +52,8 @@ export interface Level {
   shape?: string[];
   /** The area finale's boss. */
   boss?: Boss;
+  /** Merge level: tap a piece, then one just like it anywhere, to merge them into a bigger one. */
+  merge?: boolean;
 }
 
 export interface Zone {
@@ -758,6 +761,58 @@ const TUNED: Record<number, { moves: number; stars: [number, number, number]; hp
   250: { moves: 23, stars: [3800, 8300, 11600] },
 };
 
+/** Merge levels, tuned with scripts/tune.test.ts once merging was added. */
+const MERGE_TUNED: Record<number, { moves: number; stars: [number, number, number]; hp?: number }> = {
+  8: { moves: 20, stars: [1600, 3500, 4700] },
+  13: { moves: 32, stars: [2700, 6100, 7400] },
+  18: { moves: 41, stars: [7000, 9100, 10800] },
+  23: { moves: 23, stars: [1600, 3500, 4300] },
+  28: { moves: 40, stars: [3600, 7900, 9500] },
+  33: { moves: 37, stars: [7000, 8000, 8800] },
+  38: { moves: 45, stars: [4400, 9700, 12600] },
+  43: { moves: 36, stars: [2900, 6400, 8100] },
+  48: { moves: 38, stars: [2700, 6100, 7400] },
+  53: { moves: 33, stars: [3100, 6800, 8400] },
+  58: { moves: 34, stars: [8000, 9200, 10300] },
+  63: { moves: 45, stars: [2900, 6400, 8300] },
+  68: { moves: 39, stars: [3800, 8400, 10800] },
+  73: { moves: 20, stars: [2200, 4800, 6300] },
+  78: { moves: 41, stars: [3800, 8400, 10000] },
+  83: { moves: 39, stars: [2400, 5300, 6000] },
+  88: { moves: 30, stars: [3200, 7000, 8800] },
+  93: { moves: 21, stars: [2000, 4400, 5700] },
+  98: { moves: 42, stars: [3500, 7800, 9100] },
+  103: { moves: 45, stars: [4200, 9400, 11400] },
+  108: { moves: 37, stars: [5100, 11300, 13700] },
+  113: { moves: 42, stars: [3600, 8000, 10500] },
+  118: { moves: 40, stars: [3400, 7600, 9200] },
+  123: { moves: 41, stars: [6600, 14700, 18600] },
+  128: { moves: 45, stars: [4700, 10500, 12600] },
+  133: { moves: 35, stars: [4700, 10500, 13300] },
+  138: { moves: 26, stars: [2500, 5600, 7000] },
+  143: { moves: 44, stars: [2700, 6100, 7000] },
+  148: { moves: 35, stars: [6400, 14300, 20800] },
+  153: { moves: 35, stars: [3600, 8000, 10300] },
+  158: { moves: 35, stars: [2800, 6300, 7700] },
+  163: { moves: 23, stars: [2200, 5000, 6500] },
+  168: { moves: 21, stars: [1700, 3700, 4600] },
+  173: { moves: 23, stars: [2300, 5100, 6400] },
+  178: { moves: 37, stars: [3800, 8500, 10700] },
+  183: { moves: 45, stars: [5600, 12500, 14900] },
+  188: { moves: 45, stars: [3600, 7900, 9900] },
+  193: { moves: 42, stars: [3200, 7000, 8100] },
+  198: { moves: 45, stars: [4600, 10300, 12500] },
+  203: { moves: 22, stars: [1800, 4000, 5000] },
+  208: { moves: 43, stars: [5800, 12900, 15700] },
+  213: { moves: 27, stars: [2600, 5700, 6800] },
+  218: { moves: 37, stars: [3700, 8200, 10200] },
+  223: { moves: 45, stars: [5600, 12500, 15500] },
+  228: { moves: 32, stars: [3000, 6700, 8500] },
+  233: { moves: 38, stars: [3300, 7300, 9600] },
+  238: { moves: 42, stars: [10000, 11500, 12700] },
+  243: { moves: 45, stars: [5800, 12800, 16300] },
+  248: { moves: 44, stars: [4500, 10000, 12100] },
+};
 function bossLevel(lv: Level): Level {
   const zone = lv.zone;
   const area = Math.floor((lv.id - 1) / 5);
@@ -798,13 +853,55 @@ function shapedLevel(lv: Level): Level {
   return lv;
 }
 
+// ───────────────────────────── Merge levels ─────────────────────────────
+// One level in every area (from level 8) lets you merge as well as swap: tap a piece, then one just
+// like it, and they become one bigger piece. Two big ones make a golden one; two golden ones make Micah.
+export const isMergeId = (id: number) => id >= 8 && id % 5 === 3;
+/** The first merge level, where the tip explains it. */
+export const FIRST_MERGE = 8;
+/** Merge levels that played too hard with a full merge goal on top (sim bot). */
+const MERGE_LIGHT = new Set<number>([38, 63, 83, 98, 103, 128, 143, 148, 183, 188, 198, 208, 218, 223, 233, 243, 248]);
+/** ...and the ones that were still too hard with that. */
+const MERGE_LIGHTER = new Set<number>([223, 243, 248]);
+function mergeLevel(lv: Level): Level {
+  const area = Math.floor((lv.id - 1) / 5);
+  const taken = new Set(lv.goals.flatMap((g) => (g.type === 'collect' ? [g.kind] : [])));
+  // A kind the level doesn't also ask you to collect, so the two goals don't fight over it.
+  let kind = (lv.id * 5) % lv.kinds;
+  for (let i = 0; i < lv.kinds && taken.has(kind); i++) kind = (kind + 1) % lv.kinds;
+  const goal: Goal = area < 6 ? { type: 'merge', kind, tier: 2, count: 4 } : area < 16 ? { type: 'merge', kind, tier: 3, count: 2 } : { type: 'merge', kind, tier: 3, count: 3 };
+  let goals = [...lv.goals];
+  // Levels that were already long: a smaller merge goal, in place of a score, collect or power goal.
+  if (MERGE_LIGHT.has(lv.id) && goal.type === 'merge') {
+    goal.count = Math.max(1, goal.count - (MERGE_LIGHTER.has(lv.id) ? 2 : 1));
+    const drop = goals.findIndex((g) => g.type === 'score' || g.type === 'collect' || g.type === 'power');
+    if (drop >= 0 && goals.length > 1) goals.splice(drop, 1);
+  }
+  // Three goals is plenty: the merge goal takes the place of a score or collect goal.
+  if (goals.length >= 3) {
+    const drop = goals.findIndex((g) => g.type === 'score') >= 0 ? goals.findIndex((g) => g.type === 'score') : goals.findIndex((g) => g.type === 'collect');
+    if (drop >= 0) goals.splice(drop, 1);
+  }
+  // The first one just teaches merging.
+  goals = lv.id === FIRST_MERGE ? [{ ...goal, count: 8 }] : [goal, ...goals];
+  const out: Level = { ...lv, goals, merge: true };
+  // Still more than three: the last board goal goes, and its layer with it.
+  while (out.goals.length > 3) {
+    const g = out.goals.pop()!;
+    const layer = LAYER_OF[g.type];
+    if (layer) delete out[layer];
+    if (g.type === 'junk') delete out.junk;
+  }
+  return out;
+}
 /** Which levels get a boss or a shape. */
 export const isBossId = (id: number) => id % 5 === 0;
 export const isShapedId = (id: number) => id > 10 && id % 5 >= 2;
 
 export const LEVELS: Level[] = BASE_LEVELS.map((lv) => {
-  const out = isBossId(lv.id) ? bossLevel(lv) : isShapedId(lv.id) ? shapedLevel(lv) : lv;
-  const t = TUNED[lv.id];
+  let out = isBossId(lv.id) ? bossLevel(lv) : isShapedId(lv.id) ? shapedLevel(lv) : lv;
+  if (isMergeId(lv.id)) out = mergeLevel(out);
+  const t = MERGE_TUNED[lv.id] ?? TUNED[lv.id];
   if (t) {
     out.moves = t.moves;
     out.stars = t.stars;

@@ -1,5 +1,5 @@
 // Level-balance simulator. Run with: SIM=1 npx vitest run scripts/sim.test.ts
-// SIM_WINTER=1 or SIM_ARK=1 runs Micah's Winter or Noah's Ark instead of the map.
+// SIM_MERGE=1 only runs the merge levels. SIM_WINTER=1 or SIM_ARK=1 runs Micah's Winter or Noah's Ark instead of the map.
 // Optional: SIM_FROM=41 / SIM_TO=45 pick levels, SIM_N=200 sets runs per level, SIM_BOT=greedy uses the old weaker bot.
 // Results go to <tmpdir>/micah-sim.txt: win rate, spare moves on a win, median winning score (victory lap included),
 // how often each star threshold is reached by a win, and how often each goal was left unfinished.
@@ -8,7 +8,7 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'vitest';
-import { LEVELS } from '../src/levels';
+import { LEVELS, isMergeId } from '../src/levels';
 import { WINTER_LEVELS } from '../src/winter';
 import { ARK_LEVELS } from '../src/ark';
 import { play, summarize } from './sim';
@@ -22,6 +22,7 @@ test.skipIf(!process.env.SIM)('simulate win rates', () => {
   const N = Number(process.env.SIM_N ?? 100);
   const smart = process.env.SIM_BOT !== 'greedy';
   for (let i = from; i < to; i++) {
+    if (process.env.SIM_MERGE && !isMergeId(set[i].id)) continue;
     const s = summarize(set[i], N, smart);
     out.push(`${tag}${i + 1}\twin ${s.win}%\tspare ${s.spare}\tmedian ${s.p50}\tp85 ${s.p85}\tstars ${s.stars.join('/')}%\tstuck ${s.stuck.join('/')}%`);
   }

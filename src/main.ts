@@ -27,6 +27,12 @@ import {
   type Special,
   type Tile,
   isJunk,
+  canMerge,
+  mergePartners,
+  mergePieces,
+  findMerge,
+  tierOf,
+  MAX_TIER,
   isBox,
   placeBoxes,
   hitBoxes,
@@ -52,7 +58,7 @@ import { backdropHTML } from './backdrop';
 import { COSTUMES, costumeById, costumeUrl, isUnlocked, unlockText, type Costume } from './costumes';
 import { startYard } from './roam';
 import { noahsArk, owlSVG, sceneryHTML, wireScenery } from './scenery';
-import { LEVELS, ZONES, boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type BossId, type Goal, type Level, type Power } from './levels';
+import { FIRST_MERGE, LEVELS, ZONES, boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type BossId, type Goal, type Level, type Power } from './levels';
 import {
   BOOSTERS,
   DAILY_REWARDS,
@@ -182,8 +188,11 @@ function goalIcon(goal: Goal): string {
   if (goal.type === 'burrs') return svg(BOOSTER_ICONS.burrs, 'goal-icon');
   if (goal.type === 'power') return svg(BOOSTER_ICONS[goal.power], 'goal-icon');
   if (goal.type === 'boss') return bossSvg(bossNow, 'goal-icon boss-icon');
+  if (goal.type === 'merge') return `<span class="goal-tier tier-${goal.tier}">${svg(KINDS[goal.kind].svg, 'goal-icon')}</span>`;
   return `<span class="goal-score">${UI.star}</span>`;
 }
+/** Merge levels: what a piece is called at each size. */
+const TIER_NAMES = ['', '', 'Big', 'Golden'];
 const POWER_NAMES: Record<Power, [string, string]> = {
   zoomies: ['Zoomies', 'Zoomies'],
   bark: ['Big Bark', 'Big Barks'],
@@ -201,6 +210,7 @@ function goalText(goal: Goal): string {
   if (goal.type === 'burrs') return 'Pick out every burr';
   if (goal.type === 'boss') return `Chase off ${BOSSES[bossNow].name}`;
   if (goal.type === 'power') return `Make ${goal.count} ${POWER_NAMES[goal.power][goal.count === 1 ? 0 : 1]}`;
+  if (goal.type === 'merge') return `Merge ${goal.count} ${TIER_NAMES[goal.tier].toLowerCase()} ${(goal.count === 1 ? KINDS[goal.kind].name : KINDS[goal.kind].plural).toLowerCase()}`;
   return `Score ${goal.target.toLocaleString()} points`;
 }
 
@@ -208,6 +218,8 @@ const PAW_POINTER = `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="62" rx="20"
 
 /** One tip the first time a mechanic appears, so the difficulty ramps with the teaching. */
 const TIPS: Record<number, string> = {
+  [FIRST_MERGE]: 'Merge level! Tap a piece, then tap one just like it. They join into a bigger one.',
+  33: 'Two big pieces merge into a golden one. Two golden ones make Micah!',
   1: 'Drag a piece onto a neighbour to swap them. Three or more in a line clears them.',
   2: 'Line up four in a row to make Zoomies, which clears its whole row or column.',
   3: 'Make an L or T shape to get a Big Bark, which clears the 3×3 area around it.',
@@ -1091,7 +1103,7 @@ function showLevelIntro(level: Level): void {
     `
     <div class="modal-head">
       ${micahImg('modal-avatar micah-idle')}
-      <div><p class="eyebrow">${isWinterLevel(level) ? 'Micah\u2019s Winter' : isArkLevel(level) ? 'Noah\u2019s Ark' : zone.name}</p><h2>${levelTitle(level)}</h2></div>
+      <div><p class="eyebrow">${isWinterLevel(level) ? 'Micah\u2019s Winter' : isArkLevel(level) ? 'Noah\u2019s Ark' : zone.name}${level.merge ? ' \u00b7 Merge level' : ''}</p><h2>${levelTitle(level)}</h2></div>
       <button class="close" aria-label="Close">${UI.close}</button>
     </div>
     <section>
@@ -1099,7 +1111,7 @@ function showLevelIntro(level: Level): void {
       <ul class="goal-list">${level.goals.map((g) => `<li>${goalIcon(g)}<span>${goalText(g)}</span></li>`).join('')}</ul>
       <p class="meta-row">You have <b>${level.moves} moves</b>${save.best[level.id] ? ` · Best score <b>${save.best[level.id].toLocaleString()}</b>` : ''}</p>
     </section>
-    ${TIPS[level.id] ? `<p class="tip"><b>Tip</b>${TIPS[level.id]}</p>` : ''}
+    ${TIPS[level.id] || level.merge ? `<p class="tip"><b>Tip</b>${TIPS[level.id] ?? 'Tap a piece, then one just like it, to merge them.'}</p>` : ''}
     ${streakZoomies()
       ? `<p class="streak">${icon('zoomies', 'booster-icon')}<span><b>${save.winStreak} win streak.</b> You start with ${streakZoomies()} free Zoomies. Lose or leave a level and the streak resets.</span></p>`
       : ''}
@@ -1781,7 +1793,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const totalMud = mudCount(level);
   const totalYarn = yarnCount(level);
   const remaining = level.goals.map((g) =>
-    g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.type === 'burrs' ? burrCount(level) : g.type === 'boss' ? level.boss?.hp ?? 0 : g.target,
+    g.type === 'collect' || g.type === 'power' || g.type === 'junk' || g.type === 'merge' ? g.count : g.type === 'mud' ? totalMud : g.type === 'yarn' ? totalYarn : g.type === 'leaves' ? leafCount(level) : g.type === 'bubbles' ? bubbleCount(level) : g.type === 'boxes' ? boxTotal(level) : g.type === 'burrs' ? burrCount(level) : g.type === 'boss' ? level.boss?.hp ?? 0 : g.target,
   );
   const syncBurrs = () => level.goals.forEach((g, i) => g.type === 'burrs' && (remaining[i] = burrsLeft()));
   const syncLeaves = () => level.goals.forEach((g, i) => g.type === 'leaves' && (remaining[i] = leavesLeft()));
@@ -2052,8 +2064,14 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
 
   function makeTileEl(t: Tile): HTMLDivElement {
     const el = document.createElement('div');
-    el.className = `tile ${specialClass(t.special)} ${isJunk(t) ? 'junk' : ''} ${isBox(t) ? 'parcel' : ''}`;
-    el.innerHTML = tileInner(t) + (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '');
+    const tier = tierOf(t);
+    el.className = `tile ${specialClass(t.special)} ${isJunk(t) ? 'junk' : ''} ${isBox(t) ? 'parcel' : ''} ${tier > 1 ? `tier-${tier}` : ''}`;
+    el.innerHTML =
+      (tier > 1 ? '<span class="tier-glow"></span>' : '') +
+      tileInner(t) +
+      (t.special === 'zoomRow' || t.special === 'zoomCol' ? '<span class="streaks"></span>' : '') +
+      (tier > 1 ? `<span class="tier-pips">${UI.star.repeat(tier - 1)}</span>` : '');
+    el.dataset.tier = String(tier);
     el.dataset.special = t.special;
     el.dataset.kind = String(t.kind);
     el.dataset.box = String(t.box ?? 0);
@@ -2066,7 +2084,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   }
   function syncTileEl(t: Tile, r: number, c: number) {
     let el = tileEls.get(t.id);
-    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind) || el.dataset.box !== String(t.box ?? 0)) {
+    if (!el || el.dataset.special !== t.special || el.dataset.kind !== String(t.kind) || el.dataset.box !== String(t.box ?? 0) || el.dataset.tier !== String(tierOf(t))) {
       el?.remove();
       el = makeTileEl(t);
     }
@@ -2148,7 +2166,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       .map((g, i) => {
         const left = Math.max(0, g.type === 'score' ? g.target - score : remaining[i]);
         const done = left === 0;
-        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : g.type === 'burrs' ? 'burrs left' : g.type === 'boss' ? 'health left' : `${POWER_NAMES[g.power][1]} to make`;
+        const what = g.type === 'score' ? 'points to go' : g.type === 'collect' ? `${KINDS[g.kind].plural.toLowerCase()} to go` : g.type === 'mud' ? (snowy ? 'snow drifts left' : 'mud patches left') : g.type === 'yarn' ? 'yarn balls left' : g.type === 'leaves' ? 'leaves left' : g.type === 'bubbles' ? 'bubbles left' : g.type === 'junk' ? 'junk to eat' : g.type === 'boxes' ? 'parcels left' : g.type === 'burrs' ? 'burrs left' : g.type === 'boss' ? 'health left' : g.type === 'merge' ? `${TIER_NAMES[g.tier].toLowerCase()} ${KINDS[g.kind].plural.toLowerCase()} to merge` : `${POWER_NAMES[g.power][1]} to make`;
         return `<div class="goal ${done ? 'done' : ''}" role="img" aria-label="${done ? `${goalText(g)}: done` : `${left.toLocaleString()} ${what}`}">${goalIcon(g)}<b>${done ? UI.check : g.type === 'score' ? left.toLocaleString() : left}</b></div>`;
       })
       .join('');
@@ -2185,7 +2203,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     hintTimer = window.setTimeout(() => {
       if (busy || over) return;
       // On a Noah's Ark level the hint points at a move that drops junk toward Micah.
-      const mv = (junkGoal >= 0 && remaining[junkGoal] > 0 ? junkMove(grid, locked) : null) ?? findMove(grid, locked);
+      const mv = (junkGoal >= 0 && remaining[junkGoal] > 0 ? junkMove(grid, locked) : null) ?? mergeHint() ?? findMove(grid, locked);
       if (!mv) return;
       for (const [r, c] of mv) tileEls.get(grid[r][c]!.id)?.classList.add('hint');
       // Left alone a while longer, Micah dozes off.
@@ -2619,12 +2637,105 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   }
 
   function selectCell(p: Pos | null) {
-    boardEl.querySelectorAll('.selected').forEach((e) => e.classList.remove('selected'));
+    boardEl.querySelectorAll('.selected, .mergeable').forEach((e) => e.classList.remove('selected', 'mergeable'));
     selected = p;
     if (p) {
       tileEls.get(grid[p[0]][p[1]]!.id)?.classList.add('selected');
       sfx.select();
+      // On a merge level every piece it could merge with lights up.
+      if (level.merge) for (const [r, c] of mergePartners(grid, p, locked)) tileEls.get(grid[r][c]!.id)?.classList.add('mergeable');
     }
+  }
+
+  // ── Merge levels: tap a piece, then one just like it, to merge them ──
+  const mergeGoals = level.goals.flatMap((g, i) => (g.type === 'merge' ? [{ g, i }] : []));
+  /** The hint on a merge level: the next merge toward an unfinished merge goal. */
+  function mergeHint(): [Pos, Pos] | null {
+    if (!level.merge) return null;
+    for (const { g, i } of mergeGoals) {
+      if (remaining[i] <= 0) continue;
+      const mv = findMerge(grid, locked, g.kind, g.tier);
+      if (mv) return mv;
+    }
+    // A Micah goal: two golden pieces make her.
+    if (level.goals.some((g, i) => g.type === 'power' && g.power === 'micah' && remaining[i] > 0)) {
+      const mv = findMerge(grid, locked, undefined, MAX_TIER + 1);
+      if (mv && tierOf(grid[mv[0][0]][mv[0][1]]) === MAX_TIER) return mv;
+    }
+    return null;
+  }
+  let mergeSaid = 0;
+  async function tryMerge(a: Pos, b: Pos) {
+    if (busy || over || !canMerge(grid, a, b, locked)) return;
+    clearHint();
+    selectCell(null);
+    await runLocked(async () => {
+      undoSnap = {
+        grid: cloneGrid(grid),
+        mud: mud.map((row) => [...row]),
+        yarn: yarn.map((row) => [...row]),
+        leaf: leaf.map((row) => [...row]),
+        burr: burr.map((row) => [...row]),
+        bubble: soap.map((row) => [...row]),
+        remaining: [...remaining],
+        moves,
+        score,
+        goalsDone,
+      };
+      endGuide();
+      const from = grid[a[0]][a[1]]!;
+      const into = grid[b[0]][b[1]]!;
+      const kind = into.kind;
+      // The first piece slides over onto the second one.
+      const fromEl = tileEls.get(from.id);
+      fromEl?.classList.add('merging');
+      if (fromEl) placeEl(fromEl, b[0], b[1]);
+      sfx.swap();
+      await wait(220);
+      moves--;
+      if (moves === 5) sfx.warn();
+      const made = mergePieces(grid, a, b);
+      fromEl?.remove();
+      tileEls.delete(from.id);
+      tileEls.get(into.id)?.remove();
+      tileEls.delete(into.id);
+      const el = makeTileEl(made);
+      placeEl(el, b[0], b[1]);
+      el.classList.add('born', 'merged');
+      const tier = tierOf(made);
+      const x = ((b[1] + 0.5) / COLS) * 100, y = ((b[0] + 0.5) / ROWS) * 100;
+      ring(boardEl, x, y, '#ffc12e', made.special === 'micah' ? 2.4 : 1 + tier * 0.3);
+      sfx.powerUp();
+      haptic.power();
+      bump(save, 'merges');
+      score += made.special === 'micah' ? 500 : 60 * tier;
+      if (made.special === 'micah') {
+        confetti(boardEl, x, y, 30, 1.1);
+        callout(boardEl, 'Micah!', 3, 'Two golden ones');
+        bump(save, 'micah');
+        level.goals.forEach((g, i) => g.type === 'power' && g.power === 'micah' && remaining[i]--);
+        say('Two golden ones made a Micah piece!', 'big');
+      } else {
+        level.goals.forEach((g, i) => g.type === 'merge' && g.kind === kind && g.tier === tier && remaining[i]--);
+        if (tier === MAX_TIER) callout(boardEl, 'Golden!', 2, '');
+        say(tier === MAX_TIER ? `A golden ${KINDS[kind].name.toLowerCase()}!` : mergeSaid++ < 1 ? `A big ${KINDS[kind].name.toLowerCase()}! Merge two of those next.` : CHEERS[Math.floor(Math.random() * CHEERS.length)], 'big');
+      }
+      const doneNow = level.goals.filter((g, i) => (g.type === 'score' ? score >= g.target : remaining[i] <= 0)).length;
+      if (doneNow > goalsDone) {
+        goalsDone = doneNow;
+        setTimeout(() => sfx.goal(), 200);
+      }
+      renderHud();
+      await wait(200);
+      el.classList.remove('merged');
+      // The emptied cell fills from above, which can set off matches of its own.
+      // Leaves and burrs only spread after a swap, so a merge never makes them worse.
+      await fall();
+      await cascade([]);
+      if (!goalsMet()) await bossThrows();
+    });
+    await checkEnd();
+    armHint();
   }
 
   async function useTool(id: BoosterId) {
@@ -3151,14 +3262,19 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
     const to: Pos = Math.abs(dx) > Math.abs(dy) ? [r, c + Math.sign(dx)] : [r + Math.sign(dy), c];
     dragStart = null;
     releasePiece();
-    if (to[0] >= 0 && to[1] >= 0 && to[0] < ROWS && to[1] < COLS) void trySwap([r, c], to);
+    if (to[0] >= 0 && to[1] >= 0 && to[0] < ROWS && to[1] < COLS) {
+      // Dragging a piece onto one just like it merges them.
+      if (level.merge && canMerge(grid, [r, c], to, locked)) void tryMerge([r, c], to);
+      else void trySwap([r, c], to);
+    }
   });
   boardEl.addEventListener('pointerup', () => {
     releasePiece();
     if (!dragStart) return;
     const p = dragStart.p;
     dragStart = null;
-    if (selected && isAdjacent(selected, p)) void trySwap(selected, p);
+    if (selected && level.merge && canMerge(grid, selected, p, locked)) void tryMerge(selected, p);
+    else if (selected && isAdjacent(selected, p)) void trySwap(selected, p);
     else if (selected && selected[0] === p[0] && selected[1] === p[1]) selectCell(null);
     else selectCell(p);
   });
@@ -3181,7 +3297,7 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
   const SPECIAL_NAMES: Record<Special, string> = { none: '', zoomRow: ' Zoomies, clears its row', zoomCol: ' Zoomies, clears its column', bark: ' Big Bark', micah: '' };
   const describe = ([r, c]: Pos) => {
     const t = grid[r][c];
-    const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : isBox(t) ? ((t.box ?? 1) > 1 ? 'taped parcel' : 'parcel') : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : KINDS[t.kind].name + SPECIAL_NAMES[t.special];
+    const what = !t ? 'empty' : isJunk(t) ? `${JUNK_ITEMS[t.junk ?? 0].name}, junk for Micah to eat` : isBox(t) ? ((t.box ?? 1) > 1 ? 'taped parcel' : 'parcel') : t.special === 'micah' || !KINDS[t.kind] ? 'Micah piece' : (tierOf(t) > 1 ? `${TIER_NAMES[tierOf(t)]} ` : '') + KINDS[t.kind].name + SPECIAL_NAMES[t.special];
     const extra = [mud[r][c] > 1 ? (snowy ? 'deep snow' : 'deep mud') : mud[r][c] ? (snowy ? 'snow' : 'mud') : '', leaf[r][c] ? 'under leaves' : '', yarn[r][c] ? 'tangled in yarn' : '', soap[r][c] ? 'in a soap bubble' : '', burr[r][c] ? 'stuck with a burr' : ''].filter(Boolean).join(', ');
     return `Row ${r + 1}, column ${c + 1}: ${what}${extra ? `, ${extra}` : ''}`;
   };
@@ -3228,9 +3344,13 @@ function startLevel(level: Level, picks: { zoomies: boolean; micah: boolean }): 
       if (selected && selected[0] === cursor[0] && selected[1] === cursor[1]) {
         selectCell(null);
         announce('Put down.');
+      } else if (selected && level.merge && canMerge(grid, selected, cursor, locked)) {
+        void tryMerge(selected, cursor).then(() => {
+          if (!over) announce(`Merged. ${moves} moves left. ${describe(cursor)}`);
+        });
       } else {
         selectCell(cursor);
-        announce(`Picked up. ${describe(cursor)}. Press an arrow key to swap.`);
+        announce(`Picked up. ${describe(cursor)}. Press an arrow key to swap${level.merge ? ', or Enter on one just like it to merge' : ''}.`);
       }
       return;
     }

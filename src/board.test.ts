@@ -21,6 +21,10 @@ import {
   BOX_KIND,
   shuffle,
   transformKind,
+  canMerge,
+  mergePieces,
+  tierOf,
+  findMerge,
   type Grid,
 } from './board';
 
@@ -228,5 +232,56 @@ describe('burrs', () => {
     burr[2][2] = burr[2][4] = burr[6][6] = true;
     const hit = burrsHit(burr, new Set([key(2, 3), key(2, 2)]));
     expect(hit.map(([r, c]) => `${r},${c}`).sort()).toEqual(['2,2', '2,4']);
+  });
+});
+
+describe('merging', () => {
+  const g = (rows: string[]): Grid => rows.map((row) => [...row].map((ch) => newTile(Number(ch))));
+
+  test('two alike anywhere merge: the second grows, the first empties', () => {
+    const grid = g(['0123', '1230', '2301']);
+    expect(canMerge(grid, [0, 0], [1, 3])).toBe(true);
+    expect(canMerge(grid, [0, 0], [0, 1])).toBe(false); // different kinds
+    expect(canMerge(grid, [0, 0], [0, 0])).toBe(false); // itself
+    const made = mergePieces(grid, [0, 0], [1, 3]);
+    expect(grid[0][0]).toBeNull();
+    expect(grid[1][3]).toBe(made);
+    expect(tierOf(made)).toBe(2);
+    expect(made.kind).toBe(0);
+  });
+
+  test('only the same size merges, and two golden pieces make Micah', () => {
+    const grid = g(['00', '00']);
+    grid[0][0]!.tier = 2;
+    expect(canMerge(grid, [0, 0], [0, 1])).toBe(false);
+    grid[0][1]!.tier = 2;
+    expect(tierOf(mergePieces(grid, [0, 0], [0, 1]))).toBe(3);
+    grid[1][0]!.tier = 3;
+    expect(canMerge(grid, [1, 0], [0, 1])).toBe(true);
+    expect(mergePieces(grid, [1, 0], [0, 1]).special).toBe('micah');
+  });
+
+  test('powered, pinned and junk pieces never merge', () => {
+    const grid = g(['000']);
+    grid[0][1]!.special = 'bark';
+    expect(canMerge(grid, [0, 0], [0, 1])).toBe(false);
+    expect(canMerge(grid, [0, 0], [0, 2], (_r, c) => c === 2)).toBe(false);
+    expect(canMerge(grid, [0, 0], [0, 2])).toBe(true);
+  });
+
+  test('a big piece counts twice when matched, a golden one four times', () => {
+    const grid = g(['000', '123', '231']);
+    grid[0][1]!.tier = 2;
+    grid[0][2]!.tier = 3;
+    expect(computeClear(grid).collected[0]).toBe(1 + 2 + 4);
+  });
+
+  test('the merge hint goes for the biggest pieces under the goal size', () => {
+    const grid = g(['0101', '2323', '0123']);
+    grid[0][0]!.tier = 2;
+    grid[2][0]!.tier = 2;
+    expect(findMerge(grid, undefined, 0, 3)).toEqual([[0, 0], [2, 0]]);
+    expect(findMerge(grid, undefined, 0, 2)).toBeNull(); // only big bones left, and big is the goal
+    expect(findMerge(grid, undefined, 1, 3)).not.toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 import { boxTotal, burrCount, bubbleCount, leafCount, mudCount, mudDepth, yarnCount, type Level, type Power } from '../src/levels';
 import { JUNK_ITEMS } from '../src/ark';
 import { BOSSES } from '../src/bosses';
-import { bossDamage, isBossCell, isFixed, newBox, placeBoss, placeHoles, removeBoss, JUNK_KIND, burrsHit, hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
+import { bossDamage, isBossCell, isFixed, newBox, placeBoss, placeHoles, removeBoss, findMerge, mergePieces, tierOf, MAX_TIER, JUNK_KIND, burrsHit, hitBoxes, isBox, placeBoxes, applyClear, applyGravity, isJunk, junkAtBottom, junkIn, placeJunk, throwJunk, cloneGrid, comboClears, computeClear, createGrid, hasMove, isLegalSwap, key, popBubbles, shuffle, spreadLeaf, swap, unkey, type Grid, type Pos } from '../src/board';
 
 export interface Outcome { won: boolean; movesLeft: number; score: number; left: number[] }
 
@@ -29,7 +29,7 @@ export function play(lv: Level, smart = true): Outcome {
   const total = (g: Level['goals'][number]) => (g.type === 'mud' ? mudCount(lv) : g.type === 'yarn' ? yarnCount(lv) : g.type === 'leaves' ? leafCount(lv) : g.type === 'bubbles' ? bubbleCount(lv) : g.type === 'boxes' ? boxTotal(lv) : g.type === 'burrs' ? burrCount(lv) : 0);
   const leavesLeft = () => leaf.flat().filter(Boolean).length;
   let raked = false;
-  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : g.type === 'score' ? g.target : g.type === 'boss' ? lv.boss?.hp ?? 0 : total(g)));
+  const rem = lv.goals.map((g) => (g.type === 'collect' || g.type === 'power' || g.type === 'junk' || g.type === 'merge' ? g.count : g.type === 'score' ? g.target : g.type === 'boss' ? lv.boss?.hp ?? 0 : total(g)));
   const syncLeaves = () => lv.goals.forEach((g, i) => (g.type === 'leaves' && (rem[i] = leavesLeft())) || (g.type === 'burrs' && (rem[i] = burrsLeft())));
   if (junkGoal >= 0) placeJunk(grid, junkWant(), JUNK_ITEMS.length);
   const fall = () => { const drops = applyGravity(grid, Math.random, lv.kinds); throwJunk(grid, drops, junkWant(), JUNK_ITEMS.length); };
@@ -131,14 +131,46 @@ export function play(lv: Level, smart = true): Outcome {
       if (junkGoal >= 0 && dr === 1 && isJunk(grid[r][c])) v += smart ? 4 + r : 2;
       if (v > bestV) { bestV = v; best = [a, b]; }
     }
-    if (!best) { shuffle(grid); continue; }
-    const [a, b] = best;
-    const forced = comboClears(grid, a, b) ?? [];
-    swap(grid, a, b);
+    // Merge levels: a merge toward a merge goal (or two golden pieces into a Micah piece) is worth a lot.
+    let merge: [Pos, Pos] | null = null; let mergeV = -1;
+    if (lv.merge) {
+      lv.goals.forEach((g, i) => {
+        if (g.type !== 'merge' || rem[i] <= 0 || merge) return;
+        const mv = findMerge(grid, locked, g.kind, g.tier);
+        if (!mv) return;
+        merge = mv;
+        mergeV = tierOf(grid[mv[0][0]][mv[0][1]]) + 1 === g.tier ? (smart ? 10 : 7) : smart ? 8 : 5;
+      });
+      if (!merge && lv.goals.some((g, i) => g.type === 'power' && g.power === 'micah' && rem[i] > 0)) {
+        const mv = findMerge(grid, locked);
+        if (mv && tierOf(grid[mv[0][0]][mv[0][1]]) === MAX_TIER) { merge = mv; mergeV = 12; }
+      }
+    }
+    if (!best && !merge) { shuffle(grid); continue; }
     moves--;
     raked = false;
     picked = false;
-    cascade([b, a], forced);
+    const merging = !!merge && mergeV >= bestV;
+    if (merging) {
+      const [a, b]: [Pos, Pos] = merge;
+      const kind = grid[b[0]][b[1]]!.kind;
+      const made = mergePieces(grid, a, b);
+      const tier = tierOf(made);
+      score += made.special === 'micah' ? 500 : 60 * tier;
+      lv.goals.forEach((g, i) => {
+        if (made.special === 'micah') { if (g.type === 'power' && g.power === 'micah') rem[i]--; }
+        else if (g.type === 'merge' && g.kind === kind && g.tier === tier) rem[i]--;
+      });
+      fall();
+      cascade([], []);
+    } else {
+      const [a, b] = best!;
+      const forced = comboClears(grid, a, b) ?? [];
+      swap(grid, a, b);
+      cascade([b, a], forced);
+    }
+    // A merge never makes leaves or burrs spread (main.ts).
+    if (merging) raked = picked = true;
     if (!raked && leavesLeft() > 0) { spreadLeaf(leaf, (r, c) => mud[r][c] > 0 || yarn[r][c] || bubble[r][c] || burr[r][c] || isBox(grid[r][c])); syncLeaves(); }
     if (!picked && burrsLeft() > 0) { spreadLeaf(burr, (r, c) => yarn[r][c] || bubble[r][c] || isBox(grid[r][c])); syncLeaves(); }
     // The boss throws its nuisance every few moves, as in main.ts.
@@ -171,7 +203,7 @@ export function play(lv: Level, smart = true): Outcome {
     score += moves * 100;
     cascade([], forced);
   }
-  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'collect' || g.type === 'power' || g.type === 'junk' ? g.count : Math.max(1, total(g)))));
+  const left = lv.goals.map((g, i) => (g.type === 'score' ? Math.max(0, g.target - score) / g.target : Math.max(0, rem[i]) / (g.type === 'collect' || g.type === 'power' || g.type === 'junk' || g.type === 'merge' ? g.count : Math.max(1, total(g)))));
   return { won, movesLeft, score, left };
 }
 
