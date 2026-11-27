@@ -90,6 +90,8 @@ import { STICKERS, freshStickers, markStickersSeen, stickerEarned, stickerHint, 
 import { startSnow } from './snow';
 import { ANTLERS_AT, WINTER_BISCUITS, WINTER_COUNT, WINTER_GIFT, WINTER_LEVELS, WINTER_UNLOCK, claimWinter, giveWinterGift, isWinterLevel, winterHello, winterNext, winterNumber, winterOpen, winterSnowing, winterWon } from './winter';
 import { ARK_BISCUITS, ARK_COUNT, ARK_LEVELS, ARK_TIPS, ARK_UNLOCK_LEVEL, JUNK_ITEMS, MASK_AT, arkNext, arkNumber, arkOpen, claimArk, isArkLevel } from './ark';
+import { showWorkshop } from './workshop';
+import { cleanCraft, orderReady } from './craft';
 import { canPrompt, installSteps, isInstalled, promptInstall, setupInstall } from './install';
 
 const ROWS = 8;
@@ -246,6 +248,37 @@ const TOOL_ORDER = ['treat', 'squirrel', 'leash', 'dust', 'bed'] as const;
 /** A tool is available from its level on, or anywhere once the player has got that far. */
 const toolOpen = (id: keyof typeof TOOL_UNLOCK, levelId: number) => Math.max(levelId, unlockedUpTo(save)) >= TOOL_UNLOCK[id];
 
+// ───────────────────────────── Workshop (merge and craft) ─────────────────────────────
+
+const CRAFT_ICON = `<svg viewBox="0 0 24 24" class="ui-icon" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 10.5-9 9a1.6 1.6 0 0 1-2.2-2.2l9-9"/><path d="m9.8 6.6 4.1-4.1 3.3 1.2 1.6 1.6 2.7.6 1 1-3.9 3.9-1-1-.6-1.4-1.9-.7-1.6 1.6z"/></svg>`;
+/** An order is ready to hand over: the Craft button gets a dot. */
+const craftReady = () => {
+  const c = cleanCraft(save.craft);
+  return !!c && c.orders.some((o) => orderReady(c, o));
+};
+
+function openWorkshop(): void {
+  playMusic('map');
+  showWorkshop({
+    save: () => save,
+    persist: () => persist(save),
+    h,
+    mount,
+    modal,
+    toast,
+    micahImg,
+    tags: () => {
+      const t = awardBadges(save);
+      if (t.length) (persist(save), celebrate(t));
+    },
+    back: () => showMap(),
+    toYard: (area) => {
+      yardArea = area;
+      showYard();
+    },
+  });
+}
+
 // ───────────────────────────── Map screen ─────────────────────────────
 
 type EventChip = { cls: string; act: string; done: boolean; icon: string; name: string; short: string; note: string };
@@ -344,7 +377,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
         <button class="dock-btn" data-act="collar">${UI.award}<span>Collar</span><em class="tally">${save.badges.length}/${BADGES.length}</em></button>
         <button class="dock-btn" data-act="closet">${UI.shirt}<span>Closet</span></button>
         <button class="dock-btn" data-act="album">${UI.album}<span>Album</span>${freshStickers(save).length ? '<em class="count dot">1</em>' : ''}</button>
-        <button class="dock-btn" data-act="shop2">${UI.bag}<span>Shop</span></button>
+        <button class="dock-btn" data-act="craft">${CRAFT_ICON}<span>Craft</span>${craftReady() ? '<em class="count dot">1</em>' : ''}</button>
       </nav>
     </div>`);
 
@@ -370,7 +403,7 @@ function showMap(scrollTo?: number, walkFrom?: number, after?: () => void): void
       if (screen.isConnected && !document.querySelector('.modal')) revealSticker(freshStickers(save)[0]);
     }, 1800);
   }
-  screen.querySelector('[data-act="shop2"]')!.addEventListener('click', () => showShop(() => showMap()));
+  screen.querySelector('[data-act="craft"]')!.addEventListener('click', () => openWorkshop());
   screen.querySelector('[data-act="shop"]')!.addEventListener('click', () => showShop(() => showMap()));
   screen.querySelector('[data-act="settings"]')!.addEventListener('click', () => showSettings());
   screen.querySelector('[data-act="start"]')?.addEventListener('click', () => showLevelIntro(LEVELS[0]));

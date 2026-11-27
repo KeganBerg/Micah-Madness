@@ -3,6 +3,7 @@
 
 import { LEVELS } from './levels';
 import { DECOR } from './yard';
+import { ALL_ITEMS } from './craft';
 import type { SaveData } from './save';
 
 export type TallyKey = 'mud' | 'yarn' | 'leaves' | 'zoomies' | 'bark' | 'micah' | 'treats' | 'wins' | 'bestStreak' | 'saves' | 'gulps' | 'yoshi' | 'junk' | 'digs' | 'boxes' | 'burrs' | 'bosses' | `ate:${string}`;
@@ -45,6 +46,8 @@ export const BADGES: Badge[] = [
   { id: 'burr', name: 'Burr Picker', desc: 'Pick out 60 burrs.', reward: 40, color: '#9a8a2e', progress: (s) => [t(s, 'burrs'), 60] },
   { id: 'boss', name: 'Boss Chaser', desc: 'Chase 10 area bosses off the board.', reward: 50, color: '#2f6fd0', progress: (s) => [t(s, 'bosses'), 10] },
   { id: 'dig', name: 'Treasure Hunter', desc: 'Dig up 10 things Micah buried in her Yard.', reward: 40, color: '#b07a3c', progress: (s) => [t(s, 'digs'), 10] },
+  { id: 'crafty', name: 'Crafty Paws', desc: 'Make 100 merges in Micah’s Workshop.', reward: 40, color: '#d9643a', progress: (s) => [s.craft?.merges ?? 0, 100] },
+  { id: 'maker', name: 'Master Crafter', desc: 'Discover everything in Micah’s Workshop.', reward: 75, color: '#7a4ab0', progress: (s) => [s.craft?.found.length ?? 0, ALL_ITEMS] },
   { id: 'yard', name: 'Dream Yard', desc: 'Build everything in Micah’s Yard.', reward: 75, color: '#86a9d6', progress: (s) => [s.decor.length, DECOR.length] },
 ];
 
