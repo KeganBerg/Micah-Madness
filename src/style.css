@@ -141,7 +141,7 @@ h2, h3, p { margin: 0; }
 .node.current { box-shadow: var(--press) var(--brand-deep), 0 0 0 6px #ffffff88; }
 .node.locked { background: #9aa6ae; box-shadow: var(--press) #6d7a83; opacity: 1; }
 .node .ui-icon { width: 22px; height: 22px; }
-.node-stars { position: absolute; top: calc(100% + var(--s1)); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.node-stars { position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
 .node-stars i { width: 16px; height: 16px; color: #00000033; }
 .node-stars i.on { color: var(--gold); }
 .map-micah { position: absolute; width: 72px; height: 72px; margin-left: -36px; pointer-events: none; }
