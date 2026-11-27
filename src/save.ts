@@ -1,6 +1,8 @@
 // Player progress, kept in the browser's localStorage.
 // The save is versioned so future updates can migrate old saves instead of wiping them.
 
+import type { CraftSave } from './craft';
+
 export type BoosterId = 'treat' | 'squirrel' | 'leash' | 'dust' | 'bed' | 'zoomies' | 'micah';
 
 export interface SaveData {
@@ -40,6 +42,8 @@ export interface SaveData {
   ark: number[];
   /** The day (YYYY-MM-DD, local) Micah buried the thing in her dig spot ('' before the first one). */
   dig: string;
+  /** Micah's Workshop (the merge board), once it has been opened. Checked by cleanCraft in craft.ts. */
+  craft?: CraftSave;
   /** Cloud save: the secret code this save syncs under ('' when off). */
   cloud: string;
   /** When this save was last written (ms), to tell which copy is newer. */
@@ -367,6 +371,10 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
     ark: [...new Set([...local.ark, ...remote.ark])].sort((a, b) => a - b),
     dig: later(local.dig, remote.dig),
     cloud: local.cloud || remote.cloud,
+    // The workshop board can't be merged cell by cell: keep the newer board, and every discovery from both.
+    ...(newer.craft || older.craft
+      ? { craft: { ...(newer.craft ?? older.craft)!, found: union(newer.craft?.found ?? [], older.craft?.found ?? []) } }
+      : {}),
     savedAt: Math.max(local.savedAt, remote.savedAt),
   };
 }

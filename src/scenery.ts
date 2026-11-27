@@ -325,7 +325,7 @@ const squirrelBit = (flip = false) => `<g><g transform="scale(${flip ? -1 : 1} 1
     <path d="M-4 -9 L-4.5 -12 L-2 -9.5 Z" fill="#c27a38" stroke="#6e3e14" stroke-width=".8"/>
     <circle cx="-3.2" cy="-6.6" r=".9" fill="#111"/><circle cx="-5.4" cy="-5.4" r=".7" fill="#5a2d10"/>
     <ellipse cx="0" cy="1" rx="2" ry="2.6" fill="#f0c48e"/></g></g>`;
-const raccoonBit = () => `<g>
+export const raccoonBit = () => `<g>
     <path d="M7 1 C14 -1 16 -6 13 -9" fill="none" stroke="#6d6d6d" stroke-width="4" stroke-linecap="round"/>
     <path d="M9.5 0.2 L10.5 -2.4 M12.6 -3.4 L14.2 -5.2" stroke="#2b2b2b" stroke-width="1.6"/>
     <ellipse cx="0" cy="0" rx="7" ry="5.5" fill="#8a8a8a" stroke="#3d3d3d" stroke-width="1"/>
